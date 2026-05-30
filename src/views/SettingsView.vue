@@ -41,53 +41,53 @@ async function restoreBackup(): Promise<void> {
     return
   }
 
-  if (!window.confirm('Replace all local expense tracker data with this backup?')) {
+  if (!window.confirm('確定要用這份備份完整覆蓋本機收支資料嗎？')) {
     return
   }
 
   await appData.restorePayload(parsed.payload)
   restoreText.value = ''
-  restoreStatus.value = 'Restore complete.'
+  restoreStatus.value = '還原完成。'
 }
 </script>
 
 <template>
   <div class="grid gap-6">
     <section>
-      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">Data safety</p>
-      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">Settings</h1>
+      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">資料安全</p>
+      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">設定</h1>
     </section>
 
     <div class="grid gap-6 lg:grid-cols-2">
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h2 class="text-lg font-semibold text-stone-950">Backup</h2>
-            <p class="mt-1 text-sm text-stone-500">Export a complete AppDataPayload JSON file.</p>
+            <h2 class="text-lg font-semibold text-stone-950">備份</h2>
+            <p class="mt-1 text-sm text-stone-500">匯出完整的 AppDataPayload JSON 檔案。</p>
           </div>
           <Download class="size-5 text-emerald-800" aria-hidden="true" />
         </div>
         <button type="button" class="mt-4 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white" @click="exportBackup">
-          Export JSON backup
+          匯出 JSON 備份
         </button>
       </section>
 
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h2 class="text-lg font-semibold text-stone-950">Restore</h2>
-            <p class="mt-1 text-sm text-stone-500">Restore validates first, then replaces all local IndexedDB data.</p>
+            <h2 class="text-lg font-semibold text-stone-950">還原</h2>
+            <p class="mt-1 text-sm text-stone-500">會先驗證內容，通過後才整體覆蓋本機 IndexedDB 資料。</p>
           </div>
           <Upload class="size-5 text-stone-700" aria-hidden="true" />
         </div>
 
         <label class="mt-4 grid gap-1 text-sm font-medium text-stone-700">
-          Choose backup file
+          選擇備份檔
           <input type="file" accept="application/json,.json" class="rounded-md border border-stone-300 bg-white px-3 py-2" @change="readFile" />
         </label>
 
         <label class="mt-3 grid gap-1 text-sm font-medium text-stone-700">
-          Or paste backup JSON
+          或直接貼上備份 JSON
           <textarea
             v-model="restoreText"
             rows="8"
@@ -97,7 +97,7 @@ async function restoreBackup(): Promise<void> {
         </label>
 
         <div v-if="restoreErrors.length" class="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          <p class="font-semibold">Restore failed validation</p>
+          <p class="font-semibold">還原驗證失敗</p>
           <ul class="mt-1 list-disc pl-5">
             <li v-for="error in restoreErrors" :key="error">{{ error }}</li>
           </ul>
@@ -113,7 +113,7 @@ async function restoreBackup(): Promise<void> {
           :disabled="!restoreText.trim()"
           @click="restoreBackup"
         >
-          Validate and replace local data
+          驗證並覆蓋本機資料
         </button>
       </section>
     </div>

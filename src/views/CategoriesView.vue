@@ -48,20 +48,20 @@ function submitIncome(): void {
 <template>
   <div class="grid gap-6">
     <section>
-      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">Setup</p>
-      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">Categories</h1>
+      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">設定</p>
+      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">分類管理</h1>
     </section>
 
     <div class="grid gap-6 lg:grid-cols-2">
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 class="text-lg font-semibold text-stone-950">Expense categories</h2>
+        <h2 class="text-lg font-semibold text-stone-950">支出分類</h2>
         <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="submitExpense">
-          <input v-model.trim="expenseForm.name_en" class="rounded-md border border-stone-300 px-3 py-2" placeholder="English name" />
-          <input v-model.trim="expenseForm.name_tc" class="rounded-md border border-stone-300 px-3 py-2" placeholder="Traditional Chinese name" />
-          <input v-model.trim="expenseForm.color_code" class="rounded-md border border-stone-300 px-3 py-2" placeholder="Color hex" />
-          <input v-model.trim="expenseForm.icon_image_name" class="rounded-md border border-stone-300 px-3 py-2" placeholder="Icon name" />
+          <input v-model.trim="expenseForm.name_en" class="rounded-md border border-stone-300 px-3 py-2" placeholder="英文名稱" />
+          <input v-model.trim="expenseForm.name_tc" class="rounded-md border border-stone-300 px-3 py-2" placeholder="繁中名稱" />
+          <input v-model.trim="expenseForm.color_code" class="rounded-md border border-stone-300 px-3 py-2" placeholder="顏色代碼" />
+          <input v-model.trim="expenseForm.icon_image_name" class="rounded-md border border-stone-300 px-3 py-2" placeholder="圖示名稱" />
           <button class="rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white md:col-span-2" type="submit">
-            Add expense category
+            新增支出分類
           </button>
         </form>
 
@@ -74,14 +74,14 @@ function submitIncome(): void {
             <div class="flex items-center gap-3">
               <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(category.color_code) }" />
               <div>
-                <p class="text-sm font-semibold text-stone-950">{{ category.name_en }}</p>
+                <p class="text-sm font-semibold text-stone-950">{{ category.name_tc || category.name_en }}</p>
                 <p class="text-xs text-stone-500">{{ category.name_tc }} · {{ category.icon_image_name }}</p>
               </div>
             </div>
             <button
               type="button"
               class="rounded-md p-2 text-stone-500 hover:bg-stone-100"
-              title="Soft delete category"
+              title="停用分類"
               @click="appData.deleteExpenseCategory(category.category_id)"
             >
               <Trash2 class="size-4" aria-hidden="true" />
@@ -91,14 +91,14 @@ function submitIncome(): void {
       </section>
 
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 class="text-lg font-semibold text-stone-950">Income categories</h2>
+        <h2 class="text-lg font-semibold text-stone-950">收入分類</h2>
         <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="submitIncome">
-          <input v-model.trim="incomeForm.name_en" class="rounded-md border border-stone-300 px-3 py-2" placeholder="English name" />
-          <input v-model.trim="incomeForm.name_tc" class="rounded-md border border-stone-300 px-3 py-2" placeholder="Traditional Chinese name" />
-          <input v-model.trim="incomeForm.color_code" class="rounded-md border border-stone-300 px-3 py-2" placeholder="Color hex" />
-          <input v-model.trim="incomeForm.icon_image_name" class="rounded-md border border-stone-300 px-3 py-2" placeholder="Icon name" />
+          <input v-model.trim="incomeForm.name_en" class="rounded-md border border-stone-300 px-3 py-2" placeholder="英文名稱" />
+          <input v-model.trim="incomeForm.name_tc" class="rounded-md border border-stone-300 px-3 py-2" placeholder="繁中名稱" />
+          <input v-model.trim="incomeForm.color_code" class="rounded-md border border-stone-300 px-3 py-2" placeholder="顏色代碼" />
+          <input v-model.trim="incomeForm.icon_image_name" class="rounded-md border border-stone-300 px-3 py-2" placeholder="圖示名稱" />
           <button class="rounded-md bg-stone-900 px-4 py-2 text-sm font-semibold text-white md:col-span-2" type="submit">
-            Add income category
+            新增收入分類
           </button>
         </form>
 
@@ -111,14 +111,14 @@ function submitIncome(): void {
             <div class="flex items-center gap-3">
               <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(category.color_code) }" />
               <div>
-                <p class="text-sm font-semibold text-stone-950">{{ category.name_en }}</p>
+                <p class="text-sm font-semibold text-stone-950">{{ category.name_tc || category.name_en }}</p>
                 <p class="text-xs text-stone-500">{{ category.name_tc }} · {{ category.icon_image_name }}</p>
               </div>
             </div>
             <button
               type="button"
               class="rounded-md p-2 text-stone-500 hover:bg-stone-100"
-              title="Soft delete category"
+              title="停用分類"
               @click="appData.deleteIncomeCategory(category.category_id)"
             >
               <Trash2 class="size-4" aria-hidden="true" />

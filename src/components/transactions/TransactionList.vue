@@ -38,7 +38,10 @@ const categoryById = computed(() => {
       <div class="min-w-0">
         <p class="truncate text-sm font-semibold text-stone-950">{{ item.name }}</p>
         <p class="text-xs text-stone-500">
-          {{ categoryById.get(item.category_id)?.name_en ?? 'Unknown' }} · {{ formatDate(item.date) }}
+          {{ categoryById.get(item.category_id)?.name_tc || categoryById.get(item.category_id)?.name_en || '未分類' }} · {{ formatDate(item.date) }}
+        </p>
+        <p v-if="item.original_currency && item.original_amount" class="text-xs text-stone-400">
+          原幣：{{ item.original_currency }} {{ item.original_amount }}
         </p>
       </div>
       <p

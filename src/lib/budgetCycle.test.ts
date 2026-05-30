@@ -8,7 +8,7 @@ describe('getCycleWindow', () => {
 
     expect(window.start).toEqual(new Date(2026, 3, 25, 0, 0, 0, 0).getTime())
     expect(window.end).toEqual(new Date(2026, 4, 25, 0, 0, 0, 0).getTime())
-    expect(window.label).toBe('Apr 25 - May 24')
+    expect(window.label).toBe('4月25日 - 5月24日')
   })
 
   test('clamps cycle boundaries for shorter months', () => {
@@ -16,6 +16,6 @@ describe('getCycleWindow', () => {
 
     expect(window.start).toEqual(new Date(2026, 1, 28, 0, 0, 0, 0).getTime())
     expect(window.end).toEqual(new Date(2026, 2, 31, 0, 0, 0, 0).getTime())
-    expect(window.label).toBe('Feb 28 - Mar 30')
+    expect(window.label).toBe('2月28日 - 3月30日')
   })
 })

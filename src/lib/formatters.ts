@@ -7,7 +7,7 @@ export function formatCurrency(amount: number, currency = 'HKD'): string {
 }
 
 export function formatDate(timestamp: number): string {
-  return new Intl.DateTimeFormat('en-HK', {
+  return new Intl.DateTimeFormat('zh-HK', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -15,7 +15,7 @@ export function formatDate(timestamp: number): string {
 }
 
 export function formatShortDate(timestamp: number): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('zh-HK', {
     month: 'short',
     day: 'numeric',
   }).format(new Date(timestamp))

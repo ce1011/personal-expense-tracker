@@ -7,6 +7,7 @@ export interface AppDataPayload {
   targetExpenses: TargetExpenseLimit[]
   savings: SavingRecord[]
   settings: AppSetting[]
+  fxRates?: FxRateRecord[]
 }
 
 export interface BudgetCycle {
@@ -47,6 +48,9 @@ export interface ExpenseTransaction {
   edit_date: number
   synced: boolean
   reminder_parameter?: string
+  original_currency?: SupportedCurrency
+  original_amount?: number
+  exchange_rate_hkd?: number
 }
 
 export interface IncomeTransaction {
@@ -58,6 +62,9 @@ export interface IncomeTransaction {
   create_date: number
   edit_date: number
   synced: boolean
+  original_currency?: SupportedCurrency
+  original_amount?: number
+  exchange_rate_hkd?: number
 }
 
 export interface TargetExpenseLimit {
@@ -80,6 +87,16 @@ export interface AppSetting {
   parameter: string
 }
 
+export type SupportedCurrency = 'HKD' | 'USD' | 'CNY' | 'JPY' | 'TWD' | 'THB'
+
+export interface FxRateRecord {
+  rate_id: string
+  currency_code: SupportedCurrency
+  rate_to_hkd: number
+  source_date: string
+  fetched_at: number
+}
+
 export type TransactionKind = 'expense' | 'income'
 
 export interface CombinedTransaction {
@@ -89,6 +106,9 @@ export interface CombinedTransaction {
   name: string
   amount: number
   date: number
+  original_currency?: SupportedCurrency
+  original_amount?: number
+  exchange_rate_hkd?: number
 }
 
 export interface ExpenseDraft {
@@ -96,6 +116,8 @@ export interface ExpenseDraft {
   name: string
   amount: number
   date: number
+  currency_code: SupportedCurrency
+  exchange_rate_hkd: number
 }
 
 export interface IncomeDraft {
@@ -103,6 +125,8 @@ export interface IncomeDraft {
   name: string
   amount: number
   date: number
+  currency_code: SupportedCurrency
+  exchange_rate_hkd: number
 }
 
 export interface CycleDraft {

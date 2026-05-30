@@ -44,10 +44,10 @@ function addIncome(draft: IncomeDraft): void {
   <div class="grid gap-6">
     <section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
       <div>
-        <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">Dashboard</p>
-        <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">Current cycle health</h1>
+        <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">總覽</p>
+        <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">本期收支狀況</h1>
         <p class="mt-2 text-sm text-stone-600">
-          {{ appData.currentWindow.value?.label ?? 'Create a cycle to begin tracking.' }}
+          {{ appData.currentWindow.value?.label ?? '先建立預算週期，之後所有交易都會按入糧日自動歸期。' }}
         </p>
       </div>
       <p v-if="appData.error.value" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -57,26 +57,26 @@ function addIncome(draft: IncomeDraft): void {
 
     <section class="grid gap-3 md:grid-cols-4">
       <MetricCard
-        label="Income"
+        label="收入"
         :value="formatCurrency(appData.cycleIncomeTotal.value, appData.currency.value)"
-        :detail="`${appData.cycleIncomes.value.length} income records + cycle income`"
+        :detail="`本期 ${appData.cycleIncomes.value.length} 筆收入，加上週期設定收入`"
         tone="good"
       />
       <MetricCard
-        label="Spent"
+        label="支出"
         :value="formatCurrency(appData.cycleExpenseTotal.value, appData.currency.value)"
-        :detail="`${appData.cycleExpenses.value.length} expenses this cycle`"
+        :detail="`本期 ${appData.cycleExpenses.value.length} 筆支出`"
       />
       <MetricCard
-        label="Remaining"
+        label="結餘"
         :value="formatCurrency(appData.remainingBudget.value, appData.currency.value)"
-        :detail="`Target saving ${formatCurrency(appData.currentCycle.value?.saving_target ?? 0, appData.currency.value)}`"
+        :detail="`儲蓄目標 ${formatCurrency(appData.currentCycle.value?.saving_target ?? 0, appData.currency.value)}`"
         :tone="appData.remainingBudget.value >= 0 ? 'good' : 'warn'"
       />
       <MetricCard
-        label="Saving progress"
+        label="儲蓄進度"
         :value="formatPercent(appData.savingProgress.value)"
-        detail="Against target after spending"
+        detail="按支出後剩餘金額計算"
       />
     </section>
 
@@ -84,8 +84,8 @@ function addIncome(draft: IncomeDraft): void {
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-stone-950">Category targets</h2>
-            <p class="text-sm text-stone-500">Spend compared with target limits for this cycle.</p>
+            <h2 class="text-lg font-semibold text-stone-950">分類預算進度</h2>
+            <p class="text-sm text-stone-500">比較本期實際支出與分類上限。</p>
           </div>
         </div>
 
@@ -94,11 +94,11 @@ function addIncome(draft: IncomeDraft): void {
             <div class="flex items-center justify-between gap-3 text-sm">
               <div class="flex items-center gap-2 font-semibold text-stone-900">
                 <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(row.category.color_code) }" />
-                {{ row.category.name_en }}
+                {{ row.category.name_tc || row.category.name_en }}
               </div>
               <span class="text-stone-500">
                 {{ formatCurrency(row.spent, appData.currency.value) }} /
-                {{ row.target ? formatCurrency(row.target, appData.currency.value) : 'No target' }}
+                {{ row.target ? formatCurrency(row.target, appData.currency.value) : '未設定上限' }}
               </span>
             </div>
             <div class="mt-2 h-2 overflow-hidden rounded-full bg-stone-100">
@@ -112,12 +112,14 @@ function addIncome(draft: IncomeDraft): void {
             </div>
           </div>
         </div>
-        <EmptyState v-else class="mt-4" title="No categories yet" message="Add categories before setting targets." />
+        <EmptyState v-else class="mt-4" title="尚未有分類" message="先建立支出分類，之後就可以設定分類預算。" />
       </section>
 
       <TransactionForm
         :expense-categories="appData.activeExpenseCategories.value"
         :income-categories="appData.activeIncomeCategories.value"
+        :fx-rate-map="appData.fxRateMap.value"
+        :latest-fx-date="appData.latestFxDate.value"
         compact
         @create-expense="addExpense"
         @create-income="addIncome"
@@ -126,7 +128,7 @@ function addIncome(draft: IncomeDraft): void {
 
     <section>
       <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-stone-950">Recent transactions</h2>
+        <h2 class="text-lg font-semibold text-stone-950">最近交易</h2>
       </div>
       <TransactionList
         v-if="appData.recentTransactions.value.length"
@@ -135,7 +137,7 @@ function addIncome(draft: IncomeDraft): void {
         :income-categories="appData.data.value.incomeCategories"
         :currency="appData.currency.value"
       />
-      <EmptyState v-else title="No transactions yet" message="Use quick add to record your first expense or income." />
+      <EmptyState v-else title="還沒有交易紀錄" message="用右側快速記一筆，先把第一筆支出或收入記下來。" />
     </section>
   </div>
 </template>

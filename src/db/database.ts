@@ -7,6 +7,7 @@ import type {
   BudgetCycle,
   ExpenseCategory,
   ExpenseTransaction,
+  FxRateRecord,
   IncomeCategory,
   IncomeTransaction,
   SavingRecord,
@@ -22,11 +23,12 @@ export class ExpenseTrackerDatabase extends Dexie {
   targetExpenses!: Table<TargetExpenseLimit, string>
   savings!: Table<SavingRecord, string>
   settings!: Table<AppSetting, string>
+  fxRates!: Table<FxRateRecord, string>
 
   constructor() {
     super('personal-expense-tracker')
 
-    this.version(1).stores({
+    this.version(2).stores({
       cycles: 'cycle_id, cycle_code',
       expenseCategories: 'category_id, name_en, deleted',
       incomeCategories: 'category_id, name_en, deleted',
@@ -35,6 +37,7 @@ export class ExpenseTrackerDatabase extends Dexie {
       targetExpenses: 'target_expense_id, cycle_id, category_id, [cycle_id+category_id]',
       savings: 'saving_id, date',
       settings: 'setting_id, name',
+      fxRates: 'rate_id, currency_code, source_date, fetched_at',
     })
   }
 }
@@ -80,6 +83,7 @@ export function createInitialPayload(now = new Date()): AppDataPayload {
         parameter: 'HKD',
       },
     ],
+    fxRates: [],
   }
 }
 

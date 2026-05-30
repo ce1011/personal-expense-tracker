@@ -13,16 +13,16 @@ const props = defineProps<{
 }>()
 
 const navItems = [
-  { label: 'Dashboard', to: '/', icon: LayoutDashboard },
-  { label: 'Transactions', to: '/transactions', icon: ListChecks },
-  { label: 'Budgets', to: '/budgets', icon: ChartNoAxesCombined },
-  { label: 'Categories', to: '/categories', icon: FolderKanban },
-  { label: 'Settings', to: '/settings', icon: ArchiveRestore },
+  { label: '總覽', to: '/', icon: LayoutDashboard },
+  { label: '交易', to: '/transactions', icon: ListChecks },
+  { label: '預算週期', to: '/budgets', icon: ChartNoAxesCombined },
+  { label: '分類', to: '/categories', icon: FolderKanban },
+  { label: '設定', to: '/settings', icon: ArchiveRestore },
 ]
 
 const cycleLabel = computed(() => {
   if (!props.currentCycle) {
-    return 'No cycle'
+    return '尚未建立預算週期'
   }
 
   return `${props.currentCycle.cycle_code} · ${
@@ -37,8 +37,8 @@ const cycleLabel = computed(() => {
       class="fixed inset-y-0 left-0 hidden w-68 border-r border-stone-200/80 bg-[#f9f6ef]/90 px-5 py-5 shadow-sm backdrop-blur xl:block"
     >
       <div class="mb-8">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Personal</p>
-        <h1 class="mt-1 text-2xl font-semibold tracking-tight text-stone-950">Expense Tracker</h1>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">個人理財</p>
+        <h1 class="mt-1 text-2xl font-semibold tracking-tight text-stone-950">個人收支追蹤</h1>
       </div>
 
       <nav class="space-y-1">
@@ -55,9 +55,9 @@ const cycleLabel = computed(() => {
       </nav>
 
       <div class="mt-8 rounded-md border border-stone-200 bg-white p-4">
-        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">Current cycle</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">目前週期</p>
         <p class="mt-2 text-sm font-semibold text-stone-950">{{ cycleLabel }}</p>
-        <p class="mt-1 text-xs text-stone-500">{{ cycles.length }} saved cycle{{ cycles.length === 1 ? '' : 's' }}</p>
+        <p class="mt-1 text-xs text-stone-500">已儲存 {{ cycles.length }} 個週期</p>
       </div>
     </aside>
 
@@ -65,10 +65,10 @@ const cycleLabel = computed(() => {
       <header class="sticky top-0 z-20 border-b border-stone-200/80 bg-[#f9f6ef]/95 px-4 py-3 backdrop-blur xl:hidden">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">Expense Tracker</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">個人收支追蹤</p>
             <p class="text-sm font-medium text-stone-700">{{ cycleLabel }}</p>
           </div>
-          <p v-if="loading" class="text-xs font-medium text-stone-500">Loading</p>
+          <p v-if="loading" class="text-xs font-medium text-stone-500">載入中</p>
         </div>
         <nav class="mt-3 flex gap-2 overflow-x-auto pb-1">
           <RouterLink

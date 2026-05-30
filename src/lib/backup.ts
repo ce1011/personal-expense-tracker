@@ -95,6 +95,20 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireString(setting, 'parameter', `settings[${index}]`, errors)
   })
 
+  if (payload.fxRates) {
+    if (!Array.isArray(payload.fxRates)) {
+      errors.push('fxRates must be an array')
+    } else {
+      payload.fxRates.forEach((rate, index) => {
+        requireString(rate, 'rate_id', `fxRates[${index}]`, errors)
+        requireString(rate, 'currency_code', `fxRates[${index}]`, errors)
+        requireNumber(rate, 'rate_to_hkd', `fxRates[${index}]`, errors)
+        requireString(rate, 'source_date', `fxRates[${index}]`, errors)
+        requireNumber(rate, 'fetched_at', `fxRates[${index}]`, errors)
+      })
+    }
+  }
+
   return {
     ok: errors.length === 0,
     errors,

@@ -44,8 +44,8 @@ function save(categoryId: string): void {
   <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
     <div class="flex items-center justify-between gap-3">
       <div>
-        <h2 class="text-lg font-semibold text-stone-950">Target expense limits</h2>
-        <p class="text-sm text-stone-500">Set caps for the selected pay cycle.</p>
+        <h2 class="text-lg font-semibold text-stone-950">分類預算上限</h2>
+        <p class="text-sm text-stone-500">為選中的預算週期設定各支出分類的上限。</p>
       </div>
       <p v-if="cycle" class="text-sm font-medium text-stone-600">{{ cycle.cycle_code }}</p>
     </div>
@@ -59,7 +59,7 @@ function save(categoryId: string): void {
         <div class="flex items-center gap-3">
           <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(category.color_code) }" />
           <div>
-            <p class="text-sm font-semibold text-stone-950">{{ category.name_en }}</p>
+            <p class="text-sm font-semibold text-stone-950">{{ category.name_tc || category.name_en }}</p>
             <p class="text-xs text-stone-500">{{ formatCurrency(amounts[category.category_id] ?? 0, currency) }}</p>
           </div>
         </div>
@@ -76,7 +76,7 @@ function save(categoryId: string): void {
           :disabled="!cycle"
           @click="save(category.category_id)"
         >
-          Save
+          儲存
         </button>
       </div>
     </div>

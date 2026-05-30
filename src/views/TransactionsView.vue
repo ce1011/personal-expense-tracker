@@ -34,21 +34,23 @@ function addIncome(draft: IncomeDraft): void {
 <template>
   <div class="grid gap-6">
     <section>
-      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">Ledger</p>
-      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">Transactions</h1>
+      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">流水帳</p>
+      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">交易紀錄</h1>
     </section>
 
     <TransactionForm
       :expense-categories="appData.activeExpenseCategories.value"
       :income-categories="appData.activeIncomeCategories.value"
+      :fx-rate-map="appData.fxRateMap.value"
+      :latest-fx-date="appData.latestFxDate.value"
       @create-expense="addExpense"
       @create-income="addIncome"
     />
 
     <section class="grid gap-3">
       <label class="grid gap-1 text-sm font-medium text-stone-700">
-        Search ledger
-        <input v-model="search" class="rounded-md border border-stone-300 bg-white px-3 py-2" placeholder="Filter by name" />
+        搜尋交易
+        <input v-model="search" class="rounded-md border border-stone-300 bg-white px-3 py-2" placeholder="按名稱搜尋" />
       </label>
       <TransactionList
         v-if="filteredTransactions.length"
@@ -57,7 +59,7 @@ function addIncome(draft: IncomeDraft): void {
         :income-categories="appData.data.value.incomeCategories"
         :currency="appData.currency.value"
       />
-      <EmptyState v-else title="No matching transactions" message="Try a different search or add a transaction." />
+      <EmptyState v-else title="找不到交易" message="試試其他關鍵字，或先新增一筆交易。" />
     </section>
   </div>
 </template>

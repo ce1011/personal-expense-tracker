@@ -32,6 +32,7 @@ const emptyPayload: AppDataPayload = {
   targetExpenses: [],
   savings: [],
   settings: [],
+  fxRates: [],
 }
 
 const data = shallowRef<AppDataPayload>(emptyPayload)
@@ -56,6 +57,12 @@ export function useAppData() {
       data.value.settings.find((setting) => setting.name === 'currency')?.parameter ??
       'HKD',
   )
+  const fxRates = computed(() => data.value.fxRates ?? [])
+  const fxRateMap = computed(() => {
+    const entries = fxRates.value.map((rate) => [rate.currency_code, rate.rate_to_hkd] as const)
+    return new Map([['HKD', 1] as const, ...entries])
+  })
+  const latestFxDate = computed(() => fxRates.value[0]?.source_date ?? '')
   const cycleExpenses = computed(() => {
     const window = currentWindow.value
     return window
@@ -87,6 +94,9 @@ export function useAppData() {
         name: expense.name,
         amount: expense.amount,
         date: expense.date,
+        original_currency: expense.original_currency,
+        original_amount: expense.original_amount,
+        exchange_rate_hkd: expense.exchange_rate_hkd,
       })),
       ...data.value.incomes.map((income) => ({
         id: income.transaction_id,
@@ -95,6 +105,9 @@ export function useAppData() {
         name: income.name,
         amount: income.amount,
         date: income.date,
+        original_currency: income.original_currency,
+        original_amount: income.original_amount,
+        exchange_rate_hkd: income.exchange_rate_hkd,
       })),
     ].sort((a, b) => b.date - a.date),
   )
@@ -134,6 +147,9 @@ export function useAppData() {
     activeExpenseCategories,
     activeIncomeCategories,
     currency,
+    fxRates,
+    fxRateMap,
+    latestFxDate,
     cycleExpenses,
     cycleIncomes,
     cycleExpenseTotal,
