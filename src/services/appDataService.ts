@@ -160,6 +160,42 @@ export async function createIncome(draft: IncomeDraft): Promise<void> {
   await db.incomes.add(transaction)
 }
 
+export async function updateExpense(transactionId: string, draft: ExpenseDraft): Promise<void> {
+  await db.expenses.update(transactionId, {
+    category_id: draft.category_id,
+    name: draft.name.trim(),
+    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
+    date: draft.date,
+    edit_date: Date.now(),
+    synced: false,
+    original_currency: draft.currency_code,
+    original_amount: draft.amount,
+    exchange_rate_hkd: draft.exchange_rate_hkd,
+  })
+}
+
+export async function updateIncome(transactionId: string, draft: IncomeDraft): Promise<void> {
+  await db.incomes.update(transactionId, {
+    category_id: draft.category_id,
+    name: draft.name.trim(),
+    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
+    date: draft.date,
+    edit_date: Date.now(),
+    synced: false,
+    original_currency: draft.currency_code,
+    original_amount: draft.amount,
+    exchange_rate_hkd: draft.exchange_rate_hkd,
+  })
+}
+
+export async function deleteExpense(transactionId: string): Promise<void> {
+  await db.expenses.delete(transactionId)
+}
+
+export async function deleteIncome(transactionId: string): Promise<void> {
+  await db.incomes.delete(transactionId)
+}
+
 export async function saveCycle(draft: CycleDraft, cycleId?: string): Promise<void> {
   const cycle: BudgetCycle = {
     cycle_id: cycleId ?? makeId('cycle'),

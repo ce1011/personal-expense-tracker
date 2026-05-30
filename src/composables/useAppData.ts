@@ -4,6 +4,8 @@ import { getCycleWindow, isInCycleWindow } from '@/lib/budgetCycle'
 import {
   createExpense,
   createIncome,
+  deleteExpense,
+  deleteIncome,
   loadAppData,
   replaceAllData,
   saveCycle,
@@ -12,6 +14,8 @@ import {
   saveTargetLimit,
   softDeleteExpenseCategory,
   softDeleteIncomeCategory,
+  updateExpense,
+  updateIncome,
 } from '@/services/appDataService'
 import type {
   AppDataPayload,
@@ -161,6 +165,12 @@ export function useAppData() {
     refresh,
     addExpense: (draft: ExpenseDraft) => withRefresh(() => createExpense(draft)),
     addIncome: (draft: IncomeDraft) => withRefresh(() => createIncome(draft)),
+    updateExpense: (transactionId: string, draft: ExpenseDraft) =>
+      withRefresh(() => updateExpense(transactionId, draft)),
+    updateIncome: (transactionId: string, draft: IncomeDraft) =>
+      withRefresh(() => updateIncome(transactionId, draft)),
+    deleteExpense: (transactionId: string) => withRefresh(() => deleteExpense(transactionId)),
+    deleteIncome: (transactionId: string) => withRefresh(() => deleteIncome(transactionId)),
     saveCycle: (draft: CycleDraft, cycleId?: string) => withRefresh(() => saveCycle(draft, cycleId)),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>
       withRefresh(() => saveTargetLimit(cycleId, categoryId, amount)),

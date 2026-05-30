@@ -5,10 +5,11 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
-import type { ExpenseDraft, IncomeDraft } from '@/types/app-data'
+import type { CombinedTransaction, ExpenseDraft, IncomeDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const search = shallowRef('')
+const selectedTransaction = shallowRef<CombinedTransaction | undefined>()
 
 const filteredTransactions = computed(() => {
   const query = search.value.trim().toLowerCase()
@@ -29,6 +30,49 @@ function addExpense(draft: ExpenseDraft): void {
 function addIncome(draft: IncomeDraft): void {
   void appData.addIncome(draft)
 }
+
+function startEditing(transaction: CombinedTransaction): void {
+  selectedTransaction.value = transaction
+}
+
+function cancelEditing(): void {
+  selectedTransaction.value = undefined
+}
+
+function updateExpense(transactionId: string, draft: ExpenseDraft): void {
+  void appData.updateExpense(transactionId, draft).then(cancelEditing)
+}
+
+function updateIncome(transactionId: string, draft: IncomeDraft): void {
+  void appData.updateIncome(transactionId, draft).then(cancelEditing)
+}
+
+function deleteTransaction(transaction: CombinedTransaction): void {
+  const confirmed = globalThis.confirm?.(`確定要刪除「${transaction.name}」嗎？`) ?? true
+
+  if (!confirmed) {
+    return
+  }
+
+  const action =
+    transaction.kind === 'expense'
+      ? appData.deleteExpense(transaction.id)
+      : appData.deleteIncome(transaction.id)
+
+  void action.then(() => {
+    if (selectedTransaction.value?.id === transaction.id) {
+      cancelEditing()
+    }
+  })
+}
+
+function deleteSelectedTransaction(): void {
+  if (!selectedTransaction.value) {
+    return
+  }
+
+  deleteTransaction(selectedTransaction.value)
+}
 </script>
 
 <template>
@@ -43,8 +87,13 @@ function addIncome(draft: IncomeDraft): void {
       :income-categories="appData.activeIncomeCategories.value"
       :fx-rate-map="appData.fxRateMap.value"
       :latest-fx-date="appData.latestFxDate.value"
+      :transaction="selectedTransaction"
       @create-expense="addExpense"
       @create-income="addIncome"
+      @update-expense="updateExpense"
+      @update-income="updateIncome"
+      @delete-transaction="deleteSelectedTransaction"
+      @cancel-edit="cancelEditing"
     />
 
     <section class="grid gap-3">
@@ -58,6 +107,9 @@ function addIncome(draft: IncomeDraft): void {
         :expense-categories="appData.data.value.expenseCategories"
         :income-categories="appData.data.value.incomeCategories"
         :currency="appData.currency.value"
+        show-actions
+        @edit="startEditing"
+        @delete="deleteTransaction"
       />
       <EmptyState v-else title="找不到交易" message="試試其他關鍵字，或先新增一筆交易。" />
     </section>

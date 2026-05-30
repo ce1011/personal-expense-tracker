@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-vue-next'
+import { ArrowDownLeft, ArrowUpRight, PencilLine, Trash2 } from 'lucide-vue-next'
 
 import { formatCurrency, formatDate, withHash } from '@/lib/formatters'
 import type { CombinedTransaction, ExpenseCategory, IncomeCategory } from '@/types/app-data'
@@ -10,6 +10,12 @@ const props = defineProps<{
   expenseCategories: readonly ExpenseCategory[]
   incomeCategories: readonly IncomeCategory[]
   currency: string
+  showActions?: boolean
+}>()
+
+const emit = defineEmits<{
+  edit: [item: CombinedTransaction]
+  delete: [item: CombinedTransaction]
 }>()
 
 const categoryById = computed(() => {
@@ -50,6 +56,24 @@ const categoryById = computed(() => {
       >
         {{ item.kind === 'expense' ? '-' : '+' }}{{ formatCurrency(item.amount, currency) }}
       </p>
+      <div v-if="showActions" class="col-span-full flex justify-end gap-2 pt-1">
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs font-medium text-stone-600 transition hover:bg-stone-50"
+          @click="emit('edit', item)"
+        >
+          <PencilLine class="size-3.5" aria-hidden="true" />
+          修改
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50"
+          @click="emit('delete', item)"
+        >
+          <Trash2 class="size-3.5" aria-hidden="true" />
+          刪除
+        </button>
+      </div>
     </div>
   </div>
 </template>
