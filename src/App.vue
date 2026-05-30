@@ -1,11 +1,23 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { RouterView } from 'vue-router'
+
+import AppShell from '@/components/AppShell.vue'
+import { useAppData } from '@/composables/useAppData'
+
+const appData = useAppData()
+
+onMounted(() => {
+  void appData.refresh()
+})
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <AppShell
+    :cycles="appData.data.value.cycles"
+    :current-cycle="appData.currentCycle.value"
+    :loading="appData.loading.value"
+  >
+    <RouterView />
+  </AppShell>
 </template>
-
-<style scoped></style>
