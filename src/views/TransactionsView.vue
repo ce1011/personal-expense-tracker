@@ -83,17 +83,27 @@ function deleteSelectedTransaction(): void {
     </section>
 
     <TransactionForm
+      v-if="selectedTransaction"
+      :key="`edit-${selectedTransaction.id}`"
       :expense-categories="appData.activeExpenseCategories.value"
       :income-categories="appData.activeIncomeCategories.value"
       :fx-rate-map="appData.fxRateMap.value"
       :latest-fx-date="appData.latestFxDate.value"
       :transaction="selectedTransaction"
-      @create-expense="addExpense"
-      @create-income="addIncome"
       @update-expense="updateExpense"
       @update-income="updateIncome"
       @delete-transaction="deleteSelectedTransaction"
       @cancel-edit="cancelEditing"
+    />
+    <TransactionForm
+      v-else
+      key="create"
+      :expense-categories="appData.activeExpenseCategories.value"
+      :income-categories="appData.activeIncomeCategories.value"
+      :fx-rate-map="appData.fxRateMap.value"
+      :latest-fx-date="appData.latestFxDate.value"
+      @create-expense="addExpense"
+      @create-income="addIncome"
     />
 
     <section class="grid gap-3">
