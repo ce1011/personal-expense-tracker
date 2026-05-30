@@ -28,6 +28,9 @@ coverage
 
 .eslintcache
 
+# Superpowers visual brainstorming artifacts
+.superpowers/
+
 # Cypress
 /cypress/videos/
 /cypress/screenshots/
