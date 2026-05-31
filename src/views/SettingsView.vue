@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { shallowRef } from 'vue'
-import { Download, Upload } from 'lucide-vue-next'
+import { Download, RefreshCw, Upload } from 'lucide-vue-next'
 
 import { useAppData } from '@/composables/useAppData'
 import { parseBackupJson } from '@/lib/backup'
@@ -49,6 +49,12 @@ async function restoreBackup(): Promise<void> {
   restoreText.value = ''
   restoreStatus.value = '還原完成。'
 }
+
+function refreshAppVersion(): void {
+  const url = new URL(window.location.href)
+  url.searchParams.set('refresh', String(Date.now()))
+  window.location.replace(url.toString())
+}
 </script>
 
 <template>
@@ -56,6 +62,25 @@ async function restoreBackup(): Promise<void> {
     <section>
       <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">資料安全</p>
       <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">設定</h1>
+    </section>
+
+    <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-950">App 更新</h2>
+          <p class="mt-1 text-sm text-stone-500">重新載入目前頁面並加上更新參數，盡量抓取 GitHub Pages 的最新版本。</p>
+          <p class="mt-2 text-xs text-stone-400">在 iPhone 主畫面 Web App 上，若仍看到舊版本，可能還需要完全關閉 App 再打開一次。</p>
+        </div>
+        <RefreshCw class="size-5 text-stone-700" aria-hidden="true" />
+      </div>
+
+      <button
+        type="button"
+        class="mt-4 rounded-md bg-stone-900 px-4 py-2 text-sm font-semibold text-white"
+        @click="refreshAppVersion"
+      >
+        重新載入最新版本
+      </button>
     </section>
 
     <div class="grid gap-6 lg:grid-cols-2">
