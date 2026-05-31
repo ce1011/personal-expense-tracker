@@ -25,3 +25,30 @@ export function getCurrentCycleCode(date = new Date()): string {
 export function getDaysInMonth(year: number, monthIndex: number): number {
   return new Date(year, monthIndex + 1, 0).getDate()
 }
+
+export function getDaysUntilNextIncomeDay(incomeDay: number, now = new Date()): number {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const currentMonthIncomeDate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    Math.min(Math.max(incomeDay, 1), getDaysInMonth(now.getFullYear(), now.getMonth())),
+  )
+
+  let nextIncomeDate = currentMonthIncomeDate
+
+  if (today.getTime() > currentMonthIncomeDate.getTime()) {
+    const nextMonthIndex = now.getMonth() + 1
+    const nextMonthDate = new Date(now.getFullYear(), nextMonthIndex, 1)
+    nextIncomeDate = new Date(
+      nextMonthDate.getFullYear(),
+      nextMonthDate.getMonth(),
+      Math.min(
+        Math.max(incomeDay, 1),
+        getDaysInMonth(nextMonthDate.getFullYear(), nextMonthDate.getMonth()),
+      ),
+    )
+  }
+
+  const diffDays = Math.round((nextIncomeDate.getTime() - today.getTime()) / 86_400_000)
+  return Math.max(1, diffDays)
+}

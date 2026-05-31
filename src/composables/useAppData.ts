@@ -1,6 +1,7 @@
 import { computed, readonly, shallowRef } from 'vue'
 
 import { getCycleWindow, isInCycleWindow } from '@/lib/budgetCycle'
+import { getDaysUntilNextIncomeDay } from '@/lib/date'
 import {
   createExpense,
   createIncome,
@@ -84,6 +85,12 @@ export function useAppData() {
     cycleIncomes.value.reduce((sum, income) => sum + income.amount, currentCycle.value?.income ?? 0),
   )
   const remainingBudget = computed(() => cycleIncomeTotal.value - cycleExpenseTotal.value)
+  const daysUntilNextIncome = computed(() =>
+    currentCycle.value ? getDaysUntilNextIncomeDay(currentCycle.value.income_day) : 1,
+  )
+  const averageDailyBudgetUntilIncome = computed(() =>
+    remainingBudget.value / Math.max(1, daysUntilNextIncome.value),
+  )
   const combinedTransactions = computed<CombinedTransaction[]>(() =>
     [
       ...data.value.expenses.map((expense) => ({
@@ -154,6 +161,8 @@ export function useAppData() {
     cycleExpenseTotal,
     cycleIncomeTotal,
     remainingBudget,
+    daysUntilNextIncome,
+    averageDailyBudgetUntilIncome,
     combinedTransactions,
     recentTransactions,
     refresh,

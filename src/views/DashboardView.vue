@@ -107,6 +107,12 @@ onBeforeUnmount(() => {
         :detail="`儲蓄目標 ${formatCurrency(appData.currentCycle.value?.saving_target ?? 0, appData.currency.value)}`"
         :tone="appData.remainingBudget.value >= 0 ? 'good' : 'warn'"
       />
+      <MetricCard
+        label="每日可用"
+        :value="formatCurrency(appData.averageDailyBudgetUntilIncome.value, appData.currency.value)"
+        :detail="`距離下次出糧還有 ${appData.daysUntilNextIncome.value} 日`"
+        :tone="appData.averageDailyBudgetUntilIncome.value >= 0 ? 'good' : 'warn'"
+      />
     </section>
 
     <div class="grid gap-6 xl:grid-cols-[1fr_320px]">
