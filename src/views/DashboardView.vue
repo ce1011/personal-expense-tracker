@@ -45,6 +45,8 @@ const targetRows = computed(() => {
     appData.data.value.targetExpenses,
     appData.currentCycle.value?.cycle_id,
     targetDivisor,
+    appData.cycleExpenses.value,
+    budgetProgressMode.value === 'today',
   )
 })
 
@@ -89,17 +91,36 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="grid gap-6">
-    <section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-      <div>
-        <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">總覽</p>
-        <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">本期收支狀況</h1>
-        <p class="mt-2 text-sm text-stone-600">
-          {{ appData.currentWindow.value?.label ?? '先建立預算週期，之後所有交易都會按入糧日自動歸期。' }}
+    <section class="grid gap-4 xl:grid-cols-[1fr_320px]">
+      <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">總覽</p>
+          <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">本期收支狀況</h1>
+          <p class="mt-2 text-sm text-stone-600">
+            {{ appData.currentWindow.value?.label ?? '先建立預算週期，之後所有交易都會按入糧日自動歸期。' }}
+          </p>
+        </div>
+        <p v-if="appData.error.value" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ appData.error.value }}
         </p>
       </div>
-      <p v-if="appData.error.value" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-        {{ appData.error.value }}
-      </p>
+
+      <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+        <div class="flex h-full flex-col justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-stone-950">快速記一筆</h2>
+            <p class="mt-1 text-sm text-stone-500">用彈出視窗快速新增支出或收入。</p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
+            @click="openQuickAdd"
+          >
+            <CirclePlus class="size-4" aria-hidden="true" />
+            新增交易
+          </button>
+        </div>
+      </section>
     </section>
 
     <section class="grid gap-3 md:grid-cols-4">
@@ -128,13 +149,13 @@ onBeforeUnmount(() => {
       />
     </section>
 
-    <div class="grid gap-6 xl:grid-cols-[1fr_320px]">
+    <div class="grid gap-6">
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-semibold text-stone-950">分類預算進度</h2>
             <p class="text-sm text-stone-500">
-              {{ budgetProgressMode === 'today' ? '比較今日支出與分類每日預算上限。' : '比較本期實際支出與分類預算上限。' }}
+              {{ budgetProgressMode === 'today' ? '比較今日支出與分類每日剩餘預算上限。' : '比較本期實際支出與分類預算上限。' }}
             </p>
           </div>
           <div class="inline-flex rounded-md border border-stone-200 bg-stone-50 p-1">
@@ -181,23 +202,6 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <EmptyState v-else class="mt-4" title="尚未有分類" message="先建立支出分類，之後就可以設定分類預算。" />
-      </section>
-
-      <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <div class="flex h-full flex-col justify-between gap-4">
-          <div>
-            <h2 class="text-lg font-semibold text-stone-950">快速記一筆</h2>
-            <p class="mt-1 text-sm text-stone-500">用彈出視窗快速新增支出或收入。</p>
-          </div>
-          <button
-            type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
-            @click="openQuickAdd"
-          >
-            <CirclePlus class="size-4" aria-hidden="true" />
-            新增交易
-          </button>
-        </div>
       </section>
     </div>
 

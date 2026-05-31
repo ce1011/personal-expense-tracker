@@ -81,7 +81,7 @@ describe('buildCategoryProgressRows', () => {
     expect(rows[1]?.ratio).toBe(1)
   })
 
-  test('supports dividing the category limit for daily view', () => {
+  test('supports dividing the remaining category budget for daily view', () => {
     const expenses: ExpenseTransaction[] = [
       {
         transaction_id: 'expense-1',
@@ -94,10 +94,31 @@ describe('buildCategoryProgressRows', () => {
         synced: false,
       },
     ]
+    const cycleExpenses: ExpenseTransaction[] = [
+      ...expenses,
+      {
+        transaction_id: 'expense-2',
+        category_id: 'food',
+        name: '午餐',
+        amount: 170,
+        date: 1780272000000,
+        create_date: 1780272000000,
+        edit_date: 1780272000000,
+        synced: false,
+      },
+    ]
 
-    const rows = buildCategoryProgressRows(categories, expenses, targetExpenses, 'cycle-1', 10)
+    const rows = buildCategoryProgressRows(
+      categories,
+      expenses,
+      targetExpenses,
+      'cycle-1',
+      10,
+      cycleExpenses,
+      true,
+    )
 
-    expect(rows[0]?.target).toBe(50)
-    expect(rows[0]?.ratio).toBe(0.6)
+    expect(rows[0]?.target).toBe(30)
+    expect(rows[0]?.ratio).toBe(1)
   })
 })
