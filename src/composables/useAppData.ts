@@ -83,11 +83,6 @@ export function useAppData() {
   const cycleIncomeTotal = computed(() =>
     cycleIncomes.value.reduce((sum, income) => sum + income.amount, currentCycle.value?.income ?? 0),
   )
-  const savingProgress = computed(() => {
-    const target = currentCycle.value?.saving_target ?? 0
-    const remaining = cycleIncomeTotal.value - cycleExpenseTotal.value
-    return target > 0 ? Math.max(0, Math.min(1, remaining / target)) : 0
-  })
   const remainingBudget = computed(() => cycleIncomeTotal.value - cycleExpenseTotal.value)
   const combinedTransactions = computed<CombinedTransaction[]>(() =>
     [
@@ -158,7 +153,6 @@ export function useAppData() {
     cycleIncomes,
     cycleExpenseTotal,
     cycleIncomeTotal,
-    savingProgress,
     remainingBudget,
     combinedTransactions,
     recentTransactions,

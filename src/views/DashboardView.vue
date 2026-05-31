@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, shallowRef } from 'vue'
+import { CirclePlus, X } from 'lucide-vue-next'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import MetricCard from '@/components/common/MetricCard.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
-import { formatCurrency, formatPercent, withHash } from '@/lib/formatters'
+import { formatCurrency, withHash } from '@/lib/formatters'
 import type { ExpenseDraft, IncomeDraft } from '@/types/app-data'
 
 const appData = useAppData()
+const isQuickAddOpen = shallowRef(false)
+const toastMessage = shallowRef('')
+let toastTimeout: ReturnType<typeof setTimeout> | undefined
 
 const targetRows = computed(() => {
   const cycle = appData.currentCycle.value
@@ -31,13 +35,43 @@ const targetRows = computed(() => {
   })
 })
 
-function addExpense(draft: ExpenseDraft): void {
-  void appData.addExpense(draft)
+function openQuickAdd(): void {
+  isQuickAddOpen.value = true
 }
 
-function addIncome(draft: IncomeDraft): void {
-  void appData.addIncome(draft)
+function closeQuickAdd(): void {
+  isQuickAddOpen.value = false
 }
+
+function showToast(message: string): void {
+  toastMessage.value = message
+
+  if (toastTimeout) {
+    clearTimeout(toastTimeout)
+  }
+
+  toastTimeout = setTimeout(() => {
+    toastMessage.value = ''
+  }, 2400)
+}
+
+async function addExpense(draft: ExpenseDraft): Promise<void> {
+  await appData.addExpense(draft)
+  closeQuickAdd()
+  showToast('已新增支出')
+}
+
+async function addIncome(draft: IncomeDraft): Promise<void> {
+  await appData.addIncome(draft)
+  closeQuickAdd()
+  showToast('已新增收入')
+}
+
+onBeforeUnmount(() => {
+  if (toastTimeout) {
+    clearTimeout(toastTimeout)
+  }
+})
 </script>
 
 <template>
@@ -73,14 +107,9 @@ function addIncome(draft: IncomeDraft): void {
         :detail="`儲蓄目標 ${formatCurrency(appData.currentCycle.value?.saving_target ?? 0, appData.currency.value)}`"
         :tone="appData.remainingBudget.value >= 0 ? 'good' : 'warn'"
       />
-      <MetricCard
-        label="儲蓄進度"
-        :value="formatPercent(appData.savingProgress.value)"
-        detail="按支出後剩餘金額計算"
-      />
     </section>
 
-    <div class="grid gap-6 xl:grid-cols-[1fr_420px]">
+    <div class="grid gap-6 xl:grid-cols-[1fr_320px]">
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <div>
@@ -115,15 +144,22 @@ function addIncome(draft: IncomeDraft): void {
         <EmptyState v-else class="mt-4" title="尚未有分類" message="先建立支出分類，之後就可以設定分類預算。" />
       </section>
 
-      <TransactionForm
-        :expense-categories="appData.activeExpenseCategories.value"
-        :income-categories="appData.activeIncomeCategories.value"
-        :fx-rate-map="appData.fxRateMap.value"
-        :latest-fx-date="appData.latestFxDate.value"
-        compact
-        @create-expense="addExpense"
-        @create-income="addIncome"
-      />
+      <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+        <div class="flex h-full flex-col justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-stone-950">快速記一筆</h2>
+            <p class="mt-1 text-sm text-stone-500">用彈出視窗快速新增支出或收入。</p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
+            @click="openQuickAdd"
+          >
+            <CirclePlus class="size-4" aria-hidden="true" />
+            新增交易
+          </button>
+        </div>
+      </section>
     </div>
 
     <section>
@@ -139,5 +175,45 @@ function addIncome(draft: IncomeDraft): void {
       />
       <EmptyState v-else title="還沒有交易紀錄" message="用右側快速記一筆，先把第一筆支出或收入記下來。" />
     </section>
+
+    <div
+      v-if="isQuickAddOpen"
+      class="fixed inset-0 z-40 grid place-items-center bg-stone-950/40 px-4 py-8 backdrop-blur-sm"
+      @click.self="closeQuickAdd"
+    >
+      <div class="w-full max-w-4xl rounded-md bg-[#f9f6ef] p-4 shadow-xl">
+        <div class="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-semibold text-stone-950">快速記一筆</h2>
+            <p class="mt-1 text-sm text-stone-500">新增後會立即寫入帳目，並自動換算成港幣。</p>
+          </div>
+          <button
+            type="button"
+            class="rounded-md border border-stone-200 bg-white p-2 text-stone-600 transition hover:bg-stone-50"
+            @click="closeQuickAdd"
+          >
+            <X class="size-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        <TransactionForm
+          :expense-categories="appData.activeExpenseCategories.value"
+          :income-categories="appData.activeIncomeCategories.value"
+          :fx-rate-map="appData.fxRateMap.value"
+          :latest-fx-date="appData.latestFxDate.value"
+          @create-expense="addExpense"
+          @create-income="addIncome"
+        />
+      </div>
+    </div>
+
+    <div
+      v-if="toastMessage"
+      class="fixed bottom-4 right-4 z-50 rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-900 shadow-lg"
+      role="status"
+      aria-live="polite"
+    >
+      {{ toastMessage }}
+    </div>
   </div>
 </template>
