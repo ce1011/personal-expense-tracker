@@ -7,32 +7,45 @@ import MetricCard from '@/components/common/MetricCard.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
+import { buildCategoryProgressRows } from '@/lib/categoryProgress'
+import { startOfLocalDay } from '@/lib/date'
 import { formatCurrency, withHash } from '@/lib/formatters'
 import type { ExpenseDraft, IncomeDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const isQuickAddOpen = shallowRef(false)
 const toastMessage = shallowRef('')
+const budgetProgressMode = shallowRef<'today' | 'cycle'>('today')
 let toastTimeout: ReturnType<typeof setTimeout> | undefined
 
-const targetRows = computed(() => {
-  const cycle = appData.currentCycle.value
-  const totals = new Map<string, number>()
+const todayExpenses = computed(() => {
+  const start = startOfLocalDay(new Date())
+  const end = start + 86_400_000
+  return appData.data.value.expenses.filter((expense) => expense.date >= start && expense.date < end)
+})
 
-  for (const expense of appData.cycleExpenses.value) {
-    totals.set(expense.category_id, (totals.get(expense.category_id) ?? 0) + expense.amount)
+const cycleDays = computed(() => {
+  const window = appData.currentWindow.value
+
+  if (!window) {
+    return 1
   }
 
-  return appData.activeExpenseCategories.value.map((category) => {
-    const target =
-      appData.data.value.targetExpenses.find(
-        (limit) => limit.cycle_id === cycle?.cycle_id && limit.category_id === category.category_id,
-      )?.amount ?? 0
-    const spent = totals.get(category.category_id) ?? 0
-    const ratio = target > 0 ? Math.min(1, spent / target) : 0
+  return Math.max(1, Math.round((window.end - window.start) / 86_400_000))
+})
 
-    return { category, target, spent, ratio }
-  })
+const targetRows = computed(() => {
+  const expenses =
+    budgetProgressMode.value === 'today' ? todayExpenses.value : appData.cycleExpenses.value
+  const targetDivisor = budgetProgressMode.value === 'today' ? cycleDays.value : 1
+
+  return buildCategoryProgressRows(
+    appData.activeExpenseCategories.value,
+    expenses,
+    appData.data.value.targetExpenses,
+    appData.currentCycle.value?.cycle_id,
+    targetDivisor,
+  )
 })
 
 function openQuickAdd(): void {
@@ -120,7 +133,27 @@ onBeforeUnmount(() => {
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-semibold text-stone-950">分類預算進度</h2>
-            <p class="text-sm text-stone-500">比較本期實際支出與分類上限。</p>
+            <p class="text-sm text-stone-500">
+              {{ budgetProgressMode === 'today' ? '比較今日支出與分類每日預算上限。' : '比較本期實際支出與分類預算上限。' }}
+            </p>
+          </div>
+          <div class="inline-flex rounded-md border border-stone-200 bg-stone-50 p-1">
+            <button
+              type="button"
+              class="rounded-md px-3 py-1.5 text-sm font-medium transition"
+              :class="budgetProgressMode === 'today' ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-500'"
+              @click="budgetProgressMode = 'today'"
+            >
+              今日
+            </button>
+            <button
+              type="button"
+              class="rounded-md px-3 py-1.5 text-sm font-medium transition"
+              :class="budgetProgressMode === 'cycle' ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-500'"
+              @click="budgetProgressMode = 'cycle'"
+            >
+              本期
+            </button>
           </div>
         </div>
 
