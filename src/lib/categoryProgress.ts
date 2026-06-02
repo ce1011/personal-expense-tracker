@@ -9,6 +9,7 @@ export interface CategoryProgressRow {
   target: number
   spent: number
   ratio: number
+  remaining: number
 }
 
 export function buildCategoryProgressRows(
@@ -41,7 +42,8 @@ export function buildCategoryProgressRows(
     const target = rawTarget > 0 ? effectiveTarget / Math.max(1, targetDivisor) : 0
     const spent = totals.get(category.category_id) ?? 0
     const ratio = target > 0 ? Math.min(1, spent / target) : 0
+    const remaining = Math.max(0, target - spent)
 
-    return { category, target, spent, ratio }
+    return { category, target, spent, ratio, remaining }
   })
 }

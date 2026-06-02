@@ -24,6 +24,13 @@ const todayExpenses = computed(() => {
   return appData.data.value.expenses.filter((expense) => expense.date >= start && expense.date < end)
 })
 
+const visibleRecentTransactions = computed(() => {
+  const endOfToday = startOfLocalDay(new Date()) + 86_400_000
+  return appData.combinedTransactions.value
+    .filter((transaction) => transaction.date < endOfToday)
+    .slice(0, 8)
+})
+
 const cycleDays = computed(() => {
   const window = appData.currentWindow.value
 
@@ -180,12 +187,17 @@ onBeforeUnmount(() => {
 
         <div v-if="targetRows.length" class="mt-4 grid gap-4">
           <div v-for="row in targetRows" :key="row.category.category_id">
-            <div class="flex items-center justify-between gap-3 text-sm">
-              <div class="flex items-center gap-2 font-semibold text-stone-900">
-                <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(row.category.color_code) }" />
-                {{ row.category.name_tc || row.category.name_en }}
+            <div class="flex items-start justify-between gap-3 text-sm">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 font-semibold text-stone-900">
+                  <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(row.category.color_code) }" />
+                  {{ row.category.name_tc || row.category.name_en }}
+                </div>
+                <p class="mt-1 text-xs text-stone-500">
+                  餘額 {{ formatCurrency(row.remaining, appData.currency.value) }}
+                </p>
               </div>
-              <span class="text-stone-500">
+              <span class="shrink-0 text-stone-500">
                 {{ formatCurrency(row.spent, appData.currency.value) }} /
                 {{ row.target ? formatCurrency(row.target, appData.currency.value) : '未設定上限' }}
               </span>
@@ -210,8 +222,8 @@ onBeforeUnmount(() => {
         <h2 class="text-lg font-semibold text-stone-950">最近交易</h2>
       </div>
       <TransactionList
-        v-if="appData.recentTransactions.value.length"
-        :items="appData.recentTransactions.value"
+        v-if="visibleRecentTransactions.length"
+        :items="visibleRecentTransactions"
         :expense-categories="appData.data.value.expenseCategories"
         :income-categories="appData.data.value.incomeCategories"
         :currency="appData.currency.value"

@@ -59,6 +59,7 @@ describe('buildCategoryProgressRows', () => {
     expect(rows[0]?.spent).toBe(200)
     expect(rows[0]?.target).toBe(500)
     expect(rows[0]?.ratio).toBe(0.4)
+    expect(rows[0]?.remaining).toBe(300)
     expect(rows[1]?.spent).toBe(0)
   })
 
@@ -79,6 +80,7 @@ describe('buildCategoryProgressRows', () => {
     const rows = buildCategoryProgressRows(categories, expenses, targetExpenses, 'cycle-1')
 
     expect(rows[1]?.ratio).toBe(1)
+    expect(rows[1]?.remaining).toBe(0)
   })
 
   test('supports dividing the remaining category budget for daily view', () => {
@@ -120,5 +122,6 @@ describe('buildCategoryProgressRows', () => {
 
     expect(rows[0]?.target).toBe(30)
     expect(rows[0]?.ratio).toBe(1)
+    expect(rows[0]?.remaining).toBe(0)
   })
 })
