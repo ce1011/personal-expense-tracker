@@ -7,54 +7,20 @@ import MetricCard from '@/components/common/MetricCard.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
-import { buildCategoryProgressRows } from '@/lib/categoryProgress'
 import { startOfLocalDay } from '@/lib/date'
-import { formatCurrency, withHash } from '@/lib/formatters'
+import { formatCurrency } from '@/lib/formatters'
 import type { ExpenseDraft, IncomeDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const isQuickAddOpen = shallowRef(false)
 const toastMessage = shallowRef('')
-const budgetProgressMode = shallowRef<'today' | 'cycle'>('today')
 let toastTimeout: ReturnType<typeof setTimeout> | undefined
-
-const todayExpenses = computed(() => {
-  const start = startOfLocalDay(new Date())
-  const end = start + 86_400_000
-  return appData.data.value.expenses.filter((expense) => expense.date >= start && expense.date < end)
-})
 
 const visibleRecentTransactions = computed(() => {
   const endOfToday = startOfLocalDay(new Date()) + 86_400_000
   return appData.combinedTransactions.value
     .filter((transaction) => transaction.date < endOfToday)
     .slice(0, 8)
-})
-
-const cycleDays = computed(() => {
-  const window = appData.currentWindow.value
-
-  if (!window) {
-    return 1
-  }
-
-  return Math.max(1, Math.round((window.end - window.start) / 86_400_000))
-})
-
-const targetRows = computed(() => {
-  const expenses =
-    budgetProgressMode.value === 'today' ? todayExpenses.value : appData.cycleExpenses.value
-  const targetDivisor = budgetProgressMode.value === 'today' ? cycleDays.value : 1
-
-  return buildCategoryProgressRows(
-    appData.activeExpenseCategories.value,
-    expenses,
-    appData.data.value.targetExpenses,
-    appData.currentCycle.value?.cycle_id,
-    targetDivisor,
-    appData.cycleExpenses.value,
-    budgetProgressMode.value === 'today',
-  )
 })
 
 function openQuickAdd(): void {
@@ -155,67 +121,6 @@ onBeforeUnmount(() => {
         :tone="appData.averageDailyBudgetUntilIncome.value >= 0 ? 'good' : 'warn'"
       />
     </section>
-
-    <div class="grid gap-6">
-      <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-stone-950">分類預算進度</h2>
-            <p class="text-sm text-stone-500">
-              {{ budgetProgressMode === 'today' ? '比較今日支出與分類每日剩餘預算上限。' : '比較本期實際支出與分類預算上限。' }}
-            </p>
-          </div>
-          <div class="inline-flex rounded-md border border-stone-200 bg-stone-50 p-1">
-            <button
-              type="button"
-              class="rounded-md px-3 py-1.5 text-sm font-medium transition"
-              :class="budgetProgressMode === 'today' ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-500'"
-              @click="budgetProgressMode = 'today'"
-            >
-              今日
-            </button>
-            <button
-              type="button"
-              class="rounded-md px-3 py-1.5 text-sm font-medium transition"
-              :class="budgetProgressMode === 'cycle' ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-500'"
-              @click="budgetProgressMode = 'cycle'"
-            >
-              本期
-            </button>
-          </div>
-        </div>
-
-        <div v-if="targetRows.length" class="mt-4 grid gap-4">
-          <div v-for="row in targetRows" :key="row.category.category_id">
-            <div class="flex items-start justify-between gap-3 text-sm">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 font-semibold text-stone-900">
-                  <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(row.category.color_code) }" />
-                  {{ row.category.name_tc || row.category.name_en }}
-                </div>
-                <p class="mt-1 text-xs text-stone-500">
-                  餘額 {{ formatCurrency(row.remaining, appData.currency.value) }}
-                </p>
-              </div>
-              <span class="shrink-0 text-stone-500">
-                {{ formatCurrency(row.spent, appData.currency.value) }} /
-                {{ row.target ? formatCurrency(row.target, appData.currency.value) : '未設定上限' }}
-              </span>
-            </div>
-            <div class="mt-2 h-2 overflow-hidden rounded-full bg-stone-100">
-              <div
-                class="h-full rounded-full"
-                :style="{
-                  width: `${row.target ? row.ratio * 100 : 0}%`,
-                  backgroundColor: withHash(row.category.color_code),
-                }"
-              />
-            </div>
-          </div>
-        </div>
-        <EmptyState v-else class="mt-4" title="尚未有分類" message="先建立支出分類，之後就可以設定分類預算。" />
-      </section>
-    </div>
 
     <section>
       <div class="mb-3 flex items-center justify-between">

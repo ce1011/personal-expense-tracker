@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import BudgetsView from '@/views/BudgetsView.vue'
+import CategoryBudgetView from '@/views/CategoryBudgetView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import SettingsView from '@/views/SettingsView.vue'
@@ -12,6 +13,7 @@ const router = createRouter({
     { path: '/', name: 'dashboard', component: DashboardView },
     { path: '/transactions', name: 'transactions', component: TransactionsView },
     { path: '/budgets', name: 'budgets', component: BudgetsView },
+    { path: '/category-budget', name: 'category-budget', component: CategoryBudgetView },
     { path: '/categories', name: 'categories', component: CategoriesView },
     { path: '/settings', name: 'settings', component: SettingsView },
   ],
