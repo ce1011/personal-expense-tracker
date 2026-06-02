@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { ArrowDownLeft, ArrowUpRight, PencilLine, Trash2 } from 'lucide-vue-next'
 
 import { formatCurrency, formatDate, withHash } from '@/lib/formatters'
+import { savingCategories } from '@/lib/savingCategories'
 import type { CombinedTransaction, ExpenseCategory, IncomeCategory } from '@/types/app-data'
 
 const props = defineProps<{
@@ -19,7 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const categoryById = computed(() => {
-  const entries = [...props.expenseCategories, ...props.incomeCategories].map((category) => [
+  const entries = [...props.expenseCategories, ...props.incomeCategories, ...savingCategories].map((category) => [
     category.category_id,
     category,
   ] as const)
@@ -39,7 +40,8 @@ const categoryById = computed(() => {
         :style="{ backgroundColor: withHash(categoryById.get(item.category_id)?.color_code ?? 'd6d0c4') }"
       >
         <ArrowUpRight v-if="item.kind === 'expense'" class="size-4 text-white" aria-hidden="true" />
-        <ArrowDownLeft v-else class="size-4 text-white" aria-hidden="true" />
+        <ArrowDownLeft v-else-if="item.kind === 'income'" class="size-4 text-white" aria-hidden="true" />
+        <ArrowUpRight v-else class="size-4 text-white" aria-hidden="true" />
       </div>
       <div class="min-w-0">
         <p class="truncate text-sm font-semibold text-stone-950">{{ item.name }}</p>
@@ -52,9 +54,9 @@ const categoryById = computed(() => {
       </div>
       <p
         class="text-right text-sm font-semibold"
-        :class="item.kind === 'expense' ? 'text-stone-950' : 'text-emerald-800'"
+        :class="item.kind === 'income' ? 'text-emerald-800' : 'text-stone-950'"
       >
-        {{ item.kind === 'expense' ? '-' : '+' }}{{ formatCurrency(item.amount, currency) }}
+        {{ item.kind === 'income' ? '+' : '-' }}{{ formatCurrency(item.amount, currency) }}
       </p>
       <div v-if="showActions" class="col-span-full flex justify-end gap-2 pt-1">
         <button

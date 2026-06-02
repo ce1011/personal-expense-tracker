@@ -5,8 +5,10 @@ import { getDaysUntilNextIncomeDay } from '@/lib/date'
 import {
   createExpense,
   createIncome,
+  createSaving,
   deleteExpense,
   deleteIncome,
+  deleteSaving,
   loadAppData,
   replaceAllData,
   saveCycle,
@@ -17,6 +19,7 @@ import {
   softDeleteIncomeCategory,
   updateExpense,
   updateIncome,
+  updateSaving,
 } from '@/services/appDataService'
 import type {
   AppDataPayload,
@@ -26,6 +29,7 @@ import type {
   CycleDraft,
   ExpenseDraft,
   IncomeDraft,
+  SavingDraft,
 } from '@/types/app-data'
 
 const emptyPayload: AppDataPayload = {
@@ -79,7 +83,10 @@ export function useAppData() {
     return window ? data.value.incomes.filter((income) => isInCycleWindow(income.date, window)) : []
   })
   const cycleExpenseTotal = computed(() =>
-    cycleExpenses.value.reduce((sum, expense) => sum + expense.amount, 0),
+    cycleExpenses.value.reduce((sum, expense) => sum + expense.amount, 0) +
+    data.value.savings
+      .filter((saving) => (currentWindow.value ? isInCycleWindow(saving.date, currentWindow.value) : false))
+      .reduce((sum, saving) => sum + saving.amount, 0),
   )
   const cycleIncomeTotal = computed(() =>
     cycleIncomes.value.reduce((sum, income) => sum + income.amount, currentCycle.value?.income ?? 0),
@@ -114,6 +121,17 @@ export function useAppData() {
         original_currency: income.original_currency,
         original_amount: income.original_amount,
         exchange_rate_hkd: income.exchange_rate_hkd,
+      })),
+      ...data.value.savings.map((saving) => ({
+        id: saving.saving_id,
+        kind: 'saving' as const,
+        category_id: saving.category_id ?? 'saving-cash',
+        name: saving.description,
+        amount: saving.amount,
+        date: saving.date,
+        original_currency: saving.original_currency,
+        original_amount: saving.original_amount,
+        exchange_rate_hkd: saving.exchange_rate_hkd,
       })),
     ].sort((a, b) => b.date - a.date),
   )
@@ -168,12 +186,16 @@ export function useAppData() {
     refresh,
     addExpense: (draft: ExpenseDraft) => withRefresh(() => createExpense(draft)),
     addIncome: (draft: IncomeDraft) => withRefresh(() => createIncome(draft)),
+    addSaving: (draft: SavingDraft) => withRefresh(() => createSaving(draft)),
     updateExpense: (transactionId: string, draft: ExpenseDraft) =>
       withRefresh(() => updateExpense(transactionId, draft)),
     updateIncome: (transactionId: string, draft: IncomeDraft) =>
       withRefresh(() => updateIncome(transactionId, draft)),
+    updateSaving: (transactionId: string, draft: SavingDraft) =>
+      withRefresh(() => updateSaving(transactionId, draft)),
     deleteExpense: (transactionId: string) => withRefresh(() => deleteExpense(transactionId)),
     deleteIncome: (transactionId: string) => withRefresh(() => deleteIncome(transactionId)),
+    deleteSaving: (transactionId: string) => withRefresh(() => deleteSaving(transactionId)),
     saveCycle: (draft: CycleDraft, cycleId?: string) => withRefresh(() => saveCycle(draft, cycleId)),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>
       withRefresh(() => saveTargetLimit(cycleId, categoryId, amount)),

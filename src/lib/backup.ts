@@ -87,6 +87,13 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireNumber(saving, 'amount', `savings[${index}]`, errors)
     requireNumber(saving, 'date', `savings[${index}]`, errors)
     requireString(saving, 'description', `savings[${index}]`, errors)
+    requireOptionalString(saving, 'category_id', `savings[${index}]`, errors)
+    requireOptionalNumber(saving, 'create_date', `savings[${index}]`, errors)
+    requireOptionalNumber(saving, 'edit_date', `savings[${index}]`, errors)
+    requireOptionalBoolean(saving, 'synced', `savings[${index}]`, errors)
+    requireOptionalString(saving, 'original_currency', `savings[${index}]`, errors)
+    requireOptionalNumber(saving, 'original_amount', `savings[${index}]`, errors)
+    requireOptionalNumber(saving, 'exchange_rate_hkd', `savings[${index}]`, errors)
   })
 
   payload.settings.forEach((setting, index) => {
@@ -157,6 +164,28 @@ function requireNumber(value: unknown, key: string, path: string, errors: string
 
 function requireBoolean(value: unknown, key: string, path: string, errors: string[]): void {
   if (!isRecord(value) || typeof value[key] !== 'boolean') {
+    errors.push(`${path}.${key} must be a boolean`)
+  }
+}
+
+function requireOptionalString(value: unknown, key: string, path: string, errors: string[]): void {
+  if (isRecord(value) && value[key] !== undefined && typeof value[key] !== 'string') {
+    errors.push(`${path}.${key} must be a string`)
+  }
+}
+
+function requireOptionalNumber(value: unknown, key: string, path: string, errors: string[]): void {
+  if (
+    isRecord(value) &&
+    value[key] !== undefined &&
+    (typeof value[key] !== 'number' || !Number.isFinite(value[key]))
+  ) {
+    errors.push(`${path}.${key} must be a number`)
+  }
+}
+
+function requireOptionalBoolean(value: unknown, key: string, path: string, errors: string[]): void {
+  if (isRecord(value) && value[key] !== undefined && typeof value[key] !== 'boolean') {
     errors.push(`${path}.${key} must be a boolean`)
   }
 }

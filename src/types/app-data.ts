@@ -76,9 +76,16 @@ export interface TargetExpenseLimit {
 
 export interface SavingRecord {
   saving_id: string
+  category_id?: string
   amount: number
   date: number
   description: string
+  create_date?: number
+  edit_date?: number
+  synced?: boolean
+  original_currency?: SupportedCurrency
+  original_amount?: number
+  exchange_rate_hkd?: number
 }
 
 export interface AppSetting {
@@ -97,7 +104,7 @@ export interface FxRateRecord {
   fetched_at: number
 }
 
-export type TransactionKind = 'expense' | 'income'
+export type TransactionKind = 'expense' | 'income' | 'saving'
 
 export interface CombinedTransaction {
   id: string
@@ -121,6 +128,15 @@ export interface ExpenseDraft {
 }
 
 export interface IncomeDraft {
+  category_id: string
+  name: string
+  amount: number
+  date: number
+  currency_code: SupportedCurrency
+  exchange_rate_hkd: number
+}
+
+export interface SavingDraft {
   category_id: string
   name: string
   amount: number

@@ -9,7 +9,7 @@ import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
 import { startOfLocalDay } from '@/lib/date'
 import { formatCurrency } from '@/lib/formatters'
-import type { ExpenseDraft, IncomeDraft } from '@/types/app-data'
+import type { ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const isQuickAddOpen = shallowRef(false)
@@ -55,6 +55,12 @@ async function addIncome(draft: IncomeDraft): Promise<void> {
   showToast('已新增收入')
 }
 
+async function addSaving(draft: SavingDraft): Promise<void> {
+  await appData.addSaving(draft)
+  closeQuickAdd()
+  showToast('已新增儲蓄')
+}
+
 onBeforeUnmount(() => {
   if (toastTimeout) {
     clearTimeout(toastTimeout)
@@ -82,7 +88,7 @@ onBeforeUnmount(() => {
         <div class="flex h-full flex-col justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold text-stone-950">快速記一筆</h2>
-            <p class="mt-1 text-sm text-stone-500">用彈出視窗快速新增支出或收入。</p>
+            <p class="mt-1 text-sm text-stone-500">用彈出視窗快速新增支出、收入或儲蓄。</p>
           </div>
           <button
             type="button"
@@ -106,7 +112,7 @@ onBeforeUnmount(() => {
       <MetricCard
         label="支出"
         :value="formatCurrency(appData.cycleExpenseTotal.value, appData.currency.value)"
-        :detail="`本期 ${appData.cycleExpenses.value.length} 筆支出`"
+        :detail="`本期 ${appData.cycleExpenses.value.length} 筆支出，另加儲蓄轉出`"
       />
       <MetricCard
         label="結餘"
@@ -133,7 +139,7 @@ onBeforeUnmount(() => {
         :income-categories="appData.data.value.incomeCategories"
         :currency="appData.currency.value"
       />
-      <EmptyState v-else title="還沒有交易紀錄" message="用右側快速記一筆，先把第一筆支出或收入記下來。" />
+      <EmptyState v-else title="還沒有交易紀錄" message="用右側快速記一筆，先把第一筆支出、收入或儲蓄記下來。" />
     </section>
 
     <div
@@ -163,6 +169,7 @@ onBeforeUnmount(() => {
           :latest-fx-date="appData.latestFxDate.value"
           @create-expense="addExpense"
           @create-income="addIncome"
+          @create-saving="addSaving"
         />
       </div>
     </div>

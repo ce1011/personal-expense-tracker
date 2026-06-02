@@ -18,7 +18,21 @@ const validPayload: AppDataPayload = {
   expenses: [],
   incomes: [],
   targetExpenses: [],
-  savings: [],
+  savings: [
+    {
+      saving_id: 'saving-1',
+      category_id: 'saving-cash',
+      amount: 5000,
+      date: 1780272000000,
+      description: '緊急基金',
+      create_date: 1780272000000,
+      edit_date: 1780272000000,
+      synced: false,
+      original_currency: 'HKD',
+      original_amount: 5000,
+      exchange_rate_hkd: 1,
+    },
+  ],
   settings: [],
 }
 

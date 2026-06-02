@@ -3,13 +3,17 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 const {
   mockExpenseUpdate,
   mockIncomeUpdate,
+  mockSavingUpdate,
   mockExpenseDelete,
   mockIncomeDelete,
+  mockSavingDelete,
 } = vi.hoisted(() => ({
   mockExpenseUpdate: vi.fn(),
   mockIncomeUpdate: vi.fn(),
+  mockSavingUpdate: vi.fn(),
   mockExpenseDelete: vi.fn(),
   mockIncomeDelete: vi.fn(),
+  mockSavingDelete: vi.fn(),
 }))
 
 vi.mock('@/db/database', () => ({
@@ -22,6 +26,10 @@ vi.mock('@/db/database', () => ({
       update: mockIncomeUpdate,
       delete: mockIncomeDelete,
     },
+    savings: {
+      update: mockSavingUpdate,
+      delete: mockSavingDelete,
+    },
   },
   createInitialPayload: vi.fn(),
 }))
@@ -29,8 +37,10 @@ vi.mock('@/db/database', () => ({
 import {
   deleteExpense,
   deleteIncome,
+  deleteSaving,
   updateExpense,
   updateIncome,
+  updateSaving,
 } from './appDataService'
 
 describe('appDataService transaction updates', () => {
@@ -39,8 +49,10 @@ describe('appDataService transaction updates', () => {
     vi.setSystemTime(new Date('2026-05-31T08:15:00.000Z'))
     mockExpenseUpdate.mockReset()
     mockIncomeUpdate.mockReset()
+    mockSavingUpdate.mockReset()
     mockExpenseDelete.mockReset()
     mockIncomeDelete.mockReset()
+    mockSavingDelete.mockReset()
   })
 
   test('updates an expense in HKD while preserving original currency reference fields', async () => {
@@ -92,8 +104,33 @@ describe('appDataService transaction updates', () => {
   test('deletes expense and income transactions by id', async () => {
     await deleteExpense('expense-1')
     await deleteIncome('income-1')
+    await deleteSaving('saving-1')
 
     expect(mockExpenseDelete).toHaveBeenCalledWith('expense-1')
     expect(mockIncomeDelete).toHaveBeenCalledWith('income-1')
+    expect(mockSavingDelete).toHaveBeenCalledWith('saving-1')
+  })
+
+  test('updates a saving in HKD while preserving original currency reference fields', async () => {
+    await updateSaving('saving-1', {
+      category_id: 'saving-stocks',
+      name: 'VOO',
+      amount: 200,
+      date: 1780185600000,
+      currency_code: 'USD',
+      exchange_rate_hkd: 7.8,
+    })
+
+    expect(mockSavingUpdate).toHaveBeenCalledWith('saving-1', {
+      category_id: 'saving-stocks',
+      description: 'VOO',
+      amount: 1560,
+      date: 1780185600000,
+      edit_date: Date.now(),
+      synced: false,
+      original_currency: 'USD',
+      original_amount: 200,
+      exchange_rate_hkd: 7.8,
+    })
   })
 })

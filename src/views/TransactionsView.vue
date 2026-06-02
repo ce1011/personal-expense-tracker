@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { computed, reactive, shallowRef } from 'vue'
+import { computed, nextTick, reactive, shallowRef } from 'vue'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
 import { fromDateInputValue, toDateInputValue } from '@/lib/date'
-import type { CombinedTransaction, ExpenseDraft, IncomeDraft } from '@/types/app-data'
+import { savingCategories } from '@/lib/savingCategories'
+import type { CombinedTransaction, ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const search = shallowRef('')
 const selectedTransaction = shallowRef<CombinedTransaction | undefined>()
 const filters = reactive({
-  kind: 'all' as 'all' | 'expense' | 'income',
+  kind: 'all' as 'all' | 'expense' | 'income' | 'saving',
   categoryId: 'all',
   datePreset: 'all' as 'all' | 'today' | 'cycle' | 'future',
   fromDate: '',
@@ -34,9 +35,14 @@ const availableCategories = computed(() => {
     return appData.activeIncomeCategories.value
   }
 
+  if (filters.kind === 'saving') {
+    return savingCategories
+  }
+
   return [
     ...appData.activeExpenseCategories.value.map((category) => ({ ...category, kind: 'expense' as const })),
     ...appData.activeIncomeCategories.value.map((category) => ({ ...category, kind: 'income' as const })),
+    ...savingCategories.map((category) => ({ ...category, kind: 'saving' as const })),
   ]
 })
 
@@ -95,8 +101,15 @@ function addIncome(draft: IncomeDraft): void {
   void appData.addIncome(draft)
 }
 
+function addSaving(draft: SavingDraft): void {
+  void appData.addSaving(draft)
+}
+
 function startEditing(transaction: CombinedTransaction): void {
   selectedTransaction.value = transaction
+  void nextTick(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  })
 }
 
 function cancelEditing(): void {
@@ -111,6 +124,10 @@ function updateIncome(transactionId: string, draft: IncomeDraft): void {
   void appData.updateIncome(transactionId, draft).then(cancelEditing)
 }
 
+function updateSaving(transactionId: string, draft: SavingDraft): void {
+  void appData.updateSaving(transactionId, draft).then(cancelEditing)
+}
+
 function deleteTransaction(transaction: CombinedTransaction): void {
   const confirmed = globalThis.confirm?.(`確定要刪除「${transaction.name}」嗎？`) ?? true
 
@@ -121,7 +138,9 @@ function deleteTransaction(transaction: CombinedTransaction): void {
   const action =
     transaction.kind === 'expense'
       ? appData.deleteExpense(transaction.id)
-      : appData.deleteIncome(transaction.id)
+      : transaction.kind === 'income'
+        ? appData.deleteIncome(transaction.id)
+        : appData.deleteSaving(transaction.id)
 
   void action.then(() => {
     if (selectedTransaction.value?.id === transaction.id) {
@@ -164,6 +183,7 @@ function resetFilters(): void {
       :transaction="selectedTransaction"
       @update-expense="updateExpense"
       @update-income="updateIncome"
+      @update-saving="updateSaving"
       @delete-transaction="deleteSelectedTransaction"
       @cancel-edit="cancelEditing"
     />
@@ -176,6 +196,7 @@ function resetFilters(): void {
       :latest-fx-date="appData.latestFxDate.value"
       @create-expense="addExpense"
       @create-income="addIncome"
+      @create-saving="addSaving"
     />
 
     <section class="grid gap-3">
@@ -191,6 +212,7 @@ function resetFilters(): void {
             <option value="all">全部</option>
             <option value="expense">支出</option>
             <option value="income">收入</option>
+            <option value="saving">儲蓄</option>
           </select>
         </label>
 

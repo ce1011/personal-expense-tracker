@@ -18,6 +18,8 @@ import type {
   IncomeCategory,
   IncomeDraft,
   IncomeTransaction,
+  SavingDraft,
+  SavingRecord,
   SupportedCurrency,
   TargetExpenseLimit,
 } from '@/types/app-data'
@@ -160,6 +162,25 @@ export async function createIncome(draft: IncomeDraft): Promise<void> {
   await db.incomes.add(transaction)
 }
 
+export async function createSaving(draft: SavingDraft): Promise<void> {
+  const now = Date.now()
+  const record: SavingRecord = {
+    saving_id: makeId('saving'),
+    category_id: draft.category_id,
+    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
+    date: draft.date,
+    description: draft.name.trim(),
+    create_date: now,
+    edit_date: now,
+    synced: false,
+    original_currency: draft.currency_code,
+    original_amount: draft.amount,
+    exchange_rate_hkd: draft.exchange_rate_hkd,
+  }
+
+  await db.savings.add(record)
+}
+
 export async function updateExpense(transactionId: string, draft: ExpenseDraft): Promise<void> {
   await db.expenses.update(transactionId, {
     category_id: draft.category_id,
@@ -188,12 +209,30 @@ export async function updateIncome(transactionId: string, draft: IncomeDraft): P
   })
 }
 
+export async function updateSaving(transactionId: string, draft: SavingDraft): Promise<void> {
+  await db.savings.update(transactionId, {
+    category_id: draft.category_id,
+    description: draft.name.trim(),
+    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
+    date: draft.date,
+    edit_date: Date.now(),
+    synced: false,
+    original_currency: draft.currency_code,
+    original_amount: draft.amount,
+    exchange_rate_hkd: draft.exchange_rate_hkd,
+  })
+}
+
 export async function deleteExpense(transactionId: string): Promise<void> {
   await db.expenses.delete(transactionId)
 }
 
 export async function deleteIncome(transactionId: string): Promise<void> {
   await db.incomes.delete(transactionId)
+}
+
+export async function deleteSaving(transactionId: string): Promise<void> {
+  await db.savings.delete(transactionId)
 }
 
 export async function saveCycle(draft: CycleDraft, cycleId?: string): Promise<void> {

@@ -5,15 +5,18 @@ import { CirclePlus, PencilLine, Trash2 } from 'lucide-vue-next'
 import { fromDateInputValue, toDateInputValue } from '@/lib/date'
 import { convertToHkd } from '@/lib/fx'
 import { formatCurrency } from '@/lib/formatters'
+import { savingCategories } from '@/lib/savingCategories'
 import type {
   CombinedTransaction,
   ExpenseCategory,
   ExpenseDraft,
   IncomeCategory,
   IncomeDraft,
+  SavingDraft,
   SupportedCurrency,
   TransactionKind,
 } from '@/types/app-data'
+import type { SavingCategoryOption } from '@/lib/savingCategories'
 
 const props = defineProps<{
   expenseCategories: readonly ExpenseCategory[]
@@ -27,8 +30,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   createExpense: [draft: ExpenseDraft]
   createIncome: [draft: IncomeDraft]
+  createSaving: [draft: SavingDraft]
   updateExpense: [transactionId: string, draft: ExpenseDraft]
   updateIncome: [transactionId: string, draft: IncomeDraft]
+  updateSaving: [transactionId: string, draft: SavingDraft]
   deleteTransaction: []
   cancelEdit: []
 }>()
@@ -44,8 +49,12 @@ const form = reactive({
 
 const supportedCurrencies: SupportedCurrency[] = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB']
 const isEditing = computed(() => Boolean(props.transaction))
-const categories = computed(() =>
-  form.kind === 'expense' ? props.expenseCategories : props.incomeCategories,
+const categories = computed<readonly (ExpenseCategory | IncomeCategory | SavingCategoryOption)[]>(() =>
+  form.kind === 'expense'
+    ? props.expenseCategories
+    : form.kind === 'income'
+      ? props.incomeCategories
+      : savingCategories,
 )
 const selectedRate = computed(() => props.fxRateMap.get(form.currency_code) ?? 0)
 const convertedAmount = computed(() =>
@@ -107,11 +116,17 @@ function submitForm(): void {
     } else {
       emit('createExpense', draft)
     }
-  } else {
+  } else if (form.kind === 'income') {
     if (props.transaction) {
       emit('updateIncome', props.transaction.id, draft)
     } else {
       emit('createIncome', draft)
+    }
+  } else {
+    if (props.transaction) {
+      emit('updateSaving', props.transaction.id, draft)
+    } else {
+      emit('createSaving', draft)
     }
   }
 
@@ -151,7 +166,7 @@ function removeTransaction(): void {
           {{ isEditing ? '修改交易' : compact ? '快速記一筆' : '新增交易' }}
         </p>
         <p class="text-xs text-stone-500">
-          {{ isEditing ? '修改後會覆蓋原有紀錄，交易類型會保持不變。' : '輸入原幣金額後會自動換算成港幣入帳。' }}
+          {{ isEditing ? '修改後會覆蓋原有紀錄，交易類型會保持不變。' : '支出、收入與儲蓄都會先按原幣輸入，再自動換算成港幣入帳。' }}
         </p>
       </div>
       <CirclePlus v-if="!isEditing" class="size-5 text-emerald-800" aria-hidden="true" />
@@ -163,12 +178,13 @@ function removeTransaction(): void {
         <span>類型</span>
         <template v-if="isEditing">
           <div class="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-stone-700">
-            {{ form.kind === 'expense' ? '支出' : '收入' }}
+            {{ form.kind === 'expense' ? '支出' : form.kind === 'income' ? '收入' : '儲蓄' }}
           </div>
         </template>
         <select v-else v-model="form.kind" class="rounded-md border border-stone-300 bg-white px-3 py-2">
           <option value="expense">支出</option>
           <option value="income">收入</option>
+          <option value="saving">儲蓄</option>
         </select>
       </div>
 
@@ -183,7 +199,11 @@ function removeTransaction(): void {
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         名稱
-        <input v-model.trim="form.name" class="rounded-md border border-stone-300 px-3 py-2" placeholder="例如：午餐、MTR、薪金" />
+        <input
+          v-model.trim="form.name"
+          class="rounded-md border border-stone-300 px-3 py-2"
+          placeholder="例如：午餐、MTR、薪金、買股票"
+        />
       </label>
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
