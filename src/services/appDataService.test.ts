@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const {
+  mockDbTransaction,
+  mockExpenseAdd,
+  mockIncomeAdd,
+  mockSavingAdd,
   mockExpenseUpdate,
   mockIncomeUpdate,
   mockSavingUpdate,
@@ -8,6 +12,10 @@ const {
   mockIncomeDelete,
   mockSavingDelete,
 } = vi.hoisted(() => ({
+  mockDbTransaction: vi.fn(async (_mode: string, _tables: unknown[], callback: () => Promise<void>) => callback()),
+  mockExpenseAdd: vi.fn(),
+  mockIncomeAdd: vi.fn(),
+  mockSavingAdd: vi.fn(),
   mockExpenseUpdate: vi.fn(),
   mockIncomeUpdate: vi.fn(),
   mockSavingUpdate: vi.fn(),
@@ -18,15 +26,19 @@ const {
 
 vi.mock('@/db/database', () => ({
   db: {
+    transaction: mockDbTransaction,
     expenses: {
+      add: mockExpenseAdd,
       update: mockExpenseUpdate,
       delete: mockExpenseDelete,
     },
     incomes: {
+      add: mockIncomeAdd,
       update: mockIncomeUpdate,
       delete: mockIncomeDelete,
     },
     savings: {
+      add: mockSavingAdd,
       update: mockSavingUpdate,
       delete: mockSavingDelete,
     },
@@ -38,6 +50,7 @@ import {
   deleteExpense,
   deleteIncome,
   deleteSaving,
+  importTransactions,
   updateExpense,
   updateIncome,
   updateSaving,
@@ -47,6 +60,10 @@ describe('appDataService transaction updates', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-31T08:15:00.000Z'))
+    mockDbTransaction.mockClear()
+    mockExpenseAdd.mockReset()
+    mockIncomeAdd.mockReset()
+    mockSavingAdd.mockReset()
     mockExpenseUpdate.mockReset()
     mockIncomeUpdate.mockReset()
     mockSavingUpdate.mockReset()
@@ -109,6 +126,70 @@ describe('appDataService transaction updates', () => {
     expect(mockExpenseDelete).toHaveBeenCalledWith('expense-1')
     expect(mockIncomeDelete).toHaveBeenCalledWith('income-1')
     expect(mockSavingDelete).toHaveBeenCalledWith('saving-1')
+  })
+
+  test('imports mixed transaction types in one db transaction', async () => {
+    await importTransactions([
+      {
+        type: 'expense',
+        category_id: 'expense-food',
+        name: '午餐',
+        amount: 50,
+        date: 1780185600000,
+        currency_code: 'HKD',
+        exchange_rate_hkd: 1,
+      },
+      {
+        type: 'income',
+        category_id: 'income-salary',
+        name: '薪金',
+        amount: 1000,
+        date: 1780185600000,
+        currency_code: 'CNY',
+        exchange_rate_hkd: 1.08,
+      },
+      {
+        type: 'saving',
+        category_id: 'saving-stocks',
+        name: 'VOO',
+        amount: 200,
+        date: 1780185600000,
+        currency_code: 'USD',
+        exchange_rate_hkd: 7.8,
+      },
+    ])
+
+    expect(mockDbTransaction).toHaveBeenCalledTimes(1)
+    expect(mockExpenseAdd).toHaveBeenCalledTimes(1)
+    expect(mockIncomeAdd).toHaveBeenCalledTimes(1)
+    expect(mockSavingAdd).toHaveBeenCalledTimes(1)
+    expect(mockExpenseAdd.mock.calls[0]?.[0]).toMatchObject({
+      category_id: 'expense-food',
+      name: '午餐',
+      amount: 50,
+      date: 1780185600000,
+      original_currency: 'HKD',
+      original_amount: 50,
+      exchange_rate_hkd: 1,
+    })
+    expect(mockIncomeAdd.mock.calls[0]?.[0]).toMatchObject({
+      category_id: 'income-salary',
+      name: '薪金',
+      amount: 1080,
+      date: 1780185600000,
+      original_currency: 'CNY',
+      original_amount: 1000,
+      exchange_rate_hkd: 1.08,
+    })
+    expect(mockSavingAdd.mock.calls[0]?.[0]).toMatchObject({
+      category_id: 'saving-stocks',
+      description: 'VOO',
+      amount: 1560,
+      date: 1780185600000,
+      original_currency: 'USD',
+      original_amount: 200,
+      exchange_rate_hkd: 7.8,
+    })
   })
 
   test('updates a saving in HKD while preserving original currency reference fields', async () => {

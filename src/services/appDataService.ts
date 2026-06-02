@@ -6,6 +6,7 @@ import {
   parseHkdFxApiResponse,
   shouldRefreshFxRates,
 } from '@/lib/fx'
+import type { ImportTransactionRecord } from '@/lib/transactionImport'
 import type {
   AppDataPayload,
   BudgetCycle,
@@ -179,6 +180,62 @@ export async function createSaving(draft: SavingDraft): Promise<void> {
   }
 
   await db.savings.add(record)
+}
+
+export async function importTransactions(records: readonly ImportTransactionRecord[]): Promise<void> {
+  const now = Date.now()
+
+  await db.transaction('rw', [db.expenses, db.incomes, db.savings], async () => {
+    for (const record of records) {
+      if (record.type === 'expense') {
+        await db.expenses.add({
+          transaction_id: makeId('expense'),
+          category_id: record.category_id,
+          name: record.name.trim(),
+          amount: convertToHkd(record.amount, record.exchange_rate_hkd),
+          date: record.date,
+          create_date: now,
+          edit_date: now,
+          synced: false,
+          original_currency: record.currency_code,
+          original_amount: record.amount,
+          exchange_rate_hkd: record.exchange_rate_hkd,
+        })
+        continue
+      }
+
+      if (record.type === 'income') {
+        await db.incomes.add({
+          transaction_id: makeId('income'),
+          category_id: record.category_id,
+          name: record.name.trim(),
+          amount: convertToHkd(record.amount, record.exchange_rate_hkd),
+          date: record.date,
+          create_date: now,
+          edit_date: now,
+          synced: false,
+          original_currency: record.currency_code,
+          original_amount: record.amount,
+          exchange_rate_hkd: record.exchange_rate_hkd,
+        })
+        continue
+      }
+
+      await db.savings.add({
+        saving_id: makeId('saving'),
+        category_id: record.category_id,
+        amount: convertToHkd(record.amount, record.exchange_rate_hkd),
+        date: record.date,
+        description: record.name.trim(),
+        create_date: now,
+        edit_date: now,
+        synced: false,
+        original_currency: record.currency_code,
+        original_amount: record.amount,
+        exchange_rate_hkd: record.exchange_rate_hkd,
+      })
+    }
+  })
 }
 
 export async function updateExpense(transactionId: string, draft: ExpenseDraft): Promise<void> {

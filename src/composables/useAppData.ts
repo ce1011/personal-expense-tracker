@@ -9,6 +9,7 @@ import {
   deleteExpense,
   deleteIncome,
   deleteSaving,
+  importTransactions,
   loadAppData,
   replaceAllData,
   saveCycle,
@@ -21,6 +22,7 @@ import {
   updateIncome,
   updateSaving,
 } from '@/services/appDataService'
+import type { ImportTransactionRecord } from '@/lib/transactionImport'
 import type {
   AppDataPayload,
   BudgetCycle,
@@ -187,6 +189,8 @@ export function useAppData() {
     addExpense: (draft: ExpenseDraft) => withRefresh(() => createExpense(draft)),
     addIncome: (draft: IncomeDraft) => withRefresh(() => createIncome(draft)),
     addSaving: (draft: SavingDraft) => withRefresh(() => createSaving(draft)),
+    importTransactions: (records: readonly ImportTransactionRecord[]) =>
+      withRefresh(() => importTransactions(records)),
     updateExpense: (transactionId: string, draft: ExpenseDraft) =>
       withRefresh(() => updateExpense(transactionId, draft)),
     updateIncome: (transactionId: string, draft: IncomeDraft) =>

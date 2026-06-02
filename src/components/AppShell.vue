@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArchiveRestore, ChartNoAxesCombined, ChartPie, FolderKanban, LayoutDashboard, ListChecks } from 'lucide-vue-next'
+import { ArchiveRestore, Braces, ChartNoAxesCombined, ChartPie, FolderKanban, LayoutDashboard, ListChecks } from 'lucide-vue-next'
 
 import { getCycleWindow } from '@/lib/budgetCycle'
 import type { BudgetCycle } from '@/types/app-data'
@@ -15,6 +15,7 @@ const props = defineProps<{
 const navItems = [
   { label: '總覽', to: '/', icon: LayoutDashboard },
   { label: '交易', to: '/transactions', icon: ListChecks },
+  { label: 'JSON 匯入', to: '/import-transactions', icon: Braces },
   { label: '預算週期', to: '/budgets', icon: ChartNoAxesCombined },
   { label: '分類預算', to: '/category-budget', icon: ChartPie },
   { label: '分類', to: '/categories', icon: FolderKanban },
