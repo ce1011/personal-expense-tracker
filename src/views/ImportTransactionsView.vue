@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, shallowRef, useTemplateRef } from 'vue'
-import { Braces, CheckCircle2, CircleAlert, Upload } from 'lucide-vue-next'
+import { Braces, CheckCircle2, CircleAlert, Copy, Upload } from 'lucide-vue-next'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useAppData } from '@/composables/useAppData'
+import { buildAiImportPrompt } from '@/lib/aiImportPrompt'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import {
   parseTransactionImportJson,
@@ -18,6 +19,7 @@ const importErrors = shallowRef<string[]>([])
 const previewTransactions = shallowRef<ImportTransactionRecord[]>([])
 const previewSummary = shallowRef<ImportPreviewSummary>()
 const statusMessage = shallowRef('')
+const promptStatus = shallowRef('')
 const isImporting = shallowRef(false)
 const previewSection = useTemplateRef<HTMLElement>('previewSection')
 const resultSection = useTemplateRef<HTMLElement>('resultSection')
@@ -89,6 +91,14 @@ const amountSummary = computed(() => {
   return groups
 })
 
+const aiPrompt = computed(() =>
+  buildAiImportPrompt({
+    expenseCategories: appData.activeExpenseCategories.value,
+    incomeCategories: appData.activeIncomeCategories.value,
+    savingCategories,
+  }),
+)
+
 async function validatePreview(): Promise<void> {
   statusMessage.value = ''
 
@@ -140,6 +150,22 @@ function loadExample(): void {
   previewSummary.value = undefined
 }
 
+async function copyAiPrompt(): Promise<void> {
+  promptStatus.value = ''
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(aiPrompt.value)
+    } else {
+      copyTextFallback(aiPrompt.value)
+    }
+
+    promptStatus.value = 'AI Prompt 已複製，可直接貼到 AI 對話中配合圖片使用。'
+  } catch {
+    promptStatus.value = '複製失敗，請稍後再試。'
+  }
+}
+
 function scrollToResult(): void {
   const target = importErrors.value.length > 0 ? resultSection.value : previewSection.value
   target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -156,6 +182,18 @@ function typeLabel(type: ImportTransactionRecord['type']): string {
 
   return '儲蓄'
 }
+
+function copyTextFallback(text: string): void {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', 'true')
+  textarea.style.position = 'absolute'
+  textarea.style.left = '-9999px'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
+}
 </script>
 
 <template>
@@ -169,14 +207,24 @@ function typeLabel(type: ImportTransactionRecord['type']): string {
         </p>
       </div>
 
-      <button
-        type="button"
-        class="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-        @click="loadExample"
-      >
-        <Braces class="size-4" aria-hidden="true" />
-        載入範例 JSON
-      </button>
+      <div class="flex flex-wrap gap-3">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+          @click="copyAiPrompt"
+        >
+          <Copy class="size-4" aria-hidden="true" />
+          複製 AI Prompt
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+          @click="loadExample"
+        >
+          <Braces class="size-4" aria-hidden="true" />
+          載入範例 JSON
+        </button>
+      </div>
     </section>
 
     <section class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
@@ -221,6 +269,9 @@ function typeLabel(type: ImportTransactionRecord['type']): string {
       <div class="grid gap-6">
         <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
           <h2 class="text-lg font-semibold text-stone-950">格式說明</h2>
+          <p class="mt-1 text-sm text-stone-500">
+            可先複製上方 AI Prompt，連同圖片交給 AI 產生批量匯入 JSON，再貼回這個頁面驗證。
+          </p>
           <ul class="mt-3 space-y-2 text-sm text-stone-600">
             <li><span class="font-semibold text-stone-900">type</span>: `expense` / `income` / `saving`</li>
             <li><span class="font-semibold text-stone-900">date</span>: 毫秒 Unix timestamp</li>
@@ -335,6 +386,13 @@ function typeLabel(type: ImportTransactionRecord['type']): string {
         </section>
       </div>
     </section>
+
+    <p
+      v-if="promptStatus"
+      class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 shadow-sm"
+    >
+      {{ promptStatus }}
+    </p>
 
     <section
       v-if="importErrors.length"
