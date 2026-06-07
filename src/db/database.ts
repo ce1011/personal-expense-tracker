@@ -12,6 +12,7 @@ import type {
   IncomeTransaction,
   SavingRecord,
   TargetExpenseLimit,
+  TripSession,
 } from '@/types/app-data'
 
 export class ExpenseTrackerDatabase extends Dexie {
@@ -24,20 +25,22 @@ export class ExpenseTrackerDatabase extends Dexie {
   savings!: Table<SavingRecord, string>
   settings!: Table<AppSetting, string>
   fxRates!: Table<FxRateRecord, string>
+  trips!: Table<TripSession, string>
 
   constructor() {
     super('personal-expense-tracker')
 
-    this.version(2).stores({
+    this.version(3).stores({
       cycles: 'cycle_id, cycle_code',
       expenseCategories: 'category_id, name_en, deleted',
       incomeCategories: 'category_id, name_en, deleted',
-      expenses: 'transaction_id, category_id, date',
-      incomes: 'transaction_id, category_id, date',
+      expenses: 'transaction_id, category_id, date, trip_id',
+      incomes: 'transaction_id, category_id, date, trip_id',
       targetExpenses: 'target_expense_id, cycle_id, category_id, [cycle_id+category_id]',
-      savings: 'saving_id, date',
+      savings: 'saving_id, date, trip_id',
       settings: 'setting_id, name',
       fxRates: 'rate_id, currency_code, source_date, fetched_at',
+      trips: 'trip_id, status, start_date, end_date, updated_at',
     })
   }
 }
@@ -83,6 +86,7 @@ export function createInitialPayload(now = new Date()): AppDataPayload {
         parameter: 'HKD',
       },
     ],
+    trips: [],
     fxRates: [],
   }
 }

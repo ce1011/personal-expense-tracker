@@ -9,6 +9,7 @@ import {
 import type { ImportTransactionRecord } from '@/lib/transactionImport'
 import type {
   AppDataPayload,
+  AppSetting,
   BudgetCycle,
   CategoryDraft,
   CycleDraft,
@@ -23,10 +24,25 @@ import type {
   SavingRecord,
   SupportedCurrency,
   TargetExpenseLimit,
+  TripDraft,
+  TripSession,
 } from '@/types/app-data'
 
 const FX_API_URL =
   'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/hkd.json'
+const ACTIVE_TRIP_SETTING_ID = 'setting-active-trip-id'
+const ACTIVE_TRIP_SETTING_NAME = 'active_trip_id'
+type ImportTransactionRecordWithTrip = ImportTransactionRecord & { trip_id?: string }
+type TripSaveMetadata = {
+  trip_id: string
+  created_at: number
+}
+type TripLinkedPersistenceInput = {
+  amount: number
+  currency_code: SupportedCurrency
+  exchange_rate_hkd: number
+  trip_id?: string
+}
 
 export async function ensureSeedData(): Promise<void> {
   const cycleCount = await db.cycles.count()
@@ -51,6 +67,7 @@ export async function loadAppData(): Promise<AppDataPayload> {
     targetExpenses,
     savings,
     settings,
+    trips,
     fxRates,
   ] = await Promise.all([
     db.cycles.toArray(),
@@ -61,6 +78,7 @@ export async function loadAppData(): Promise<AppDataPayload> {
     db.targetExpenses.toArray(),
     db.savings.toArray(),
     db.settings.toArray(),
+    db.trips.toArray(),
     db.fxRates.toArray(),
   ])
 
@@ -73,6 +91,7 @@ export async function loadAppData(): Promise<AppDataPayload> {
     targetExpenses,
     savings: savings.sort((a, b) => b.date - a.date),
     settings,
+    trips: trips.sort((a, b) => b.updated_at - a.updated_at),
     fxRates: fxRates.sort((a, b) => a.currency_code.localeCompare(b.currency_code)),
   }
 }
@@ -95,6 +114,7 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
       db.targetExpenses,
       db.savings,
       db.settings,
+      db.trips,
       db.fxRates,
     ],
     async () => {
@@ -107,6 +127,7 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
         db.targetExpenses.clear(),
         db.savings.clear(),
         db.settings.clear(),
+        db.trips.clear(),
         db.fxRates.clear(),
       ])
 
@@ -119,6 +140,7 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
         db.targetExpenses.bulkPut(payload.targetExpenses),
         db.savings.bulkPut(payload.savings),
         db.settings.bulkPut(payload.settings),
+        db.trips.bulkPut(payload.trips ?? []),
         db.fxRates.bulkPut(payload.fxRates ?? []),
       ])
     },
@@ -127,18 +149,15 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
 
 export async function createExpense(draft: ExpenseDraft): Promise<void> {
   const now = Date.now()
+  const persistedFields = await buildTripLinkedPersistenceFields(draft)
   const transaction: ExpenseTransaction = {
     transaction_id: makeId('expense'),
     category_id: draft.category_id,
     name: draft.name.trim(),
-    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
     date: draft.date,
     create_date: now,
     edit_date: now,
-    synced: false,
-    original_currency: draft.currency_code,
-    original_amount: draft.amount,
-    exchange_rate_hkd: draft.exchange_rate_hkd,
+    ...persistedFields,
   }
 
   await db.expenses.add(transaction)
@@ -146,18 +165,15 @@ export async function createExpense(draft: ExpenseDraft): Promise<void> {
 
 export async function createIncome(draft: IncomeDraft): Promise<void> {
   const now = Date.now()
+  const persistedFields = await buildTripLinkedPersistenceFields(draft)
   const transaction: IncomeTransaction = {
     transaction_id: makeId('income'),
     category_id: draft.category_id,
     name: draft.name.trim(),
-    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
     date: draft.date,
     create_date: now,
     edit_date: now,
-    synced: false,
-    original_currency: draft.currency_code,
-    original_amount: draft.amount,
-    exchange_rate_hkd: draft.exchange_rate_hkd,
+    ...persistedFields,
   }
 
   await db.incomes.add(transaction)
@@ -165,41 +181,36 @@ export async function createIncome(draft: IncomeDraft): Promise<void> {
 
 export async function createSaving(draft: SavingDraft): Promise<void> {
   const now = Date.now()
+  const persistedFields = await buildTripLinkedPersistenceFields(draft)
   const record: SavingRecord = {
     saving_id: makeId('saving'),
     category_id: draft.category_id,
-    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
     date: draft.date,
     description: draft.name.trim(),
     create_date: now,
     edit_date: now,
-    synced: false,
-    original_currency: draft.currency_code,
-    original_amount: draft.amount,
-    exchange_rate_hkd: draft.exchange_rate_hkd,
+    ...persistedFields,
   }
 
   await db.savings.add(record)
 }
 
-export async function importTransactions(records: readonly ImportTransactionRecord[]): Promise<void> {
+export async function importTransactions(records: readonly ImportTransactionRecordWithTrip[]): Promise<void> {
   const now = Date.now()
 
   await db.transaction('rw', [db.expenses, db.incomes, db.savings], async () => {
     for (const record of records) {
+      const persistedFields = await buildTripLinkedPersistenceFields(record)
+
       if (record.type === 'expense') {
         await db.expenses.add({
           transaction_id: makeId('expense'),
           category_id: record.category_id,
           name: record.name.trim(),
-          amount: convertToHkd(record.amount, record.exchange_rate_hkd),
           date: record.date,
           create_date: now,
           edit_date: now,
-          synced: false,
-          original_currency: record.currency_code,
-          original_amount: record.amount,
-          exchange_rate_hkd: record.exchange_rate_hkd,
+          ...persistedFields,
         })
         continue
       }
@@ -209,14 +220,10 @@ export async function importTransactions(records: readonly ImportTransactionReco
           transaction_id: makeId('income'),
           category_id: record.category_id,
           name: record.name.trim(),
-          amount: convertToHkd(record.amount, record.exchange_rate_hkd),
           date: record.date,
           create_date: now,
           edit_date: now,
-          synced: false,
-          original_currency: record.currency_code,
-          original_amount: record.amount,
-          exchange_rate_hkd: record.exchange_rate_hkd,
+          ...persistedFields,
         })
         continue
       }
@@ -224,59 +231,49 @@ export async function importTransactions(records: readonly ImportTransactionReco
       await db.savings.add({
         saving_id: makeId('saving'),
         category_id: record.category_id,
-        amount: convertToHkd(record.amount, record.exchange_rate_hkd),
         date: record.date,
         description: record.name.trim(),
         create_date: now,
         edit_date: now,
-        synced: false,
-        original_currency: record.currency_code,
-        original_amount: record.amount,
-        exchange_rate_hkd: record.exchange_rate_hkd,
+        ...persistedFields,
       })
     }
   })
 }
 
 export async function updateExpense(transactionId: string, draft: ExpenseDraft): Promise<void> {
+  const persistedFields = await buildTripLinkedPersistenceFields(draft)
+
   await db.expenses.update(transactionId, {
     category_id: draft.category_id,
     name: draft.name.trim(),
-    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
     date: draft.date,
     edit_date: Date.now(),
-    synced: false,
-    original_currency: draft.currency_code,
-    original_amount: draft.amount,
-    exchange_rate_hkd: draft.exchange_rate_hkd,
+    ...persistedFields,
   })
 }
 
 export async function updateIncome(transactionId: string, draft: IncomeDraft): Promise<void> {
+  const persistedFields = await buildTripLinkedPersistenceFields(draft)
+
   await db.incomes.update(transactionId, {
     category_id: draft.category_id,
     name: draft.name.trim(),
-    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
     date: draft.date,
     edit_date: Date.now(),
-    synced: false,
-    original_currency: draft.currency_code,
-    original_amount: draft.amount,
-    exchange_rate_hkd: draft.exchange_rate_hkd,
+    ...persistedFields,
   })
 }
 
 export async function updateSaving(transactionId: string, draft: SavingDraft): Promise<void> {
+  const persistedFields = await buildTripLinkedPersistenceFields(draft)
+
   await db.savings.update(transactionId, {
     category_id: draft.category_id,
     description: draft.name.trim(),
-    amount: convertToHkd(draft.amount, draft.exchange_rate_hkd),
     date: draft.date,
     edit_date: Date.now(),
-    synced: false,
-    original_currency: draft.currency_code,
-    original_amount: draft.amount,
-    exchange_rate_hkd: draft.exchange_rate_hkd,
+    ...persistedFields,
   })
 }
 
@@ -290,6 +287,56 @@ export async function deleteIncome(transactionId: string): Promise<void> {
 
 export async function deleteSaving(transactionId: string): Promise<void> {
   await db.savings.delete(transactionId)
+}
+
+export async function getTrips(): Promise<TripSession[]> {
+  const trips = await db.trips.toArray()
+
+  return trips.sort((a, b) => b.updated_at - a.updated_at)
+}
+
+export async function saveTrip(draft: TripDraft, existing?: Partial<TripSaveMetadata>): Promise<void> {
+  const now = Date.now()
+  const storedTrip = existing?.trip_id ? await db.trips.get(existing.trip_id) : undefined
+  const trip: TripSession = {
+    trip_id: existing?.trip_id ?? makeId('trip'),
+    name: draft.name.trim(),
+    destination: draft.destination.trim(),
+    start_date: draft.start_date,
+    end_date: draft.end_date,
+    budget_amount: draft.budget_amount,
+    budget_currency: draft.budget_currency,
+    status: draft.status,
+    notes: draft.notes.trim(),
+    created_at: existing?.created_at ?? storedTrip?.created_at ?? now,
+    updated_at: now,
+  }
+
+  await db.trips.put(trip)
+}
+
+export async function getActiveTripId(): Promise<string | undefined> {
+  const setting = await findActiveTripSetting()
+
+  return setting?.parameter || undefined
+}
+
+export async function setActiveTripId(tripId?: string): Promise<void> {
+  await assertTripExists(tripId)
+  const existing = await findActiveTripSetting()
+
+  if (!tripId) {
+    await db.settings.delete(existing?.setting_id ?? ACTIVE_TRIP_SETTING_ID)
+    return
+  }
+
+  const setting: AppSetting = {
+    setting_id: existing?.setting_id ?? ACTIVE_TRIP_SETTING_ID,
+    name: ACTIVE_TRIP_SETTING_NAME,
+    parameter: tripId,
+  }
+
+  await db.settings.put(setting)
 }
 
 export async function saveCycle(draft: CycleDraft, cycleId?: string): Promise<void> {
@@ -400,4 +447,35 @@ async function saveFxRates(
     }))
 
   await db.fxRates.bulkPut(records)
+}
+
+async function findActiveTripSetting(): Promise<AppSetting | undefined> {
+  return db.settings.where('name').equals(ACTIVE_TRIP_SETTING_NAME).first()
+}
+
+async function buildTripLinkedPersistenceFields(
+  input: TripLinkedPersistenceInput,
+): Promise<Pick<ExpenseTransaction, 'amount' | 'synced' | 'trip_id' | 'original_currency' | 'original_amount' | 'exchange_rate_hkd'>> {
+  await assertTripExists(input.trip_id)
+
+  return {
+    amount: convertToHkd(input.amount, input.exchange_rate_hkd),
+    synced: false,
+    trip_id: input.trip_id,
+    original_currency: input.currency_code,
+    original_amount: input.amount,
+    exchange_rate_hkd: input.exchange_rate_hkd,
+  }
+}
+
+async function assertTripExists(tripId?: string): Promise<void> {
+  if (!tripId) {
+    return
+  }
+
+  const trip = await db.trips.get(tripId)
+
+  if (!trip) {
+    throw new Error(`Unknown trip_id: ${tripId}`)
+  }
 }
