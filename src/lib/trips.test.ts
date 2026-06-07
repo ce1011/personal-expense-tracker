@@ -3,8 +3,10 @@ import { describe, expect, test } from 'vitest'
 import type { CombinedTransaction, TripSession } from '@/types/app-data'
 import {
   filterTransactionsByTrip,
+  getTripDailyBreakdown,
   getTripDayBuckets,
   getTripRemainingBudget,
+  getTripSpentTotal,
 } from './trips'
 
 const day1 = Date.UTC(2026, 5, 10, 0, 0, 0, 0)
@@ -72,6 +74,12 @@ describe('filterTransactionsByTrip', () => {
       'income-1',
       'saving-1',
     ])
+  })
+
+  test('returns an empty list when no trip is active', () => {
+    const result = filterTransactionsByTrip(tripTransactions)
+
+    expect(result).toEqual([])
   })
 })
 
@@ -147,5 +155,40 @@ describe('getTripRemainingBudget', () => {
     )
 
     expect(result).toBe(910)
+  })
+})
+
+describe('getTripSpentTotal', () => {
+  test('totals only non-income trip spend', () => {
+    const result = getTripSpentTotal(filterTransactionsByTrip(tripTransactions, trip.trip_id))
+
+    expect(result).toBe(170)
+  })
+})
+
+describe('getTripDailyBreakdown', () => {
+  test('returns per-day trip spend totals alongside the bucketed transactions', () => {
+    const result = getTripDailyBreakdown(trip, filterTransactionsByTrip(tripTransactions, trip.trip_id))
+
+    expect(result).toEqual([
+      {
+        date: day1,
+        total: 120,
+        count: 1,
+        transactions: [tripTransactions[0]],
+      },
+      {
+        date: day2,
+        total: 0,
+        count: 0,
+        transactions: [],
+      },
+      {
+        date: day3,
+        total: 50,
+        count: 2,
+        transactions: [tripTransactions[1], tripTransactions[2]],
+      },
+    ])
   })
 })

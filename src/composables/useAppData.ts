@@ -3,6 +3,12 @@ import { computed, readonly, shallowRef } from 'vue'
 import { getCycleWindow, isInCycleWindow } from '@/lib/budgetCycle'
 import { getDaysUntilNextIncomeDay } from '@/lib/date'
 import {
+  filterTransactionsByTrip,
+  getTripDailyBreakdown,
+  getTripRemainingBudget,
+  getTripSpentTotal,
+} from '@/lib/trips'
+import {
   createExpense,
   createIncome,
   createSaving,
@@ -15,6 +21,8 @@ import {
   saveCycle,
   saveExpenseCategory,
   saveIncomeCategory,
+  saveTrip,
+  setActiveTripId,
   saveTargetLimit,
   softDeleteExpenseCategory,
   softDeleteIncomeCategory,
@@ -32,6 +40,8 @@ import type {
   ExpenseDraft,
   IncomeDraft,
   SavingDraft,
+  TripDraft,
+  TripSession,
 } from '@/types/app-data'
 
 const emptyPayload: AppDataPayload = {
@@ -43,6 +53,7 @@ const emptyPayload: AppDataPayload = {
   targetExpenses: [],
   savings: [],
   settings: [],
+  trips: [],
   fxRates: [],
 }
 
@@ -109,6 +120,7 @@ export function useAppData() {
         name: expense.name,
         amount: expense.amount,
         date: expense.date,
+        trip_id: expense.trip_id,
         original_currency: expense.original_currency,
         original_amount: expense.original_amount,
         exchange_rate_hkd: expense.exchange_rate_hkd,
@@ -120,6 +132,7 @@ export function useAppData() {
         name: income.name,
         amount: income.amount,
         date: income.date,
+        trip_id: income.trip_id,
         original_currency: income.original_currency,
         original_amount: income.original_amount,
         exchange_rate_hkd: income.exchange_rate_hkd,
@@ -131,6 +144,7 @@ export function useAppData() {
         name: saving.description,
         amount: saving.amount,
         date: saving.date,
+        trip_id: saving.trip_id,
         original_currency: saving.original_currency,
         original_amount: saving.original_amount,
         exchange_rate_hkd: saving.exchange_rate_hkd,
@@ -138,13 +152,52 @@ export function useAppData() {
     ].sort((a, b) => b.date - a.date),
   )
   const recentTransactions = computed(() => combinedTransactions.value.slice(0, 8))
+  const trips = computed(() =>
+    [...(data.value.trips ?? [])].sort((left, right) => left.start_date - right.start_date),
+  )
+  const activeTripId = computed(() => {
+    const tripId = data.value.settings.find((setting) => setting.name === 'active_trip_id')?.parameter
+
+    if (!tripId) {
+      return ''
+    }
+
+    return trips.value.some((trip) => trip.trip_id === tripId) ? tripId : ''
+  })
+  const activeTrip = computed(() =>
+    trips.value.find((trip) => trip.trip_id === activeTripId.value),
+  )
+  const tripTransactions = computed(() =>
+    filterTransactionsByTrip(combinedTransactions.value, activeTripId.value || undefined),
+  )
+  const tripExpenses = computed(() =>
+    tripTransactions.value.filter((transaction) => transaction.kind === 'expense'),
+  )
+  const tripIncomes = computed(() =>
+    tripTransactions.value.filter((transaction) => transaction.kind === 'income'),
+  )
+  const tripSavings = computed(() =>
+    tripTransactions.value.filter((transaction) => transaction.kind === 'saving'),
+  )
+  const unassignedTransactions = computed(() =>
+    combinedTransactions.value.filter((transaction) => !transaction.trip_id),
+  )
+  const tripSpentTotal = computed(() => getTripSpentTotal(tripTransactions.value))
+  const tripRemainingBudget = computed(() =>
+    activeTrip.value ? getTripRemainingBudget(activeTrip.value.budget_amount, tripTransactions.value) : 0,
+  )
+  const tripDailyBreakdown = computed(() =>
+    activeTrip.value ? getTripDailyBreakdown(activeTrip.value, tripTransactions.value) : [],
+  )
 
   async function refresh(): Promise<void> {
     loading.value = true
     error.value = ''
 
     try {
-      data.value = await loadAppData()
+      const loaded = await loadAppData()
+
+      data.value = await normalizeActiveTripSetting(loaded)
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Unable to load app data'
     } finally {
@@ -162,6 +215,32 @@ export function useAppData() {
       error.value = caught instanceof Error ? caught.message : 'Unable to save changes'
       throw caught
     }
+  }
+
+  async function normalizeActiveTripSetting(payload: AppDataPayload): Promise<AppDataPayload> {
+    const activeTripSetting = payload.settings.find((setting) => setting.name === 'active_trip_id')
+
+    if (!activeTripSetting?.parameter) {
+      return payload
+    }
+
+    const payloadTrips = payload.trips ?? []
+    if (payloadTrips.some((trip) => trip.trip_id === activeTripSetting.parameter)) {
+      return payload
+    }
+
+    await setActiveTripId()
+    return loadAppData()
+  }
+
+  function requireTrip(tripId: string): TripSession {
+    const trip = trips.value.find((entry) => entry.trip_id === tripId)
+
+    if (!trip) {
+      throw new Error(`Unknown trip_id: ${tripId}`)
+    }
+
+    return trip
   }
 
   return {
@@ -185,10 +264,56 @@ export function useAppData() {
     averageDailyBudgetUntilIncome,
     combinedTransactions,
     recentTransactions,
+    trips,
+    activeTripId,
+    activeTrip,
+    tripTransactions,
+    tripExpenses,
+    tripIncomes,
+    tripSavings,
+    unassignedTransactions,
+    tripSpentTotal,
+    tripRemainingBudget,
+    tripDailyBreakdown,
     refresh,
     addExpense: (draft: ExpenseDraft) => withRefresh(() => createExpense(draft)),
     addIncome: (draft: IncomeDraft) => withRefresh(() => createIncome(draft)),
     addSaving: (draft: SavingDraft) => withRefresh(() => createSaving(draft)),
+    addTrip: (draft: TripDraft) => withRefresh(() => saveTrip(draft)),
+    updateTrip: (tripId: string, draft: TripDraft) => {
+      const trip = requireTrip(tripId)
+
+      return withRefresh(() =>
+        saveTrip(draft, {
+          trip_id: trip.trip_id,
+          created_at: trip.created_at,
+        }),
+      )
+    },
+    completeTrip: (tripId: string) => {
+      const trip = requireTrip(tripId)
+
+      return withRefresh(() =>
+        saveTrip(
+          {
+            name: trip.name,
+            destination: trip.destination,
+            start_date: trip.start_date,
+            end_date: trip.end_date,
+            budget_amount: trip.budget_amount,
+            budget_currency: trip.budget_currency,
+            status: 'completed',
+            notes: trip.notes,
+          },
+          {
+            trip_id: trip.trip_id,
+            created_at: trip.created_at,
+          },
+        ),
+      )
+    },
+    setActiveTrip: (tripId?: string) => withRefresh(() => setActiveTripId(tripId)),
+    clearActiveTrip: () => withRefresh(() => setActiveTripId()),
     importTransactions: (records: readonly ImportTransactionRecord[]) =>
       withRefresh(() => importTransactions(records)),
     updateExpense: (transactionId: string, draft: ExpenseDraft) =>

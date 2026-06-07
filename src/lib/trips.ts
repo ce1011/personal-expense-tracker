@@ -5,11 +5,20 @@ export interface TripDayBucket<TTransaction> {
   transactions: TTransaction[]
 }
 
+export interface TripDailyBreakdown<TTransaction> extends TripDayBucket<TTransaction> {
+  total: number
+  count: number
+}
+
 export function filterTransactionsByTrip<
   TTransaction extends {
     trip_id?: string
   },
->(transactions: readonly TTransaction[], tripId: string): TTransaction[] {
+>(transactions: readonly TTransaction[], tripId?: string): TTransaction[] {
+  if (!tripId) {
+    return []
+  }
+
   return transactions.filter((transaction) => transaction.trip_id === tripId)
 }
 
@@ -60,6 +69,29 @@ export function getTripRemainingBudget(
 
     return remaining - transaction.amount
   }, budget)
+}
+
+export function getTripSpentTotal(
+  transactions: readonly Pick<CombinedTransaction, 'kind' | 'amount'>[],
+): number {
+  return transactions.reduce((sum, transaction) => {
+    if (transaction.kind === 'income') {
+      return sum
+    }
+
+    return sum + transaction.amount
+  }, 0)
+}
+
+export function getTripDailyBreakdown<TTransaction extends CombinedTransaction>(
+  trip: Pick<TripSession, 'start_date' | 'end_date'>,
+  transactions: readonly TTransaction[],
+): TripDailyBreakdown<TTransaction>[] {
+  return getTripDayBuckets(trip, transactions).map((bucket) => ({
+    ...bucket,
+    total: getTripSpentTotal(bucket.transactions),
+    count: bucket.transactions.length,
+  }))
 }
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000
