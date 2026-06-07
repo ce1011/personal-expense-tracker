@@ -52,4 +52,137 @@ describe('validateAppDataPayload', () => {
     expect(result.ok).toBe(false)
     expect(result.errors).toContain('settings must be an array')
   })
+
+  test('accepts payloads with trips', () => {
+    const payload: AppDataPayload = {
+      ...validPayload,
+      trips: [
+        {
+          trip_id: 'trip-tokyo',
+          name: 'Tokyo',
+          destination: 'Tokyo, Japan',
+          start_date: 1780272000000,
+          end_date: 1780444799999,
+          budget_amount: 12000,
+          budget_currency: 'HKD',
+          status: 'active',
+          notes: 'Spring trip',
+          created_at: 1779000000000,
+          updated_at: 1779086400000,
+        },
+      ],
+    }
+
+    const result = validateAppDataPayload(payload)
+
+    expect(result.ok).toBe(true)
+  })
+
+  test('accepts legacy payloads with no trips array', () => {
+    const result = validateAppDataPayload(validPayload)
+
+    expect(result.ok).toBe(true)
+  })
+
+  test('rejects trips with an invalid status', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      trips: [
+        {
+          trip_id: 'trip-1',
+          name: 'Tokyo',
+          destination: 'Tokyo, Japan',
+          start_date: 1780272000000,
+          end_date: 1780444799999,
+          budget_amount: 12000,
+          budget_currency: 'HKD',
+          status: 'paused',
+          notes: 'Spring trip',
+          created_at: 1779000000000,
+          updated_at: 1779086400000,
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('trips[0].status must be one of planned, active, completed')
+  })
+
+  test('rejects trips with an invalid budget currency', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      trips: [
+        {
+          trip_id: 'trip-1',
+          name: 'Tokyo',
+          destination: 'Tokyo, Japan',
+          start_date: 1780272000000,
+          end_date: 1780444799999,
+          budget_amount: 12000,
+          budget_currency: 'EUR',
+          status: 'active',
+          notes: 'Spring trip',
+          created_at: 1779000000000,
+          updated_at: 1779086400000,
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('trips[0].budget_currency must be one of HKD, USD, CNY, JPY, TWD, THB')
+  })
+
+  test('rejects expenses with an invalid original currency value', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      expenses: [
+        {
+          transaction_id: 'expense-1',
+          category_id: 'food',
+          name: 'Lunch',
+          amount: 100,
+          date: 1780272000000,
+          create_date: 1780272000000,
+          edit_date: 1780272000000,
+          synced: false,
+          original_currency: 'EUR',
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('expenses[0].original_currency must be one of HKD, USD, CNY, JPY, TWD, THB')
+  })
+
+  test('rejects incomes with a non-string original currency type', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      incomes: [
+        {
+          transaction_id: 'income-1',
+          category_id: 'salary',
+          name: 'Bonus',
+          amount: 500,
+          date: 1780272000000,
+          create_date: 1780272000000,
+          edit_date: 1780272000000,
+          synced: false,
+          original_currency: 123,
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('incomes[0].original_currency must be one of HKD, USD, CNY, JPY, TWD, THB')
+  })
+
+  test('rejects malformed fxRates when present but not an array', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      fxRates: null,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('fxRates must be an array')
+  })
 })

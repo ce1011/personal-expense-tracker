@@ -62,6 +62,11 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireNumber(transaction, 'create_date', `expenses[${index}]`, errors)
     requireNumber(transaction, 'edit_date', `expenses[${index}]`, errors)
     requireBoolean(transaction, 'synced', `expenses[${index}]`, errors)
+    requireOptionalString(transaction, 'reminder_parameter', `expenses[${index}]`, errors)
+    requireOptionalString(transaction, 'trip_id', `expenses[${index}]`, errors)
+    requireOptionalSupportedCurrency(transaction, 'original_currency', `expenses[${index}]`, errors)
+    requireOptionalNumber(transaction, 'original_amount', `expenses[${index}]`, errors)
+    requireOptionalNumber(transaction, 'exchange_rate_hkd', `expenses[${index}]`, errors)
   })
 
   payload.incomes.forEach((transaction, index) => {
@@ -73,6 +78,10 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireNumber(transaction, 'create_date', `incomes[${index}]`, errors)
     requireNumber(transaction, 'edit_date', `incomes[${index}]`, errors)
     requireBoolean(transaction, 'synced', `incomes[${index}]`, errors)
+    requireOptionalString(transaction, 'trip_id', `incomes[${index}]`, errors)
+    requireOptionalSupportedCurrency(transaction, 'original_currency', `incomes[${index}]`, errors)
+    requireOptionalNumber(transaction, 'original_amount', `incomes[${index}]`, errors)
+    requireOptionalNumber(transaction, 'exchange_rate_hkd', `incomes[${index}]`, errors)
   })
 
   payload.targetExpenses.forEach((target, index) => {
@@ -91,7 +100,8 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireOptionalNumber(saving, 'create_date', `savings[${index}]`, errors)
     requireOptionalNumber(saving, 'edit_date', `savings[${index}]`, errors)
     requireOptionalBoolean(saving, 'synced', `savings[${index}]`, errors)
-    requireOptionalString(saving, 'original_currency', `savings[${index}]`, errors)
+    requireOptionalString(saving, 'trip_id', `savings[${index}]`, errors)
+    requireOptionalSupportedCurrency(saving, 'original_currency', `savings[${index}]`, errors)
     requireOptionalNumber(saving, 'original_amount', `savings[${index}]`, errors)
     requireOptionalNumber(saving, 'exchange_rate_hkd', `savings[${index}]`, errors)
   })
@@ -102,13 +112,33 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireString(setting, 'parameter', `settings[${index}]`, errors)
   })
 
-  if (payload.fxRates) {
+  if (payload.trips !== undefined) {
+    if (!Array.isArray(payload.trips)) {
+      errors.push('trips must be an array')
+    } else {
+      payload.trips.forEach((trip, index) => {
+        requireString(trip, 'trip_id', `trips[${index}]`, errors)
+        requireString(trip, 'name', `trips[${index}]`, errors)
+        requireString(trip, 'destination', `trips[${index}]`, errors)
+        requireNumber(trip, 'start_date', `trips[${index}]`, errors)
+        requireNumber(trip, 'end_date', `trips[${index}]`, errors)
+        requireNumber(trip, 'budget_amount', `trips[${index}]`, errors)
+        requireSupportedCurrency(trip, 'budget_currency', `trips[${index}]`, errors)
+        requireTripStatus(trip, 'status', `trips[${index}]`, errors)
+        requireString(trip, 'notes', `trips[${index}]`, errors)
+        requireNumber(trip, 'created_at', `trips[${index}]`, errors)
+        requireNumber(trip, 'updated_at', `trips[${index}]`, errors)
+      })
+    }
+  }
+
+  if (payload.fxRates !== undefined) {
     if (!Array.isArray(payload.fxRates)) {
       errors.push('fxRates must be an array')
     } else {
       payload.fxRates.forEach((rate, index) => {
         requireString(rate, 'rate_id', `fxRates[${index}]`, errors)
-        requireString(rate, 'currency_code', `fxRates[${index}]`, errors)
+        requireSupportedCurrency(rate, 'currency_code', `fxRates[${index}]`, errors)
         requireNumber(rate, 'rate_to_hkd', `fxRates[${index}]`, errors)
         requireString(rate, 'source_date', `fxRates[${index}]`, errors)
         requireNumber(rate, 'fetched_at', `fxRates[${index}]`, errors)
@@ -187,5 +217,31 @@ function requireOptionalNumber(value: unknown, key: string, path: string, errors
 function requireOptionalBoolean(value: unknown, key: string, path: string, errors: string[]): void {
   if (isRecord(value) && value[key] !== undefined && typeof value[key] !== 'boolean') {
     errors.push(`${path}.${key} must be a boolean`)
+  }
+}
+
+const SUPPORTED_CURRENCIES = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB'] as const
+const TRIP_STATUSES = ['planned', 'active', 'completed'] as const
+
+function requireSupportedCurrency(value: unknown, key: string, path: string, errors: string[]): void {
+  if (!isRecord(value) || !SUPPORTED_CURRENCIES.includes(value[key] as (typeof SUPPORTED_CURRENCIES)[number])) {
+    errors.push(`${path}.${key} must be one of ${SUPPORTED_CURRENCIES.join(', ')}`)
+  }
+}
+
+function requireOptionalSupportedCurrency(
+  value: unknown,
+  key: string,
+  path: string,
+  errors: string[],
+): void {
+  if (isRecord(value) && value[key] !== undefined) {
+    requireSupportedCurrency(value, key, path, errors)
+  }
+}
+
+function requireTripStatus(value: unknown, key: string, path: string, errors: string[]): void {
+  if (!isRecord(value) || !TRIP_STATUSES.includes(value[key] as (typeof TRIP_STATUSES)[number])) {
+    errors.push(`${path}.${key} must be one of ${TRIP_STATUSES.join(', ')}`)
   }
 }

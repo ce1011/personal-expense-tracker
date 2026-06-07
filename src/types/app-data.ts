@@ -7,7 +7,24 @@ export interface AppDataPayload {
   targetExpenses: TargetExpenseLimit[]
   savings: SavingRecord[]
   settings: AppSetting[]
+  trips?: TripSession[]
   fxRates?: FxRateRecord[]
+}
+
+export type TripStatus = 'planned' | 'active' | 'completed'
+
+export interface TripSession {
+  trip_id: string
+  name: string
+  destination: string
+  start_date: number
+  end_date: number
+  budget_amount: number
+  budget_currency: SupportedCurrency
+  status: TripStatus
+  notes: string
+  created_at: number
+  updated_at: number
 }
 
 export interface BudgetCycle {
@@ -48,6 +65,7 @@ export interface ExpenseTransaction {
   edit_date: number
   synced: boolean
   reminder_parameter?: string
+  trip_id?: string
   original_currency?: SupportedCurrency
   original_amount?: number
   exchange_rate_hkd?: number
@@ -62,6 +80,7 @@ export interface IncomeTransaction {
   create_date: number
   edit_date: number
   synced: boolean
+  trip_id?: string
   original_currency?: SupportedCurrency
   original_amount?: number
   exchange_rate_hkd?: number
@@ -83,6 +102,7 @@ export interface SavingRecord {
   create_date?: number
   edit_date?: number
   synced?: boolean
+  trip_id?: string
   original_currency?: SupportedCurrency
   original_amount?: number
   exchange_rate_hkd?: number
@@ -113,6 +133,7 @@ export interface CombinedTransaction {
   name: string
   amount: number
   date: number
+  trip_id?: string
   original_currency?: SupportedCurrency
   original_amount?: number
   exchange_rate_hkd?: number
@@ -123,6 +144,7 @@ export interface ExpenseDraft {
   name: string
   amount: number
   date: number
+  trip_id?: string
   currency_code: SupportedCurrency
   exchange_rate_hkd: number
 }
@@ -132,6 +154,7 @@ export interface IncomeDraft {
   name: string
   amount: number
   date: number
+  trip_id?: string
   currency_code: SupportedCurrency
   exchange_rate_hkd: number
 }
@@ -141,8 +164,20 @@ export interface SavingDraft {
   name: string
   amount: number
   date: number
+  trip_id?: string
   currency_code: SupportedCurrency
   exchange_rate_hkd: number
+}
+
+export interface TripDraft {
+  name: string
+  destination: string
+  start_date: number
+  end_date: number
+  budget_amount: number
+  budget_currency: SupportedCurrency
+  status: TripStatus
+  notes: string
 }
 
 export interface CycleDraft {
