@@ -104,7 +104,7 @@ function getTripStatusLabel(status: TripStatus): string {
         <p class="mt-1 text-xs text-stone-500">已儲存 {{ cycles.length }} 個週期</p>
       </div>
 
-      <div class="mt-4 rounded-md border border-stone-200 bg-white p-4">
+      <div class="mt-4 rounded-md border border-stone-200 bg-white p-4 hidden">
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">旅程模式</p>
@@ -139,7 +139,7 @@ function getTripStatusLabel(status: TripStatus): string {
           </div>
           <p v-if="loading" class="text-xs font-medium text-stone-500">載入中</p>
         </div>
-        <div class="mt-3 rounded-md border border-stone-200 bg-white px-3 py-3 shadow-sm">
+        <div class="mt-3 rounded-md border border-stone-200 bg-white px-3 py-3 shadow-sm hidden">
           <div class="flex items-start justify-between gap-3">
             <div>
               <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">旅程模式</p>
