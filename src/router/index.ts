@@ -7,6 +7,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import ImportTransactionsView from '@/views/ImportTransactionsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import TransactionsView from '@/views/TransactionsView.vue'
+import TripsView from '@/views/TripsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,6 +18,7 @@ const router = createRouter({
     { path: '/budgets', name: 'budgets', component: BudgetsView },
     { path: '/category-budget', name: 'category-budget', component: CategoryBudgetView },
     { path: '/categories', name: 'categories', component: CategoriesView },
+    { path: '/trips', name: 'trips', component: TripsView },
     { path: '/settings', name: 'settings', component: SettingsView },
   ],
 })

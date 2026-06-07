@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, nextTick, reactive, shallowRef } from 'vue'
+import { computed, nextTick, reactive, shallowRef, watch } from 'vue'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
-import { fromDateInputValue, toDateInputValue } from '@/lib/date'
+import { fromDateInputValue } from '@/lib/date'
 import { savingCategories } from '@/lib/savingCategories'
 import type { CombinedTransaction, ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
@@ -13,6 +13,7 @@ const appData = useAppData()
 const search = shallowRef('')
 const selectedTransaction = shallowRef<CombinedTransaction | undefined>()
 const filters = reactive({
+  tripId: 'all',
   kind: 'all' as 'all' | 'expense' | 'income' | 'saving',
   categoryId: 'all',
   datePreset: 'all' as 'all' | 'today' | 'cycle' | 'future',
@@ -46,12 +47,28 @@ const availableCategories = computed(() => {
   ]
 })
 
+const baseTransactions = computed(() => {
+  if (filters.tripId === 'all') {
+    return appData.combinedTransactions.value
+  }
+
+  if (filters.tripId === 'unassigned') {
+    return appData.unassignedTransactions.value
+  }
+
+  if (filters.tripId === appData.activeTripId.value) {
+    return appData.tripTransactions.value
+  }
+
+  return appData.combinedTransactions.value.filter((transaction) => transaction.trip_id === filters.tripId)
+})
+
 const filteredTransactions = computed(() => {
   const query = search.value.trim().toLowerCase()
   const fromTimestamp = filters.fromDate ? fromDateInputValue(filters.fromDate) : undefined
   const toTimestamp = filters.toDate ? fromDateInputValue(filters.toDate) + 86_400_000 : undefined
 
-  return appData.combinedTransactions.value.filter((transaction) => {
+  return baseTransactions.value.filter((transaction) => {
     if (query && !transaction.name.toLowerCase().includes(query)) {
       return false
     }
@@ -92,6 +109,28 @@ const filteredTransactions = computed(() => {
     return true
   })
 })
+
+watch(
+  () => appData.activeTripId.value,
+  (activeTripId) => {
+    filters.tripId = activeTripId || 'all'
+  },
+  { immediate: true },
+)
+
+watch(
+  () => appData.trips.value,
+  (trips) => {
+    if (filters.tripId === 'all' || filters.tripId === 'unassigned') {
+      return
+    }
+
+    if (!trips.some((trip) => trip.trip_id === filters.tripId)) {
+      filters.tripId = appData.activeTripId.value || 'all'
+    }
+  },
+  { immediate: true },
+)
 
 function addExpense(draft: ExpenseDraft): void {
   void appData.addExpense(draft)
@@ -158,6 +197,7 @@ function deleteSelectedTransaction(): void {
 }
 
 function resetFilters(): void {
+  filters.tripId = appData.activeTripId.value || 'all'
   filters.kind = 'all'
   filters.categoryId = 'all'
   filters.datePreset = 'all'
@@ -178,6 +218,8 @@ function resetFilters(): void {
       :key="`edit-${selectedTransaction.id}`"
       :expense-categories="appData.activeExpenseCategories.value"
       :income-categories="appData.activeIncomeCategories.value"
+      :trip-options="appData.trips.value"
+      :default-trip-id="appData.activeTripId.value || undefined"
       :fx-rate-map="appData.fxRateMap.value"
       :latest-fx-date="appData.latestFxDate.value"
       :transaction="selectedTransaction"
@@ -192,6 +234,8 @@ function resetFilters(): void {
       key="create"
       :expense-categories="appData.activeExpenseCategories.value"
       :income-categories="appData.activeIncomeCategories.value"
+      :trip-options="appData.trips.value"
+      :default-trip-id="appData.activeTripId.value || undefined"
       :fx-rate-map="appData.fxRateMap.value"
       :latest-fx-date="appData.latestFxDate.value"
       @create-expense="addExpense"
@@ -205,7 +249,18 @@ function resetFilters(): void {
         <input v-model="search" class="rounded-md border border-stone-300 bg-white px-3 py-2" placeholder="按名稱搜尋" />
       </label>
 
-      <div class="grid gap-3 rounded-md border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-5">
+      <div class="grid gap-3 rounded-md border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-6">
+        <label class="grid gap-1 text-sm font-medium text-stone-700">
+          旅程
+          <select v-model="filters.tripId" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+            <option value="all">全部交易</option>
+            <option value="unassigned">未關聯旅程</option>
+            <option v-for="trip in appData.trips.value" :key="trip.trip_id" :value="trip.trip_id">
+              {{ trip.name }}｜{{ trip.destination }}
+            </option>
+          </select>
+        </label>
+
         <label class="grid gap-1 text-sm font-medium text-stone-700">
           類型
           <select v-model="filters.kind" class="rounded-md border border-stone-300 bg-white px-3 py-2">

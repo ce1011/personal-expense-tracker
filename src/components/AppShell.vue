@@ -1,16 +1,28 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArchiveRestore, Braces, ChartNoAxesCombined, ChartPie, FolderKanban, LayoutDashboard, ListChecks } from 'lucide-vue-next'
+import {
+  ArchiveRestore,
+  Braces,
+  ChartNoAxesCombined,
+  ChartPie,
+  FolderKanban,
+  LayoutDashboard,
+  ListChecks,
+  Plane,
+} from 'lucide-vue-next'
 
+import { useAppData } from '@/composables/useAppData'
 import { getCycleWindow } from '@/lib/budgetCycle'
-import type { BudgetCycle } from '@/types/app-data'
+import type { BudgetCycle, TripStatus } from '@/types/app-data'
 
 const props = defineProps<{
   cycles: readonly BudgetCycle[]
   currentCycle?: BudgetCycle
   loading: boolean
 }>()
+
+const appData = useAppData()
 
 const navItems = [
   { label: '總覽', to: '/', icon: LayoutDashboard },
@@ -19,6 +31,7 @@ const navItems = [
   { label: '預算週期', to: '/budgets', icon: ChartNoAxesCombined },
   { label: '分類預算', to: '/category-budget', icon: ChartPie },
   { label: '分類', to: '/categories', icon: FolderKanban },
+  { label: '旅程', to: '/trips', icon: Plane },
   { label: '設定', to: '/settings', icon: ArchiveRestore },
 ]
 
@@ -31,6 +44,35 @@ const cycleLabel = computed(() => {
     getCycleWindow(props.currentCycle.cycle_code, props.currentCycle.income_day).label
   }`
 })
+
+const tripSelectionValue = computed(() => appData.activeTripId.value || 'all')
+const tripModeLabel = computed(() => appData.activeTrip.value?.name ?? '一般模式')
+const tripSummaryLabel = computed(() => {
+  if (!appData.trips.value.length) {
+    return '尚未建立旅程'
+  }
+
+  if (!appData.activeTrip.value) {
+    return `可切換 ${appData.trips.value.length} 個旅程`
+  }
+
+  return `${appData.activeTrip.value.destination} · ${getTripStatusLabel(appData.activeTrip.value.status)}`
+})
+
+function handleTripSelection(event: Event): void {
+  const value = (event.target as HTMLSelectElement).value
+
+  if (value === 'all') {
+    void appData.clearActiveTrip()
+    return
+  }
+
+  void appData.setActiveTrip(value)
+}
+
+function getTripStatusLabel(status: TripStatus): string {
+  return status === 'planned' ? '規劃中' : status === 'active' ? '進行中' : '已完成'
+}
 </script>
 
 <template>
@@ -61,6 +103,31 @@ const cycleLabel = computed(() => {
         <p class="mt-2 text-sm font-semibold text-stone-950">{{ cycleLabel }}</p>
         <p class="mt-1 text-xs text-stone-500">已儲存 {{ cycles.length }} 個週期</p>
       </div>
+
+      <div class="mt-4 rounded-md border border-stone-200 bg-white p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">旅程模式</p>
+            <p class="mt-2 text-sm font-semibold text-stone-950">{{ tripModeLabel }}</p>
+            <p class="mt-1 text-xs text-stone-500">{{ tripSummaryLabel }}</p>
+          </div>
+          <Plane class="mt-0.5 size-4 text-emerald-800" aria-hidden="true" />
+        </div>
+
+        <label class="mt-4 grid gap-1 text-sm font-medium text-stone-700">
+          切換目前旅程
+          <select
+            :value="tripSelectionValue"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"
+            @change="handleTripSelection"
+          >
+            <option value="all">一般模式</option>
+            <option v-for="trip in appData.trips.value" :key="trip.trip_id" :value="trip.trip_id">
+              {{ trip.name }}｜{{ trip.destination }}
+            </option>
+          </select>
+        </label>
+      </div>
     </aside>
 
     <div class="xl:pl-68">
@@ -71,6 +138,29 @@ const cycleLabel = computed(() => {
             <p class="text-sm font-medium text-stone-700">{{ cycleLabel }}</p>
           </div>
           <p v-if="loading" class="text-xs font-medium text-stone-500">載入中</p>
+        </div>
+        <div class="mt-3 rounded-md border border-stone-200 bg-white px-3 py-3 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">旅程模式</p>
+              <p class="mt-1 text-sm font-semibold text-stone-950">{{ tripModeLabel }}</p>
+              <p class="mt-1 text-xs text-stone-500">{{ tripSummaryLabel }}</p>
+            </div>
+            <Plane class="mt-0.5 size-4 text-emerald-800" aria-hidden="true" />
+          </div>
+          <label class="mt-3 grid gap-1 text-sm font-medium text-stone-700">
+            切換目前旅程
+            <select
+              :value="tripSelectionValue"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm"
+              @change="handleTripSelection"
+            >
+              <option value="all">一般模式</option>
+              <option v-for="trip in appData.trips.value" :key="trip.trip_id" :value="trip.trip_id">
+                {{ trip.name }}｜{{ trip.destination }}
+              </option>
+            </select>
+          </label>
         </div>
         <nav class="mt-3 flex gap-2 overflow-x-auto pb-1">
           <RouterLink

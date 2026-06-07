@@ -15,12 +15,15 @@ import type {
   SavingDraft,
   SupportedCurrency,
   TransactionKind,
+  TripSession,
 } from '@/types/app-data'
 import type { SavingCategoryOption } from '@/lib/savingCategories'
 
 const props = defineProps<{
   expenseCategories: readonly ExpenseCategory[]
   incomeCategories: readonly IncomeCategory[]
+  tripOptions?: readonly Pick<TripSession, 'trip_id' | 'name' | 'destination'>[]
+  defaultTripId?: string
   fxRateMap: ReadonlyMap<SupportedCurrency, number>
   latestFxDate?: string
   compact?: boolean
@@ -45,10 +48,16 @@ const form = reactive({
   amount: 0,
   currency_code: 'HKD' as SupportedCurrency,
   date: toDateInputValue(Date.now()),
+  trip_id: '',
 })
 
 const supportedCurrencies: SupportedCurrency[] = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB']
 const isEditing = computed(() => Boolean(props.transaction))
+const tripOptions = computed(() => props.tripOptions ?? [])
+const availableTripIds = computed(() => new Set(tripOptions.value.map((trip) => trip.trip_id)))
+const normalizedDefaultTripId = computed(() =>
+  props.defaultTripId && availableTripIds.value.has(props.defaultTripId) ? props.defaultTripId : '',
+)
 const categories = computed<readonly (ExpenseCategory | IncomeCategory | SavingCategoryOption)[]>(() =>
   form.kind === 'expense'
     ? props.expenseCategories
@@ -68,6 +77,10 @@ const canSubmit = computed(
     selectedRate.value > 0,
 )
 
+function normalizeTripId(tripId?: string): string {
+  return tripId && availableTripIds.value.has(tripId) ? tripId : ''
+}
+
 watch(
   () => props.transaction,
   (transaction) => {
@@ -82,6 +95,21 @@ watch(
     form.amount = transaction.original_amount ?? transaction.amount
     form.currency_code = transaction.original_currency ?? 'HKD'
     form.date = toDateInputValue(transaction.date)
+    form.trip_id = normalizeTripId(transaction.trip_id)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => normalizedDefaultTripId.value,
+  (nextDefaultTripId, previousDefaultTripId) => {
+    if (props.transaction) {
+      return
+    }
+
+    if (!form.trip_id || form.trip_id === previousDefaultTripId || !availableTripIds.value.has(form.trip_id)) {
+      form.trip_id = nextDefaultTripId
+    }
   },
   { immediate: true },
 )
@@ -108,6 +136,7 @@ function submitForm(): void {
     date: fromDateInputValue(form.date),
     currency_code: form.currency_code,
     exchange_rate_hkd: selectedRate.value,
+    trip_id: form.trip_id || undefined,
   }
 
   if (form.kind === 'expense') {
@@ -143,6 +172,7 @@ function resetForm(): void {
   form.amount = 0
   form.currency_code = 'HKD'
   form.date = toDateInputValue(Date.now())
+  form.trip_id = normalizedDefaultTripId.value
 }
 
 function cancelEdit(): void {
@@ -173,7 +203,7 @@ function removeTransaction(): void {
       <PencilLine v-else class="size-5 text-amber-700" aria-hidden="true" />
     </div>
 
-    <div class="mt-4 grid gap-3" :class="compact ? 'md:grid-cols-2' : 'md:grid-cols-6'">
+    <div class="mt-4 grid gap-3" :class="compact ? 'md:grid-cols-2' : 'md:grid-cols-7'">
       <div class="grid gap-1 text-sm font-medium text-stone-700">
         <span>類型</span>
         <template v-if="isEditing">
@@ -223,6 +253,16 @@ function removeTransaction(): void {
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         日期
         <input v-model="form.date" type="date" class="rounded-md border border-stone-300 px-3 py-2" />
+      </label>
+
+      <label class="grid gap-1 text-sm font-medium text-stone-700">
+        旅程
+        <select v-model="form.trip_id" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+          <option value="">不關聯旅程</option>
+          <option v-for="trip in tripOptions" :key="trip.trip_id" :value="trip.trip_id">
+            {{ trip.name }}｜{{ trip.destination }}
+          </option>
+        </select>
       </label>
     </div>
 
