@@ -128,8 +128,14 @@ async function confirmImport(): Promise<void> {
   isImporting.value = true
   statusMessage.value = ''
 
+  const activeTripId = appData.activeTripId.value || undefined
+  const recordsToImport = previewTransactions.value.map((record) => ({
+    ...record,
+    trip_id: activeTripId,
+  }))
+
   try {
-    await appData.importTransactions(previewTransactions.value)
+    await appData.importTransactions(recordsToImport)
     statusMessage.value = `已成功匯入 ${previewTransactions.value.length} 筆交易。`
     jsonText.value = ''
     previewTransactions.value = []
