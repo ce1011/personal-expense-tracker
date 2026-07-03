@@ -99,9 +99,9 @@ watch(
     form.currency_code = transaction.original_currency ?? 'HKD'
     form.date = toDateInputValue(transaction.date)
     form.trip_id = normalizeTripId(transaction.trip_id)
-    form.recurring = false
-    form.recurring_frequency = 'monthly'
-    form.recurring_day = 1
+    form.recurring = transaction.kind === 'expense' ? transaction.recurring ?? false : false
+    form.recurring_frequency = transaction.kind === 'expense' ? transaction.recurring_frequency ?? 'monthly' : 'monthly'
+    form.recurring_day = transaction.kind === 'expense' ? transaction.recurring_day ?? 1 : 1
   },
   { immediate: true },
 )

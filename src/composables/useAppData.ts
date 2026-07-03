@@ -40,8 +40,11 @@ import type {
   CombinedTransaction,
   CycleDraft,
   ExpenseDraft,
+  ExpenseTransaction,
   IncomeDraft,
+  IncomeTransaction,
   SavingDraft,
+  SavingRecord,
   TripDraft,
   TripSession,
 } from '@/types/app-data'
@@ -137,46 +140,7 @@ export function useAppData() {
       savingTarget: cycle.saving_target,
     })
   })
-  const combinedTransactions = computed<CombinedTransaction[]>(() =>
-    [
-      ...data.value.expenses.map((expense) => ({
-        id: expense.transaction_id,
-        kind: 'expense' as const,
-        category_id: expense.category_id,
-        name: expense.name,
-        amount: expense.amount,
-        date: expense.date,
-        trip_id: expense.trip_id,
-        original_currency: expense.original_currency,
-        original_amount: expense.original_amount,
-        exchange_rate_hkd: expense.exchange_rate_hkd,
-      })),
-      ...data.value.incomes.map((income) => ({
-        id: income.transaction_id,
-        kind: 'income' as const,
-        category_id: income.category_id,
-        name: income.name,
-        amount: income.amount,
-        date: income.date,
-        trip_id: income.trip_id,
-        original_currency: income.original_currency,
-        original_amount: income.original_amount,
-        exchange_rate_hkd: income.exchange_rate_hkd,
-      })),
-      ...data.value.savings.map((saving) => ({
-        id: saving.saving_id,
-        kind: 'saving' as const,
-        category_id: saving.category_id ?? 'saving-cash',
-        name: saving.description,
-        amount: saving.amount,
-        date: saving.date,
-        trip_id: saving.trip_id,
-        original_currency: saving.original_currency,
-        original_amount: saving.original_amount,
-        exchange_rate_hkd: saving.exchange_rate_hkd,
-      })),
-    ].sort((a, b) => b.date - a.date),
-  )
+  const combinedTransactions = computed<CombinedTransaction[]>(() => buildCombinedTransactions(data.value))
   const recentTransactions = computed(() => combinedTransactions.value.slice(0, 8))
   const trips = computed(() =>
     [...(data.value.trips ?? [])].sort((left, right) => left.start_date - right.start_date),
@@ -372,4 +336,60 @@ export function useAppData() {
 
 export function getCycleById(cycles: BudgetCycle[], cycleId: string): BudgetCycle | undefined {
   return cycles.find((cycle) => cycle.cycle_id === cycleId)
+}
+
+export function buildCombinedTransactions(payload: AppDataPayload): CombinedTransaction[] {
+  return [
+    ...payload.expenses.map((expense) => expenseToCombinedTransaction(expense)),
+    ...payload.incomes.map((income) => incomeToCombinedTransaction(income)),
+    ...payload.savings.map((saving) => savingToCombinedTransaction(saving)),
+  ].sort((a, b) => b.date - a.date)
+}
+
+function expenseToCombinedTransaction(expense: ExpenseTransaction): CombinedTransaction {
+  return {
+    id: expense.transaction_id,
+    kind: 'expense',
+    category_id: expense.category_id,
+    name: expense.name,
+    amount: expense.amount,
+    date: expense.date,
+    trip_id: expense.trip_id,
+    original_currency: expense.original_currency,
+    original_amount: expense.original_amount,
+    exchange_rate_hkd: expense.exchange_rate_hkd,
+    recurring: expense.recurring,
+    recurring_frequency: expense.recurring_frequency,
+    recurring_day: expense.recurring_day,
+  }
+}
+
+function incomeToCombinedTransaction(income: IncomeTransaction): CombinedTransaction {
+  return {
+    id: income.transaction_id,
+    kind: 'income',
+    category_id: income.category_id,
+    name: income.name,
+    amount: income.amount,
+    date: income.date,
+    trip_id: income.trip_id,
+    original_currency: income.original_currency,
+    original_amount: income.original_amount,
+    exchange_rate_hkd: income.exchange_rate_hkd,
+  }
+}
+
+function savingToCombinedTransaction(saving: SavingRecord): CombinedTransaction {
+  return {
+    id: saving.saving_id,
+    kind: 'saving',
+    category_id: saving.category_id ?? 'saving-cash',
+    name: saving.description,
+    amount: saving.amount,
+    date: saving.date,
+    trip_id: saving.trip_id,
+    original_currency: saving.original_currency,
+    original_amount: saving.original_amount,
+    exchange_rate_hkd: saving.exchange_rate_hkd,
+  }
 }

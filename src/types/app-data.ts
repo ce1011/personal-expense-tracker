@@ -140,6 +140,9 @@ export interface CombinedTransaction {
   original_currency?: SupportedCurrency
   original_amount?: number
   exchange_rate_hkd?: number
+  recurring?: boolean
+  recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
+  recurring_day?: number
 }
 
 export interface ExpenseDraft {
