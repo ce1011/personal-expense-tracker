@@ -161,10 +161,10 @@ onBeforeUnmount(() => {
         :tone="appData.remainingBudget.value >= 0 ? 'good' : 'warn'"
       />
       <MetricCard
-        label="每日可用"
-        :value="formatCurrency(appData.averageDailyBudgetUntilIncome.value, appData.currency.value)"
-        :detail="`距離下次出糧還有 ${appData.daysUntilNextIncome.value} 日`"
-        :tone="appData.averageDailyBudgetUntilIncome.value >= 0 ? 'good' : 'warn'"
+        label="今日可用"
+        :value="formatCurrency(appData.dailySafeToSpend.value.safeToSpendToday, appData.currency.value)"
+        :detail="`今日已用 ${formatCurrency(appData.todaySpent.value, appData.currency.value)}`"
+        :tone="appData.dailySafeToSpend.value.isOverToday ? 'warn' : 'good'"
       />
     </section>
 

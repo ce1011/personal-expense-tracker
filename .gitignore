@@ -26,6 +26,9 @@ coverage
 
 .eslintcache
 
+# Build output
+dist/
+
 # Superpowers visual brainstorming artifacts
 .superpowers/
 

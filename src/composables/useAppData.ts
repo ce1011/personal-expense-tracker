@@ -1,7 +1,8 @@
 import { computed, readonly, shallowRef } from 'vue'
 
 import { getCycleWindow, isInCycleWindow } from '@/lib/budgetCycle'
-import { getDaysUntilNextIncomeDay } from '@/lib/date'
+import { getDaysUntilNextIncomeDay, startOfLocalDay } from '@/lib/date'
+import { getSafeToSpend } from '@/lib/dailyFinance/safeToSpend'
 import {
   filterTransactionsByTrip,
   getTripDailyBreakdown,
@@ -111,6 +112,26 @@ export function useAppData() {
   const averageDailyBudgetUntilIncome = computed(() =>
     remainingBudget.value / Math.max(1, daysUntilNextIncome.value),
   )
+  const todaySpent = computed(() => {
+    const today = startOfLocalDay(new Date())
+    return data.value.expenses
+      .filter((expense) => startOfLocalDay(new Date(expense.date)) === today)
+      .reduce((sum, expense) => sum + expense.amount, 0)
+  })
+  const dailySafeToSpend = computed(() => {
+    const cycle = currentCycle.value
+    if (!cycle) {
+      return { safeToSpendToday: 0, projectedSurplus: 0, isOverToday: false }
+    }
+
+    return getSafeToSpend({
+      remainingBudget: remainingBudget.value,
+      daysUntilNextIncome: daysUntilNextIncome.value,
+      fixedExpensesTotal: 0,
+      todaySpent: todaySpent.value,
+      savingTarget: cycle.saving_target,
+    })
+  })
   const combinedTransactions = computed<CombinedTransaction[]>(() =>
     [
       ...data.value.expenses.map((expense) => ({
@@ -262,6 +283,8 @@ export function useAppData() {
     remainingBudget,
     daysUntilNextIncome,
     averageDailyBudgetUntilIncome,
+    todaySpent,
+    dailySafeToSpend,
     combinedTransactions,
     recentTransactions,
     trips,
