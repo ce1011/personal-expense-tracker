@@ -1,53 +1,31 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, shallowRef } from 'vue'
-import { CirclePlus, History } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { ArrowRight } from 'lucide-vue-next'
 
-import EmptyState from '@/components/common/EmptyState.vue'
-import MetricCard from '@/components/common/MetricCard.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import EmptyState from '@/components/base/EmptyState.vue'
+import HeroCard from '@/components/dashboard/HeroCard.vue'
+import KpiGrid from '@/components/dashboard/KpiGrid.vue'
 import CategoryAlertsList from '@/components/dailyFinance/CategoryAlertsList.vue'
 import RecurringExpensesSummary from '@/components/dailyFinance/RecurringExpensesSummary.vue'
 import SavingChallengesList from '@/components/dailyFinance/SavingChallengesList.vue'
-import WeeklyReviewModal from '@/components/dailyFinance/WeeklyReviewModal.vue'
 import QuickAddShortcuts from '@/components/dailyFinance/QuickAddShortcuts.vue'
-import TransactionForm from '@/components/transactions/TransactionForm.vue'
-import TransactionList from '@/components/transactions/TransactionList.vue'
+import WeeklyReviewModal from '@/components/dailyFinance/WeeklyReviewModal.vue'
+import TransactionListItem from '@/components/transactions/TransactionListItem.vue'
 import { useAppData } from '@/composables/useAppData'
 import { startOfLocalDay } from '@/lib/date'
-import { formatCurrency, formatDate } from '@/lib/formatters'
+import { formatDate } from '@/lib/formatters'
 import type { ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
-const isQuickAddOpen = shallowRef(false)
+const router = useRouter()
 const isWeeklyReviewOpen = shallowRef(false)
 const toastMessage = shallowRef('')
 let toastTimeout: ReturnType<typeof setTimeout> | undefined
 
 const isTripMode = computed(() => Boolean(appData.activeTrip.value))
-const tripDateLabel = computed(() => {
-  const trip = appData.activeTrip.value
-
-  if (!trip) {
-    return ''
-  }
-
-  return `${formatDate(trip.start_date)} - ${formatDate(trip.end_date)}`
-})
-const tripTotalDays = computed(() => {
-  const trip = appData.activeTrip.value
-
-  if (!trip) {
-    return 0
-  }
-
-  const startDay = startOfLocalDay(new Date(trip.start_date))
-  const endDay = startOfLocalDay(new Date(trip.end_date))
-  return Math.floor((endDay - startDay) / 86_400_000) + 1
-})
-const tripDaysWithTransactions = computed(
-  () => appData.tripDailyBreakdown.value.filter((day) => day.count > 0).length,
-)
-const tripTransactionCount = computed(() => appData.tripTransactions.value.length)
+const cycleLabel = computed(() => appData.currentWindow.value?.label)
 const visibleRecentTransactions = computed(() => {
   const endOfToday = startOfLocalDay(new Date()) + 86_400_000
   const source = isTripMode.value
@@ -56,14 +34,6 @@ const visibleRecentTransactions = computed(() => {
 
   return source.filter((transaction) => transaction.date < endOfToday).slice(0, 8)
 })
-
-function openQuickAdd(): void {
-  isQuickAddOpen.value = true
-}
-
-function closeQuickAdd(): void {
-  isQuickAddOpen.value = false
-}
 
 function openWeeklyReview(): void {
   isWeeklyReviewOpen.value = true
@@ -87,19 +57,16 @@ function showToast(message: string): void {
 
 async function addExpense(draft: ExpenseDraft): Promise<void> {
   await appData.addExpense(draft)
-  closeQuickAdd()
   showToast('已新增支出')
 }
 
 async function addIncome(draft: IncomeDraft): Promise<void> {
   await appData.addIncome(draft)
-  closeQuickAdd()
   showToast('已新增收入')
 }
 
 async function addSaving(draft: SavingDraft): Promise<void> {
   await appData.addSaving(draft)
-  closeQuickAdd()
   showToast('已新增儲蓄')
 }
 
@@ -131,6 +98,10 @@ async function deleteSavingChallenge(challengeId: string): Promise<void> {
   await appData.deleteSavingChallenge(challengeId)
 }
 
+function goToTransactions(): void {
+  void router.push('/transactions')
+}
+
 onBeforeUnmount(() => {
   if (toastTimeout) {
     clearTimeout(toastTimeout)
@@ -139,82 +110,35 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <section class="grid gap-4">
-      <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">
-            {{ isTripMode ? '旅程模式' : '總覽' }}
-          </p>
-          <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">
-            {{ isTripMode ? appData.activeTrip.value?.name : '本期收支狀況' }}
-          </h1>
-          <p class="mt-2 text-sm text-stone-600">
-            {{
-              isTripMode
-                ? `${tripDateLabel} · ${appData.activeTrip.value?.destination ?? ''}`
-                : (appData.currentWindow.value?.label ??
-                  '先建立預算週期，之後所有交易都會按入糧日自動歸期。')
-            }}
-          </p>
-          <p v-if="isTripMode" class="mt-2 text-sm text-stone-500">
-            目前只顯示已綁定這次旅程的交易，方便集中查看預算與每日開支節奏。
-          </p>
-        </div>
-        <div v-if="!isTripMode" class="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-            @click="openWeeklyReview"
-          >
-            <History class="size-4" aria-hidden="true" />
-            上週回顧
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900"
-            @click="openQuickAdd"
-          >
-            <CirclePlus class="size-4" aria-hidden="true" />
-            新增交易
-          </button>
-        </div>
-      </div>
+  <div class="grid gap-4">
+    <section v-if="!isTripMode" class="grid gap-4">
+      <HeroCard
+        :remaining-budget="appData.remainingBudget.value"
+        :income-total="appData.cycleIncomeTotal.value"
+        :expense-total="appData.cycleExpenseTotal.value"
+        :currency="appData.currency.value"
+        :cycle-label="cycleLabel"
+        @weekly-review="openWeeklyReview"
+      />
 
-      <p v-if="appData.error.value" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-        {{ appData.error.value }}
-      </p>
-    </section>
-
-    <section v-if="!isTripMode" class="grid gap-3 md:grid-cols-4">
-      <MetricCard
-        label="收入"
-        :value="formatCurrency(appData.cycleIncomeTotal.value, appData.currency.value)"
-        :detail="`本期 ${appData.cycleIncomes.value.length} 筆收入，加上週期設定收入`"
-        tone="good"
-      />
-      <MetricCard
-        label="支出"
-        :value="formatCurrency(appData.cycleExpenseTotal.value, appData.currency.value)"
-        :detail="`本期 ${appData.cycleExpenses.value.length} 筆支出，另加儲蓄轉出`"
-      />
-      <MetricCard
-        label="結餘"
-        :value="formatCurrency(appData.remainingBudget.value, appData.currency.value)"
-        :detail="`儲蓄目標 ${formatCurrency(appData.currentCycle.value?.saving_target ?? 0, appData.currency.value)}`"
-        :tone="appData.remainingBudget.value >= 0 ? 'good' : 'warn'"
-      />
-      <MetricCard
-        label="今日可用"
-        :value="
-          formatCurrency(appData.dailySafeToSpend.value.safeToSpendToday, appData.currency.value)
-        "
-        :detail="`今日已用 ${formatCurrency(appData.todaySpent.value, appData.currency.value)}`"
-        :tone="appData.dailySafeToSpend.value.isOverToday ? 'warn' : 'good'"
+      <KpiGrid
+        :today-available="appData.dailySafeToSpend.value.safeToSpendToday"
+        :today-spent="appData.todaySpent.value"
+        :saving-target="appData.currentCycle.value?.saving_target ?? 0"
+        :fixed-expenses="appData.cycleFixedExpensesTotal.value"
+        :currency="appData.currency.value"
+        :is-over-today="appData.dailySafeToSpend.value.isOverToday"
       />
     </section>
 
-    <section v-if="!isTripMode" class="grid gap-3 lg:grid-cols-2">
+    <section
+      v-if="appData.error.value"
+      class="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger"
+    >
+      {{ appData.error.value }}
+    </section>
+
+    <section v-if="!isTripMode" class="grid gap-4">
       <QuickAddShortcuts
         :suggestions="appData.quickAddSuggestions.value"
         :expense-categories="appData.activeExpenseCategories.value"
@@ -232,102 +156,67 @@ onBeforeUnmount(() => {
         @update-status="updateSavingChallengeStatus"
         @delete="deleteSavingChallenge"
       />
-      <CategoryAlertsList
-        :alerts="appData.categoryAlerts.value"
-        :currency="appData.currency.value"
-      />
       <RecurringExpensesSummary
         :fixed-total="appData.cycleFixedExpensesTotal.value"
         :upcoming-bills="appData.upcomingBills.value"
         :currency="appData.currency.value"
       />
-    </section>
-
-    <section v-else class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <MetricCard
-        label="總預算"
-        :value="
-          formatCurrency(
-            appData.activeTrip.value?.budget_amount ?? 0,
-            appData.activeTrip.value?.budget_currency ?? appData.currency.value,
-          )
-        "
-        :detail="`旅程共 ${tripTotalDays} 日`"
-        tone="good"
-      />
-      <MetricCard
-        label="已支出"
-        :value="formatCurrency(appData.tripSpentTotal.value, appData.currency.value)"
-        :detail="`已記錄 ${tripTransactionCount} 筆旅程交易`"
-      />
-      <MetricCard
-        label="剩餘預算"
-        :value="formatCurrency(appData.tripRemainingBudget.value, appData.currency.value)"
-        :detail="`${tripDaysWithTransactions} / ${tripTotalDays} 日已有交易`"
-        :tone="appData.tripRemainingBudget.value >= 0 ? 'good' : 'warn'"
-      />
-      <MetricCard
-        label="每日拆分"
-        :value="`${appData.tripDailyBreakdown.value.length} 日`"
-        detail="以下按旅程日序查看每天支出與交易明細。"
-      />
-    </section>
-
-    <section v-if="isTripMode" class="grid gap-3 lg:grid-cols-2">
-      <article
-        v-for="day in appData.tripDailyBreakdown.value"
-        :key="day.date"
-        class="rounded-md border border-stone-200 bg-white p-4 shadow-sm"
-      >
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h2 class="text-base font-semibold text-stone-950">{{ formatDate(day.date) }}</h2>
-            <p class="mt-1 text-sm text-stone-500">
-              {{ day.count ? `${day.count} 筆交易` : '這一天尚未記錄旅程交易' }}
-            </p>
-          </div>
-          <p class="text-right text-sm font-semibold text-stone-950">
-            {{ formatCurrency(day.total, appData.currency.value) }}
-          </p>
-        </div>
-
-        <TransactionList
-          v-if="day.transactions.length"
-          class="mt-4"
-          :items="day.transactions"
-          :expense-categories="appData.data.value.expenseCategories"
-          :income-categories="appData.data.value.incomeCategories"
-          :currency="appData.currency.value"
-        />
-        <EmptyState
-          v-else
-          class="mt-4"
-          title="這一天尚未記錄旅程交易"
-          message="建議在旅途中當天記帳，之後回看每日拆分會更清楚。"
-        />
-      </article>
-    </section>
-
-    <section>
-      <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-stone-950">
-          {{ isTripMode ? '旅程最近交易' : '最近交易' }}
-        </h2>
-      </div>
-      <TransactionList
-        v-if="visibleRecentTransactions.length"
-        :items="visibleRecentTransactions"
-        :expense-categories="appData.data.value.expenseCategories"
-        :income-categories="appData.data.value.incomeCategories"
+      <CategoryAlertsList
+        :alerts="appData.categoryAlerts.value"
         :currency="appData.currency.value"
       />
+    </section>
+
+    <section v-else class="grid gap-4">
+      <BaseCard variant="primary">
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary-2">旅程模式</p>
+        <h2 class="mt-1 text-xl font-bold text-text">{{ appData.activeTrip.value?.name }}</h2>
+        <p class="mt-1 text-sm text-text-2">
+          {{ formatDate(appData.activeTrip.value?.start_date ?? 0) }} -
+          {{ formatDate(appData.activeTrip.value?.end_date ?? 0) }}
+        </p>
+        <p class="mt-1 text-xs text-text-3">
+          目前只顯示已綁定這次旅程的交易。要切換模式請使用頂部選單。
+        </p>
+      </BaseCard>
+    </section>
+
+    <section class="grid gap-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-text">
+          {{ isTripMode ? '旅程最近交易' : '最近交易' }}
+        </h2>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 text-sm font-medium text-primary transition hover:text-primary-2"
+          @click="goToTransactions"
+        >
+          查看全部
+          <ArrowRight class="size-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      <BaseCard v-if="visibleRecentTransactions.length" class="overflow-hidden p-0">
+        <div class="divide-y divide-border">
+          <TransactionListItem
+            v-for="transaction in visibleRecentTransactions"
+            :key="`${transaction.kind}-${transaction.id}`"
+            :item="transaction"
+            :expense-categories="appData.data.value.expenseCategories"
+            :income-categories="appData.data.value.incomeCategories"
+            :currency="appData.currency.value"
+            @select="goToTransactions"
+          />
+        </div>
+      </BaseCard>
       <EmptyState
         v-else
-        title="還沒有交易紀錄"
+        :icon="ArrowRight"
+        :title="isTripMode ? '這個旅程還未綁定任何交易' : '還沒有交易紀錄'"
         :message="
           isTripMode
             ? '這個旅程還未綁定任何交易，可以先用快速記一筆開始記錄。'
-            : '用上方新增交易按鈕，或快速新增卡片把第一筆支出、收入或儲蓄記下來。'
+            : '用底部「記一筆」按鈕新增第一筆支出、收入或儲蓄。'
         "
       />
     </section>
@@ -339,30 +228,9 @@ onBeforeUnmount(() => {
       @close="closeWeeklyReview"
     />
 
-    <BaseModal
-      :show="isQuickAddOpen"
-      title="快速記一筆"
-      subtitle="新增後會立即寫入帳目，並自動換算成港幣。"
-      max-width="max-w-4xl"
-      @close="closeQuickAdd"
-    >
-      <TransactionForm
-        :expense-categories="appData.activeExpenseCategories.value"
-        :income-categories="appData.activeIncomeCategories.value"
-        :saving-challenges="appData.savingChallenges.value"
-        :trip-options="appData.trips.value"
-        :default-trip-id="appData.activeTripId.value || undefined"
-        :fx-rate-map="appData.fxRateMap.value"
-        :latest-fx-date="appData.latestFxDate.value"
-        @create-expense="addExpense"
-        @create-income="addIncome"
-        @create-saving="addSaving"
-      />
-    </BaseModal>
-
     <div
       v-if="toastMessage"
-      class="fixed bottom-4 right-4 z-50 rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-900 shadow-lg max-sm:bottom-8 max-sm:right-1/2 max-sm:translate-x-1/2"
+      class="fixed bottom-24 right-4 z-50 rounded-xl border border-primary/20 bg-surface px-4 py-3 text-sm font-semibold text-primary shadow-lg max-sm:bottom-28 max-sm:right-1/2 max-sm:translate-x-1/2"
       role="status"
       aria-live="polite"
     >

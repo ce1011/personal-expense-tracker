@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 
+import BaseCard from '@/components/base/BaseCard.vue'
 import {
   calculateSpareChange,
   parseQuickAddText,
@@ -80,16 +81,6 @@ const spareChange = computed(() => {
   return calculateSpareChange(parsed.value.amount)
 })
 
-const inputClass = computed(() => {
-  if (!parsed.value) {
-    return 'border-stone-300 focus:border-emerald-800'
-  }
-
-  return parsed.value.category_id
-    ? 'border-emerald-500 focus:border-emerald-800'
-    : 'border-amber-500 focus:border-amber-700'
-})
-
 const categoryHint = computed(() => {
   if (!parsed.value || parsed.value.category_id) {
     return ''
@@ -152,10 +143,10 @@ function submit(): void {
 </script>
 
 <template>
-  <article class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+  <BaseCard>
     <div class="mb-4">
-      <h2 class="text-base font-semibold text-stone-950">快速新增</h2>
-      <p class="mt-1 text-sm text-stone-500">輸入「名稱 金額」快速記帳，或點選常用捷徑</p>
+      <h2 class="text-base font-semibold text-text">快速新增</h2>
+      <p class="mt-1 text-sm text-text-2">輸入「名稱 金額」快速記帳，或點選常用捷徑</p>
     </div>
 
     <div v-if="suggestions.length" class="mb-4 flex flex-wrap gap-2">
@@ -163,7 +154,7 @@ function submit(): void {
         v-for="suggestion in suggestions"
         :key="`${suggestion.kind}-${suggestion.category_id}-${suggestion.name}`"
         type="button"
-        class="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-medium text-stone-700 transition hover:border-emerald-800 hover:text-emerald-800"
+        class="rounded-full border border-border bg-accent px-3 py-1.5 text-xs font-medium text-text transition hover:border-primary hover:text-primary"
         @click="applySuggestion(suggestion)"
       >
         {{ suggestion.name }}
@@ -175,39 +166,45 @@ function submit(): void {
         <input
           v-model="text"
           type="text"
-          class="flex-1 rounded-md border px-3 py-2 text-sm focus:outline-none"
-          :class="inputClass"
+          class="input-base flex-1 text-base"
+          :class="
+            !parsed
+              ? ''
+              : parsed.category_id
+                ? 'border-primary'
+                : 'border-warning focus:border-warning focus:ring-warning/20'
+          "
           placeholder="例如：麥當勞 55"
         />
         <button
           type="submit"
-          class="rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:opacity-50"
+          class="inline-flex shrink-0 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-base font-semibold text-white transition hover:bg-primary-2 disabled:opacity-50"
           :disabled="!canSubmit"
         >
           新增
         </button>
       </div>
 
-      <div v-if="parsed" class="rounded-md bg-stone-50 px-3 py-2 text-sm text-stone-600">
+      <div v-if="parsed" class="rounded-xl bg-accent px-3 py-2 text-sm text-text-2">
         <p>
           識別：{{ parsed.name }} · {{ formatCurrency(parsed.amount, currency) }}
-          <span v-if="parsed.category_id" class="ml-1 text-emerald-700">（已配對分類）</span>
+          <span v-if="parsed.category_id" class="ml-1 text-primary">（已配對分類）</span>
         </p>
-        <p v-if="categoryHint" class="mt-1 text-amber-700">{{ categoryHint }}</p>
+        <p v-if="categoryHint" class="mt-1 text-warning">{{ categoryHint }}</p>
       </div>
 
       <label
         v-if="spareChange && spareChange.spareChange > 0"
-        class="flex items-center gap-2 text-sm font-medium text-stone-700"
+        class="flex items-center gap-2 text-sm font-medium text-text"
       >
         <input
           v-model="isSpareChangeEnabled"
           type="checkbox"
-          class="size-4 rounded border-stone-300"
+          class="size-5 rounded border-border text-primary focus:ring-primary"
         />
         零頭儲蓄：入帳 {{ formatCurrency(spareChange.roundedAmount, currency) }}，儲蓄
         {{ formatCurrency(spareChange.spareChange, currency) }}
       </label>
     </form>
-  </article>
+  </BaseCard>
 </template>

@@ -219,7 +219,9 @@ function close(): void {
             class="rounded-md border border-stone-300 px-3 py-2"
             :class="errors.recurring_day ? 'border-red-300' : ''"
           />
-          <span v-if="errors.recurring_day" class="text-xs text-red-600">{{ errors.recurring_day }}</span>
+          <span v-if="errors.recurring_day" class="text-xs text-red-600">{{
+            errors.recurring_day
+          }}</span>
         </label>
       </div>
 

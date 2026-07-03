@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import EmptyState from '@/components/common/EmptyState.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import EmptyState from '@/components/base/EmptyState.vue'
 import ProgressBar from '@/components/common/ProgressBar.vue'
 import { formatCurrency } from '@/lib/formatters'
 import type { CategoryAlert } from '@/lib/dailyFinance/categoryAlerts'
+import { AlertTriangle } from 'lucide-vue-next'
 
 const props = defineProps<{
   alerts: readonly CategoryAlert[]
@@ -27,22 +29,31 @@ function severityLabel(severity: CategoryAlert['severity']): string {
 function severityColorClass(severity: CategoryAlert['severity']): string {
   switch (severity) {
     case 'ok':
-      return 'bg-emerald-600'
+      return 'bg-primary'
     case 'warning':
-      return 'bg-amber-500'
+      return 'bg-warning'
     case 'danger':
-      return 'bg-red-600'
+      return 'bg-danger'
+  }
+}
+
+function severityTextClass(severity: CategoryAlert['severity']): string {
+  switch (severity) {
+    case 'ok':
+      return 'text-primary'
+    case 'warning':
+      return 'text-warning'
+    case 'danger':
+      return 'text-danger'
   }
 }
 </script>
 
 <template>
-  <article class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-    <div class="mb-4 flex items-start justify-between gap-4">
-      <div>
-        <h2 class="text-base font-semibold text-stone-950">分類預算警報</h2>
-        <p class="mt-1 text-sm text-stone-500">本期各分類支出與目標上限比較</p>
-      </div>
+  <BaseCard>
+    <div class="mb-4">
+      <h2 class="text-base font-semibold text-text">分類預算警報</h2>
+      <p class="mt-1 text-sm text-text-2">只顯示需要留意的分類預算</p>
     </div>
 
     <div v-if="visibleAlerts.length" class="space-y-4">
@@ -54,20 +65,13 @@ function severityColorClass(severity: CategoryAlert['severity']): string {
               :style="{ backgroundColor: `#${alert.color_code}` }"
               aria-hidden="true"
             />
-            <span class="font-medium text-stone-900">{{ alert.category_name }}</span>
+            <span class="font-medium text-text">{{ alert.category_name }}</span>
           </div>
           <div class="flex items-center gap-3 text-right">
-            <span
-              class="text-xs font-semibold"
-              :class="{
-                'text-emerald-700': alert.severity === 'ok',
-                'text-amber-700': alert.severity === 'warning',
-                'text-red-700': alert.severity === 'danger',
-              }"
-            >
+            <span class="text-xs font-semibold" :class="severityTextClass(alert.severity)">
               {{ severityLabel(alert.severity) }}
             </span>
-            <span class="text-stone-700">
+            <span class="text-text-2">
               {{ formatCurrency(alert.spent, currency) }} /
               {{ formatCurrency(alert.target, currency) }}
             </span>
@@ -79,7 +83,7 @@ function severityColorClass(severity: CategoryAlert['severity']): string {
           :color-class="severityColorClass(alert.severity)"
         />
 
-        <p class="text-right text-xs text-stone-500">
+        <p class="text-right text-xs text-text-2">
           <template v-if="alert.severity === 'danger'">
             已超支 {{ formatCurrency(Math.abs(alert.remaining), currency) }} ·
             {{ Math.round(alert.percentage) }}%
@@ -94,8 +98,9 @@ function severityColorClass(severity: CategoryAlert['severity']): string {
 
     <EmptyState
       v-else
+      :icon="AlertTriangle"
       title="目前沒有分類預算警報"
       message="所有分類支出都在健康範圍內，暫時無需特別留意。"
     />
-  </article>
+  </BaseCard>
 </template>

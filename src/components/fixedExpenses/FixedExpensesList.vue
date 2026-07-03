@@ -3,10 +3,7 @@ import { Pencil, Trash2 } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 import EmptyState from '@/components/common/EmptyState.vue'
-import {
-  getFrequencyLabel,
-  getRecurringDayLabel,
-} from '@/lib/dailyFinance/recurringExpenses'
+import { getFrequencyLabel, getRecurringDayLabel } from '@/lib/dailyFinance/recurringExpenses'
 import { formatCurrency } from '@/lib/formatters'
 import type { ExpenseCategory, ExpenseTransaction } from '@/types/app-data'
 
@@ -66,7 +63,12 @@ function confirmDelete(transaction: ExpenseTransaction): void {
           </div>
           <p class="mt-1 text-xs text-stone-500">
             {{ getFrequencyLabel(expense.recurring_frequency ?? 'monthly') }} ·
-            {{ getRecurringDayLabel(expense.recurring_frequency ?? 'monthly', expense.recurring_day ?? 1) }}
+            {{
+              getRecurringDayLabel(
+                expense.recurring_frequency ?? 'monthly',
+                expense.recurring_day ?? 1,
+              )
+            }}
             <template v-if="getCategory(expense)">
               · {{ getCategory(expense)?.name_tc || getCategory(expense)?.name_en }}
             </template>

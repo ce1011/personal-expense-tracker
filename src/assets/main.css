@@ -1,5 +1,21 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-primary: #0d7a68;
+  --color-primary-2: #0a5c4e;
+  --color-accent: #f4f1ea;
+  --color-surface: #ffffff;
+  --color-bg: #f4f1ea;
+  --color-text: #1c1917;
+  --color-text-2: #57534e;
+  --color-text-3: #a8a29e;
+  --color-border: #e7e5e4;
+  --color-success: #0d7a68;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+}
+
 :root {
   color: #17211b;
   background: #f4f1ea;
@@ -31,12 +47,8 @@ textarea {
 }
 
 @layer base {
-  button:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  a:focus-visible {
-    @apply outline-none ring-2 ring-emerald-800 ring-offset-2 ring-offset-stone-100;
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg;
   }
 }
 
@@ -46,4 +58,29 @@ button {
 
 #app {
   min-height: 100vh;
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.input-base {
+  @apply w-full rounded-xl border border-border bg-surface px-4 py-3 text-base text-text placeholder:text-text-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+}
+
+.input-base-error {
+  @apply border-danger focus:border-danger focus:ring-danger/20;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

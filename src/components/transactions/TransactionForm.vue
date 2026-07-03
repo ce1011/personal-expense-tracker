@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
-import { CirclePlus, PencilLine, Trash2 } from 'lucide-vue-next'
+import { Trash2 } from 'lucide-vue-next'
 
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
 import { fromDateInputValue, toDateInputValue } from '@/lib/date'
 import { convertToHkd } from '@/lib/fx'
 import { formatCurrency } from '@/lib/formatters'
@@ -85,6 +88,41 @@ const canSubmit = computed(
     selectedRate.value > 0,
 )
 
+const kindOptions: { value: TransactionKind; label: string }[] = [
+  { value: 'expense', label: '支出' },
+  { value: 'income', label: '收入' },
+  { value: 'saving', label: '儲蓄' },
+]
+
+const tripSelectOptions = computed(() => [
+  { value: '', label: '不關聯旅程' },
+  ...tripOptions.value.map((trip) => ({
+    value: trip.trip_id,
+    label: `${trip.name}｜${trip.destination}`,
+  })),
+])
+
+const currencyOptions = computed(() =>
+  supportedCurrencies.map((currencyCode) => ({
+    value: currencyCode,
+    label: currencyCode,
+  })),
+)
+
+const challengeOptions = computed(() => [
+  { value: '', label: '不綁定挑戰' },
+  ...savingChallengeOptions.value.map((challenge) => ({
+    value: challenge.challenge_id,
+    label: challenge.name,
+  })),
+])
+
+const recurringOptions = [
+  { value: 'weekly', label: '每週' },
+  { value: 'monthly', label: '每月' },
+  { value: 'yearly', label: '每年' },
+]
+
 function normalizeTripId(tripId?: string): string {
   return tripId && availableTripIds.value.has(tripId) ? tripId : ''
 }
@@ -140,6 +178,14 @@ watch(
   },
   { immediate: true },
 )
+
+function setKind(kind: TransactionKind): void {
+  if (isEditing.value) {
+    return
+  }
+
+  form.kind = kind
+}
 
 function submitForm(): void {
   if (!canSubmit.value) {
@@ -225,212 +271,143 @@ function removeTransaction(): void {
 </script>
 
 <template>
-  <form
-    class="rounded-md border border-stone-200 bg-white p-4 shadow-sm"
-    @submit.prevent="submitForm"
-  >
-    <div class="flex items-center justify-between gap-3">
-      <div>
-        <p class="text-sm font-semibold text-stone-950">
-          {{ isEditing ? '修改交易' : compact ? '快速記一筆' : '新增交易' }}
-        </p>
-        <p class="text-xs text-stone-500">
-          {{
-            isEditing
-              ? '修改後會覆蓋原有紀錄，交易類型會保持不變。'
-              : '支出、收入與儲蓄都會先按原幣輸入，再自動換算成港幣入帳。'
-          }}
-        </p>
-      </div>
-      <CirclePlus v-if="!isEditing" class="size-5 text-emerald-800" aria-hidden="true" />
-      <PencilLine v-else class="size-5 text-amber-700" aria-hidden="true" />
+  <form class="grid gap-4" @submit.prevent="submitForm">
+    <div v-if="!isEditing" class="grid grid-cols-3 gap-2 rounded-xl bg-accent p-1">
+      <button
+        v-for="option in kindOptions"
+        :key="option.value"
+        type="button"
+        class="rounded-lg px-2 py-2 text-sm font-semibold transition"
+        :class="
+          form.kind === option.value
+            ? 'bg-surface text-text shadow-sm'
+            : 'text-text-2 hover:text-text'
+        "
+        @click="setKind(option.value)"
+      >
+        {{ option.label }}
+      </button>
     </div>
 
-    <div class="mt-4 grid gap-3" :class="compact ? 'md:grid-cols-2' : 'md:grid-cols-4'">
-      <div class="grid gap-1 text-sm font-medium text-stone-700">
-        <span>類型</span>
-        <template v-if="isEditing">
-          <div class="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-stone-700">
-            {{ form.kind === 'expense' ? '支出' : form.kind === 'income' ? '收入' : '儲蓄' }}
-          </div>
-        </template>
-        <select
-          v-else
-          v-model="form.kind"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2"
-        >
-          <option value="expense">支出</option>
-          <option value="income">收入</option>
-          <option value="saving">儲蓄</option>
-        </select>
-      </div>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        分類
-        <select
-          v-model="form.category_id"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2"
-        >
-          <option
-            v-for="category in categories"
-            :key="category.category_id"
-            :value="category.category_id"
-          >
-            {{ category.name_tc || category.name_en }}
-          </option>
-        </select>
-      </label>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        名稱
-        <input
-          v-model.trim="form.name"
-          class="rounded-md border border-stone-300 px-3 py-2"
-          placeholder="例如：午餐、MTR、薪金、買股票"
-        />
-      </label>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        幣別
-        <select
-          v-model="form.currency_code"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2"
-        >
-          <option
-            v-for="currencyCode in supportedCurrencies"
-            :key="currencyCode"
-            :value="currencyCode"
-          >
-            {{ currencyCode }}
-          </option>
-        </select>
-      </label>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        原幣金額
-        <input
-          v-model.number="form.amount"
-          min="0"
-          step="0.01"
-          type="number"
-          class="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        日期
-        <input
-          v-model="form.date"
-          type="date"
-          class="rounded-md border border-stone-300 px-3 py-2"
-        />
-      </label>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        旅程
-        <select
-          v-model="form.trip_id"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2"
-        >
-          <option value="">不關聯旅程</option>
-          <option v-for="trip in tripOptions" :key="trip.trip_id" :value="trip.trip_id">
-            {{ trip.name }}｜{{ trip.destination }}
-          </option>
-        </select>
-      </label>
+    <div v-else class="rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-text">
+      {{ form.kind === 'expense' ? '支出' : form.kind === 'income' ? '收入' : '儲蓄' }}
     </div>
+
+    <BaseInput
+      v-model="form.name"
+      label="名稱"
+      placeholder="例如：午餐、MTR、薪金"
+      autocomplete="off"
+      :autofocus="true"
+    />
+
+    <BaseInput
+      v-model.number="form.amount"
+      label="金額"
+      type="number"
+      inputmode="decimal"
+      placeholder="0"
+      min="0"
+      step="0.01"
+    />
+
+    <div class="grid gap-1.5">
+      <p class="text-sm font-medium text-text-2">分類</p>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="category in categories"
+          :key="category.category_id"
+          type="button"
+          class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+          :class="
+            form.category_id === category.category_id
+              ? 'text-white'
+              : 'border border-border bg-surface text-text hover:bg-accent'
+          "
+          :style="
+            form.category_id === category.category_id
+              ? { backgroundColor: `#${category.color_code}` }
+              : undefined
+          "
+          @click="form.category_id = category.category_id"
+        >
+          {{ category.name_tc || category.name_en }}
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <BaseSelect v-model="form.currency_code" label="幣別" :options="currencyOptions" />
+      <BaseInput v-model="form.date" label="日期" type="date" />
+    </div>
+
+    <BaseSelect
+      v-if="tripOptions.length"
+      v-model="form.trip_id"
+      label="旅程"
+      :options="tripSelectOptions"
+    />
 
     <div
       v-if="form.kind === 'expense'"
-      class="mt-3 grid gap-3 rounded-md border border-stone-200 p-3 transition-opacity md:grid-cols-3"
-      :class="form.recurring ? 'bg-stone-50 opacity-100' : 'bg-stone-100 opacity-60'"
+      class="rounded-xl border border-border transition-colors"
+      :class="form.recurring ? 'bg-accent/50' : 'bg-surface'"
     >
-      <label class="flex items-center gap-2 text-sm font-medium text-stone-700">
-        <input v-model="form.recurring" type="checkbox" class="size-4 rounded border-stone-300" />
-        定期支出
-      </label>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        週期
-        <select
-          v-model="form.recurring_frequency"
-          :disabled="!form.recurring"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2 disabled:bg-stone-100"
-        >
-          <option value="weekly">每週</option>
-          <option value="monthly">每月</option>
-          <option value="yearly">每年</option>
-        </select>
-      </label>
-
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        到期日
+      <label class="flex items-center gap-3 px-4 py-3">
         <input
+          v-model="form.recurring"
+          type="checkbox"
+          class="size-5 rounded border-border text-primary focus:ring-primary"
+        />
+        <span class="text-sm font-medium text-text">定期支出</span>
+      </label>
+
+      <div
+        v-if="form.recurring"
+        class="grid grid-cols-2 gap-3 border-t border-border px-4 pb-4 pt-3"
+      >
+        <BaseSelect v-model="form.recurring_frequency" label="週期" :options="recurringOptions" />
+        <BaseInput
           v-model.number="form.recurring_day"
-          :disabled="!form.recurring"
+          label="到期日"
+          type="number"
+          inputmode="numeric"
           min="1"
           max="31"
-          type="number"
-          class="rounded-md border border-stone-300 px-3 py-2 disabled:bg-stone-100"
         />
-      </label>
+      </div>
     </div>
 
-    <div
+    <BaseSelect
       v-if="form.kind === 'saving'"
-      class="mt-3 rounded-md border border-stone-200 bg-stone-50 p-3"
-    >
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        儲蓄挑戰
-        <select
-          v-model="form.challenge_id"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2"
-        >
-          <option value="">不綁定挑戰</option>
-          <option
-            v-for="challenge in savingChallengeOptions"
-            :key="challenge.challenge_id"
-            :value="challenge.challenge_id"
-          >
-            {{ challenge.name }}
-          </option>
-        </select>
-      </label>
-    </div>
+      v-model="form.challenge_id"
+      label="儲蓄挑戰"
+      :options="challengeOptions"
+    />
 
-    <div class="mt-3 rounded-md bg-stone-50 px-3 py-2 text-sm text-stone-600">
+    <div class="rounded-xl bg-accent px-4 py-3 text-sm text-text-2">
       <p>
-        以 {{ form.currency_code }} 兌港幣匯率 {{ selectedRate || '-' }} 計， 將入帳
-        {{ formatCurrency(convertedAmount, 'HKD') }}
+        將入帳 {{ formatCurrency(convertedAmount, 'HKD') }} · 匯率
+        {{ selectedRate > 0 ? selectedRate : '-' }}
       </p>
-      <p class="mt-1 text-xs text-stone-500">匯率日期：{{ latestFxDate || '尚未取得' }}</p>
+      <p class="mt-0.5 text-xs text-text-3">匯率日期：{{ latestFxDate || '尚未取得' }}</p>
     </div>
 
-    <div class="mt-4 flex flex-wrap items-center gap-3">
-      <button
-        type="submit"
-        class="rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-stone-300"
-        :disabled="!canSubmit"
-      >
+    <div class="flex flex-wrap items-center gap-3 pt-2">
+      <BaseButton type="submit" :disabled="!canSubmit">
         {{ isEditing ? '儲存修改' : '新增交易' }}
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton variant="secondary" type="button" @click="cancelEdit"> 取消 </BaseButton>
+      <BaseButton
         v-if="isEditing"
+        variant="danger"
         type="button"
-        class="rounded-md border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-        @click="cancelEdit"
-      >
-        取消
-      </button>
-      <button
-        v-if="isEditing"
-        type="button"
-        class="inline-flex items-center gap-2 rounded-md border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+        aria-label="刪除交易"
         @click="removeTransaction"
       >
         <Trash2 class="size-4" aria-hidden="true" />
         刪除
-      </button>
+      </BaseButton>
     </div>
   </form>
 </template>

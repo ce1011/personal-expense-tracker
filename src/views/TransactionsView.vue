@@ -1,25 +1,41 @@
 <script setup lang="ts">
-import { computed, nextTick, reactive, shallowRef, watch } from 'vue'
+import { SearchX } from 'lucide-vue-next'
+import { computed, reactive, shallowRef, watch } from 'vue'
 
-import EmptyState from '@/components/common/EmptyState.vue'
-import TransactionForm from '@/components/transactions/TransactionForm.vue'
-import TransactionList from '@/components/transactions/TransactionList.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import EmptyState from '@/components/base/EmptyState.vue'
+import QuickAddSheet from '@/components/transactions/QuickAddSheet.vue'
+import TransactionDateGroup from '@/components/transactions/TransactionDateGroup.vue'
 import { useAppData } from '@/composables/useAppData'
-import { fromDateInputValue } from '@/lib/date'
+import { startOfLocalDay } from '@/lib/date'
 import { savingCategories } from '@/lib/savingCategories'
 import type { CombinedTransaction, ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const search = shallowRef('')
 const selectedTransaction = shallowRef<CombinedTransaction | undefined>()
+const showFilters = shallowRef(false)
+
 const filters = reactive({
   tripId: 'all',
   kind: 'all' as 'all' | 'expense' | 'income' | 'saving',
   categoryId: 'all',
   datePreset: 'all' as 'all' | 'today' | 'cycle' | 'future',
-  fromDate: '',
-  toDate: '',
 })
+
+const kindOptions: { value: typeof filters.kind; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'expense', label: '支出' },
+  { value: 'income', label: '收入' },
+  { value: 'saving', label: '儲蓄' },
+]
+
+const datePresetOptions: { value: typeof filters.datePreset; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'today', label: '今天' },
+  { value: 'cycle', label: '本期' },
+  { value: 'future', label: '未來' },
+]
 
 const todayWindow = computed(() => {
   const now = new Date()
@@ -53,6 +69,23 @@ const availableCategories = computed(() => {
   ]
 })
 
+const categoryNameById = computed(() => {
+  const map = new Map<string, string>()
+  for (const category of availableCategories.value) {
+    map.set(category.category_id, category.name_tc || category.name_en)
+  }
+  return map
+})
+
+const tripNameById = computed(() => {
+  const map = new Map<string, string>()
+  map.set('unassigned', '未關聯旅程')
+  for (const trip of appData.trips.value) {
+    map.set(trip.trip_id, `${trip.name}｜${trip.destination}`)
+  }
+  return map
+})
+
 const baseTransactions = computed(() => {
   if (filters.tripId === 'all') {
     return appData.combinedTransactions.value
@@ -73,8 +106,6 @@ const baseTransactions = computed(() => {
 
 const filteredTransactions = computed(() => {
   const query = search.value.trim().toLowerCase()
-  const fromTimestamp = filters.fromDate ? fromDateInputValue(filters.fromDate) : undefined
-  const toTimestamp = filters.toDate ? fromDateInputValue(filters.toDate) + 86_400_000 : undefined
 
   return baseTransactions.value.filter((transaction) => {
     if (query && !transaction.name.toLowerCase().includes(query)) {
@@ -106,16 +137,68 @@ const filteredTransactions = computed(() => {
       return false
     }
 
-    if (fromTimestamp !== undefined && transaction.date < fromTimestamp) {
-      return false
-    }
-
-    if (toTimestamp !== undefined && transaction.date >= toTimestamp) {
-      return false
-    }
-
     return true
   })
+})
+
+const groupedTransactions = computed(() => {
+  const groups = new Map<string, CombinedTransaction[]>()
+  const now = Date.now()
+  const today = startOfLocalDay(new Date())
+  const yesterday = today - 86_400_000
+  const oneWeekAgo = today - 7 * 86_400_000
+
+  for (const transaction of filteredTransactions.value) {
+    const date = startOfLocalDay(new Date(transaction.date))
+    let label: string
+
+    if (date === today) {
+      label = '今天'
+    } else if (date === yesterday) {
+      label = '昨天'
+    } else if (date > oneWeekAgo) {
+      label = new Intl.DateTimeFormat('zh-HK', { month: 'long', day: 'numeric' }).format(
+        new Date(date),
+      )
+    } else {
+      label = '更早'
+    }
+
+    const existing = groups.get(label)
+    if (existing) {
+      existing.push(transaction)
+    } else {
+      groups.set(label, [transaction])
+    }
+  }
+
+  // Preserve chronological order by first transaction in each group.
+  const entries = [...groups.entries()].map(([label, items]) => ({
+    label,
+    items,
+    firstDate: items[items.length - 1]?.date ?? now,
+  }))
+
+  entries.sort((a, b) => b.firstDate - a.firstDate)
+
+  return entries
+})
+
+const activeFilterChips = computed(() => {
+  const chips: { key: string; label: string }[] = []
+
+  if (filters.tripId !== 'all') {
+    chips.push({ key: 'trip', label: tripNameById.value.get(filters.tripId) ?? '旅程' })
+  }
+
+  if (filters.categoryId !== 'all') {
+    chips.push({
+      key: 'category',
+      label: categoryNameById.value.get(filters.categoryId) ?? '分類',
+    })
+  }
+
+  return chips
 })
 
 watch(
@@ -140,42 +223,54 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => filters.kind,
+  () => {
+    filters.categoryId = 'all'
+  },
+)
+
 function addExpense(draft: ExpenseDraft): void {
   void appData.addExpense(draft)
+  selectedTransaction.value = undefined
 }
 
 function addIncome(draft: IncomeDraft): void {
   void appData.addIncome(draft)
+  selectedTransaction.value = undefined
 }
 
 function addSaving(draft: SavingDraft): void {
   void appData.addSaving(draft)
+  selectedTransaction.value = undefined
 }
 
 function startEditing(transaction: CombinedTransaction): void {
   selectedTransaction.value = transaction
-  void nextTick(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  })
 }
 
-function cancelEditing(): void {
+function closeSheet(): void {
   selectedTransaction.value = undefined
 }
 
 function updateExpense(transactionId: string, draft: ExpenseDraft): void {
-  void appData.updateExpense(transactionId, draft).then(cancelEditing)
+  void appData.updateExpense(transactionId, draft).then(closeSheet)
 }
 
 function updateIncome(transactionId: string, draft: IncomeDraft): void {
-  void appData.updateIncome(transactionId, draft).then(cancelEditing)
+  void appData.updateIncome(transactionId, draft).then(closeSheet)
 }
 
 function updateSaving(transactionId: string, draft: SavingDraft): void {
-  void appData.updateSaving(transactionId, draft).then(cancelEditing)
+  void appData.updateSaving(transactionId, draft).then(closeSheet)
 }
 
-function deleteTransaction(transaction: CombinedTransaction): void {
+function deleteTransaction(): void {
+  const transaction = selectedTransaction.value
+  if (!transaction) {
+    return
+  }
+
   const confirmed = globalThis.confirm?.(`確定要刪除「${transaction.name}」嗎？`) ?? true
 
   if (!confirmed) {
@@ -189,19 +284,7 @@ function deleteTransaction(transaction: CombinedTransaction): void {
         ? appData.deleteIncome(transaction.id)
         : appData.deleteSaving(transaction.id)
 
-  void action.then(() => {
-    if (selectedTransaction.value?.id === transaction.id) {
-      cancelEditing()
-    }
-  })
-}
-
-function deleteSelectedTransaction(): void {
-  if (!selectedTransaction.value) {
-    return
-  }
-
-  deleteTransaction(selectedTransaction.value)
+  void action.then(closeSheet)
 }
 
 function resetFilters(): void {
@@ -209,164 +292,240 @@ function resetFilters(): void {
   filters.kind = 'all'
   filters.categoryId = 'all'
   filters.datePreset = 'all'
-  filters.fromDate = ''
-  filters.toDate = ''
+  search.value = ''
+}
+
+function removeFilterChip(key: string): void {
+  if (key === 'trip') {
+    filters.tripId = 'all'
+  } else if (key === 'category') {
+    filters.categoryId = 'all'
+  }
+}
+
+function setKind(value: typeof filters.kind): void {
+  filters.kind = value
+}
+
+function setDatePreset(value: typeof filters.datePreset): void {
+  filters.datePreset = value
+}
+
+function setTripFilter(tripId: string): void {
+  filters.tripId = tripId
+}
+
+function setCategoryFilter(categoryId: string): void {
+  filters.categoryId = categoryId
 }
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <section>
-      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">流水帳</p>
-      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">交易紀錄</h1>
-    </section>
+  <div class="grid gap-4">
+    <section
+      class="sticky top-14 z-10 -mx-4 border-b border-border bg-bg px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+    >
+      <div class="flex items-center gap-3">
+        <div class="relative flex-1">
+          <BaseInput v-model="search" placeholder="搜尋交易名稱" type="search" inputmode="search" />
+        </div>
+        <button
+          type="button"
+          class="inline-flex shrink-0 items-center justify-center rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-semibold text-text transition hover:bg-accent"
+          :class="showFilters ? 'bg-accent' : ''"
+          aria-label="篩選"
+          @click="showFilters = !showFilters"
+        >
+          篩選
+        </button>
+      </div>
 
-    <TransactionForm
-      v-if="selectedTransaction"
-      :key="`edit-${selectedTransaction.id}`"
-      :expense-categories="appData.activeExpenseCategories.value"
-      :income-categories="appData.activeIncomeCategories.value"
-      :saving-challenges="appData.savingChallenges.value"
-      :trip-options="appData.trips.value"
-      :default-trip-id="appData.activeTripId.value || undefined"
-      :fx-rate-map="appData.fxRateMap.value"
-      :latest-fx-date="appData.latestFxDate.value"
-      :transaction="selectedTransaction"
-      @update-expense="updateExpense"
-      @update-income="updateIncome"
-      @update-saving="updateSaving"
-      @delete-transaction="deleteSelectedTransaction"
-      @cancel-edit="cancelEditing"
-    />
-    <TransactionForm
-      v-else
-      key="create"
-      :expense-categories="appData.activeExpenseCategories.value"
-      :income-categories="appData.activeIncomeCategories.value"
-      :saving-challenges="appData.savingChallenges.value"
-      :trip-options="appData.trips.value"
-      :default-trip-id="appData.activeTripId.value || undefined"
-      :fx-rate-map="appData.fxRateMap.value"
-      :latest-fx-date="appData.latestFxDate.value"
-      @create-expense="addExpense"
-      @create-income="addIncome"
-      @create-saving="addSaving"
-    />
-
-    <section class="grid gap-3">
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        搜尋交易
-        <input
-          v-model="search"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          placeholder="按名稱搜尋"
-        />
-      </label>
-
-      <div
-        class="grid gap-3 rounded-md border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-6"
-      >
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          旅程
-          <select
-            v-model="filters.tripId"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+      <div v-if="showFilters" class="mt-3 space-y-3">
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="option in kindOptions"
+            :key="option.value"
+            type="button"
+            class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+            :class="
+              filters.kind === option.value
+                ? 'bg-primary text-white'
+                : 'border border-border bg-surface text-text hover:bg-accent'
+            "
+            @click="setKind(option.value)"
           >
-            <option value="all">全部交易</option>
-            <option value="unassigned">未關聯旅程</option>
-            <option v-for="trip in appData.trips.value" :key="trip.trip_id" :value="trip.trip_id">
-              {{ trip.name }}｜{{ trip.destination }}
-            </option>
-          </select>
-        </label>
+            {{ option.label }}
+          </button>
+        </div>
 
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          類型
-          <select
-            v-model="filters.kind"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="option in datePresetOptions"
+            :key="option.value"
+            type="button"
+            class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+            :class="
+              filters.datePreset === option.value
+                ? 'bg-primary text-white'
+                : 'border border-border bg-surface text-text hover:bg-accent'
+            "
+            @click="setDatePreset(option.value)"
           >
-            <option value="all">全部</option>
-            <option value="expense">支出</option>
-            <option value="income">收入</option>
-            <option value="saving">儲蓄</option>
-          </select>
-        </label>
+            {{ option.label }}
+          </button>
+        </div>
 
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          分類
-          <select
-            v-model="filters.categoryId"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          >
-            <option value="all">全部分類</option>
-            <option
+        <div v-if="appData.trips.value.length" class="grid gap-1.5">
+          <p class="text-xs font-medium text-text-2">旅程</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+              :class="
+                filters.tripId === 'all'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-surface text-text hover:bg-accent'
+              "
+              @click="setTripFilter('all')"
+            >
+              全部
+            </button>
+            <button
+              type="button"
+              class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+              :class="
+                filters.tripId === 'unassigned'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-surface text-text hover:bg-accent'
+              "
+              @click="setTripFilter('unassigned')"
+            >
+              未關聯
+            </button>
+            <button
+              v-for="trip in appData.trips.value"
+              :key="trip.trip_id"
+              type="button"
+              class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+              :class="
+                filters.tripId === trip.trip_id
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-surface text-text hover:bg-accent'
+              "
+              @click="setTripFilter(trip.trip_id)"
+            >
+              {{ trip.name }}
+            </button>
+          </div>
+        </div>
+
+        <div class="grid gap-1.5">
+          <p class="text-xs font-medium text-text-2">分類</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+              :class="
+                filters.categoryId === 'all'
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-surface text-text hover:bg-accent'
+              "
+              @click="setCategoryFilter('all')"
+            >
+              全部
+            </button>
+            <button
               v-for="category in availableCategories"
               :key="
                 'kind' in category
                   ? `${category.kind}-${category.category_id}`
                   : category.category_id
               "
-              :value="category.category_id"
+              type="button"
+              class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+              :class="
+                filters.categoryId === category.category_id
+                  ? 'text-white'
+                  : 'border border-border bg-surface text-text hover:bg-accent'
+              "
+              :style="
+                filters.categoryId === category.category_id
+                  ? { backgroundColor: `#${category.color_code}` }
+                  : undefined
+              "
+              @click="setCategoryFilter(category.category_id)"
             >
               {{ category.name_tc || category.name_en }}
-            </option>
-          </select>
-        </label>
-
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          時間快捷
-          <select
-            v-model="filters.datePreset"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          >
-            <option value="all">全部</option>
-            <option value="today">今天</option>
-            <option value="cycle">本期</option>
-            <option value="future">未來</option>
-          </select>
-        </label>
-
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          開始日期
-          <input
-            v-model="filters.fromDate"
-            type="date"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          />
-        </label>
-
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          結束日期
-          <input
-            v-model="filters.toDate"
-            type="date"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          />
-        </label>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div class="flex justify-end">
+      <div v-if="activeFilterChips.length" class="mt-3 flex flex-wrap items-center gap-2">
+        <span
+          v-for="chip in activeFilterChips"
+          :key="chip.key"
+          class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+        >
+          {{ chip.label }}
+          <button
+            type="button"
+            class="inline-flex size-4 items-center justify-center rounded-full text-primary hover:bg-primary/20"
+            :aria-label="`移除 ${chip.label} 篩選`"
+            @click="removeFilterChip(chip.key)"
+          >
+            ×
+          </button>
+        </span>
         <button
           type="button"
-          class="rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
+          class="text-xs font-medium text-text-2 hover:text-text"
           @click="resetFilters"
         >
-          清除篩選
+          清除全部
         </button>
       </div>
-
-      <TransactionList
-        v-if="filteredTransactions.length"
-        :items="filteredTransactions"
-        :expense-categories="appData.data.value.expenseCategories"
-        :income-categories="appData.data.value.incomeCategories"
-        :currency="appData.currency.value"
-        show-actions
-        @edit="startEditing"
-        @delete="deleteTransaction"
-      />
-      <EmptyState v-else title="找不到交易" message="試試其他關鍵字，或先新增一筆交易。" />
     </section>
+
+    <section class="grid gap-4">
+      <div v-if="groupedTransactions.length" class="space-y-4">
+        <TransactionDateGroup
+          v-for="group in groupedTransactions"
+          :key="group.label"
+          :label="group.label"
+          :items="group.items"
+          :expense-categories="appData.data.value.expenseCategories"
+          :income-categories="appData.data.value.incomeCategories"
+          :currency="appData.currency.value"
+          @select="startEditing"
+        />
+      </div>
+      <EmptyState
+        v-else
+        :icon="SearchX"
+        title="找不到交易"
+        message="試試其他關鍵字，或先新增一筆交易。"
+      />
+    </section>
+
+    <QuickAddSheet
+      :model-value="Boolean(selectedTransaction)"
+      :transaction="selectedTransaction"
+      :expense-categories="appData.activeExpenseCategories.value"
+      :income-categories="appData.activeIncomeCategories.value"
+      :saving-challenges="appData.savingChallenges.value"
+      :trip-options="appData.trips.value"
+      :default-trip-id="appData.activeTripId.value || undefined"
+      :fx-rate-map="appData.fxRateMap.value"
+      :latest-fx-date="appData.latestFxDate.value"
+      @update:model-value="closeSheet"
+      @create-expense="addExpense"
+      @create-income="addIncome"
+      @create-saving="addSaving"
+      @update-expense="updateExpense"
+      @update-income="updateIncome"
+      @update-saving="updateSaving"
+      @delete-transaction="deleteTransaction"
+    />
   </div>
 </template>
