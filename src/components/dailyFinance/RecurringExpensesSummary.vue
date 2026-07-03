@@ -6,7 +6,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import type { UpcomingBill } from '@/lib/dailyFinance/recurringExpenses'
 
-const props = defineProps<{
+defineProps<{
   fixedTotal: number
   upcomingBills: readonly UpcomingBill[]
   currency: string
