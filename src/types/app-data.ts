@@ -69,6 +69,9 @@ export interface ExpenseTransaction {
   original_currency?: SupportedCurrency
   original_amount?: number
   exchange_rate_hkd?: number
+  recurring?: boolean
+  recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
+  recurring_day?: number
 }
 
 export interface IncomeTransaction {
@@ -147,6 +150,9 @@ export interface ExpenseDraft {
   trip_id?: string
   currency_code: SupportedCurrency
   exchange_rate_hkd: number
+  recurring?: boolean
+  recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
+  recurring_day?: number
 }
 
 export interface IncomeDraft {

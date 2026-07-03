@@ -4,6 +4,7 @@ import { CirclePlus, X } from 'lucide-vue-next'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import MetricCard from '@/components/common/MetricCard.vue'
+import RecurringExpensesSummary from '@/components/dailyFinance/RecurringExpensesSummary.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
@@ -165,6 +166,14 @@ onBeforeUnmount(() => {
         :value="formatCurrency(appData.dailySafeToSpend.value.safeToSpendToday, appData.currency.value)"
         :detail="`今日已用 ${formatCurrency(appData.todaySpent.value, appData.currency.value)}`"
         :tone="appData.dailySafeToSpend.value.isOverToday ? 'warn' : 'good'"
+      />
+    </section>
+
+    <section v-if="!isTripMode" class="grid gap-3 lg:grid-cols-2">
+      <RecurringExpensesSummary
+        :fixed-total="appData.cycleFixedExpensesTotal.value"
+        :upcoming-bills="appData.upcomingBills.value"
+        :currency="appData.currency.value"
       />
     </section>
 

@@ -157,6 +157,9 @@ export async function createExpense(draft: ExpenseDraft): Promise<void> {
     date: draft.date,
     create_date: now,
     edit_date: now,
+    recurring: draft.recurring,
+    recurring_frequency: draft.recurring_frequency,
+    recurring_day: draft.recurring_day,
     ...persistedFields,
   }
 
@@ -249,6 +252,9 @@ export async function updateExpense(transactionId: string, draft: ExpenseDraft):
     name: draft.name.trim(),
     date: draft.date,
     edit_date: Date.now(),
+    recurring: draft.recurring,
+    recurring_frequency: draft.recurring_frequency,
+    recurring_day: draft.recurring_day,
     ...persistedFields,
   })
 }

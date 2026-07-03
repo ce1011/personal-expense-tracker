@@ -49,6 +49,9 @@ const form = reactive({
   currency_code: 'HKD' as SupportedCurrency,
   date: toDateInputValue(Date.now()),
   trip_id: '',
+  recurring: false,
+  recurring_frequency: 'monthly' as 'weekly' | 'monthly' | 'yearly',
+  recurring_day: 1,
 })
 
 const supportedCurrencies: SupportedCurrency[] = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB']
@@ -96,6 +99,9 @@ watch(
     form.currency_code = transaction.original_currency ?? 'HKD'
     form.date = toDateInputValue(transaction.date)
     form.trip_id = normalizeTripId(transaction.trip_id)
+    form.recurring = false
+    form.recurring_frequency = 'monthly'
+    form.recurring_day = 1
   },
   { immediate: true },
 )
@@ -137,6 +143,9 @@ function submitForm(): void {
     currency_code: form.currency_code,
     exchange_rate_hkd: selectedRate.value,
     trip_id: form.trip_id || undefined,
+    recurring: form.kind === 'expense' ? form.recurring : undefined,
+    recurring_frequency: form.kind === 'expense' && form.recurring ? form.recurring_frequency : undefined,
+    recurring_day: form.kind === 'expense' && form.recurring ? form.recurring_day : undefined,
   }
 
   if (form.kind === 'expense') {
@@ -173,6 +182,9 @@ function resetForm(): void {
   form.currency_code = 'HKD'
   form.date = toDateInputValue(Date.now())
   form.trip_id = normalizedDefaultTripId.value
+  form.recurring = false
+  form.recurring_frequency = 'monthly'
+  form.recurring_day = 1
 }
 
 function cancelEdit(): void {
@@ -263,6 +275,27 @@ function removeTransaction(): void {
             {{ trip.name }}｜{{ trip.destination }}
           </option>
         </select>
+      </label>
+    </div>
+
+    <div v-if="form.kind === 'expense'" class="mt-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 md:grid-cols-3">
+      <label class="flex items-center gap-2 text-sm font-medium text-stone-700">
+        <input v-model="form.recurring" type="checkbox" class="size-4 rounded border-stone-300" />
+        定期支出
+      </label>
+
+      <label class="grid gap-1 text-sm font-medium text-stone-700">
+        週期
+        <select v-model="form.recurring_frequency" :disabled="!form.recurring" class="rounded-md border border-stone-300 bg-white px-3 py-2 disabled:bg-stone-100">
+          <option value="weekly">每週</option>
+          <option value="monthly">每月</option>
+          <option value="yearly">每年</option>
+        </select>
+      </label>
+
+      <label class="grid gap-1 text-sm font-medium text-stone-700">
+        到期日
+        <input v-model.number="form.recurring_day" :disabled="!form.recurring" min="1" max="31" type="number" class="rounded-md border border-stone-300 px-3 py-2 disabled:bg-stone-100" />
       </label>
     </div>
 

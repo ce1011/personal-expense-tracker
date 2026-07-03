@@ -67,6 +67,9 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireOptionalSupportedCurrency(transaction, 'original_currency', `expenses[${index}]`, errors)
     requireOptionalNumber(transaction, 'original_amount', `expenses[${index}]`, errors)
     requireOptionalNumber(transaction, 'exchange_rate_hkd', `expenses[${index}]`, errors)
+    requireOptionalBoolean(transaction, 'recurring', `expenses[${index}]`, errors)
+    requireOptionalString(transaction, 'recurring_frequency', `expenses[${index}]`, errors)
+    requireOptionalNumber(transaction, 'recurring_day', `expenses[${index}]`, errors)
   })
 
   payload.incomes.forEach((transaction, index) => {
