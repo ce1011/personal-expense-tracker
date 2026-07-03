@@ -4,6 +4,8 @@ import { computed, shallowRef } from 'vue'
 
 import type { ChallengeProgress } from '@/lib/dailyFinance/savingChallenges'
 import { formatCurrency } from '@/lib/formatters'
+import ProgressBar from '@/components/common/ProgressBar.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import type { SavingChallenge } from '@/types/app-data'
 
 defineProps<{
@@ -45,6 +47,23 @@ function submitCreate(): void {
 function toggleStatus(challenge: ChallengeProgress): void {
   const next = challenge.status === 'active' ? 'paused' : 'active'
   emit('updateStatus', challenge.challenge_id, next)
+}
+
+function confirmDelete(challengeId: string): void {
+  if (confirm('確定要刪除這個儲蓄挑戰嗎？相關紀錄將一併移除。')) {
+    emit('delete', challengeId)
+  }
+}
+
+function statusColorClass(status: SavingChallenge['status']): string {
+  switch (status) {
+    case 'active':
+      return 'bg-emerald-600'
+    case 'paused':
+      return 'bg-amber-500'
+    case 'completed':
+      return 'bg-stone-400'
+  }
 }
 </script>
 
@@ -139,6 +158,7 @@ function toggleStatus(challenge: ChallengeProgress): void {
             <button
               type="button"
               class="rounded-md p-1 text-stone-500 transition hover:bg-stone-100 hover:text-stone-700"
+              :aria-label="challenge.status === 'active' ? '暫停挑戰' : '繼續挑戰'"
               :title="challenge.status === 'active' ? '暫停' : '繼續'"
               @click="toggleStatus(challenge)"
             >
@@ -148,25 +168,19 @@ function toggleStatus(challenge: ChallengeProgress): void {
             <button
               type="button"
               class="rounded-md p-1 text-stone-500 transition hover:bg-red-50 hover:text-red-700"
+              aria-label="刪除挑戰"
               title="刪除"
-              @click="emit('delete', challenge.challenge_id)"
+              @click="confirmDelete(challenge.challenge_id)"
             >
               <Trash2 class="size-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        <div class="h-2 w-full overflow-hidden rounded-full bg-stone-100">
-          <div
-            class="h-full rounded-full transition-all"
-            :class="{
-              'bg-emerald-600': challenge.status === 'active',
-              'bg-amber-500': challenge.status === 'paused',
-              'bg-stone-400': challenge.status === 'completed',
-            }"
-            :style="{ width: `${Math.min(challenge.percentage, 100)}%` }"
-          />
-        </div>
+        <ProgressBar
+          :percentage="challenge.percentage"
+          :color-class="statusColorClass(challenge.status)"
+        />
 
         <p class="text-right text-xs text-stone-500">
           {{ formatCurrency(challenge.current_amount, currency) }} /
@@ -176,11 +190,6 @@ function toggleStatus(challenge: ChallengeProgress): void {
       </div>
     </div>
 
-    <p
-      v-else
-      class="rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
-    >
-      目前沒有儲蓄挑戰。新增一個小目標，開始累積進度。
-    </p>
+    <EmptyState v-else title="目前沒有儲蓄挑戰" message="新增一個小目標，開始累積進度。" />
   </article>
 </template>

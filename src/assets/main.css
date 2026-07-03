@@ -30,6 +30,16 @@ textarea {
   font: inherit;
 }
 
+@layer base {
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible {
+    @apply outline-none ring-2 ring-emerald-800 ring-offset-2 ring-offset-stone-100;
+  }
+}
+
 button {
   cursor: pointer;
 }

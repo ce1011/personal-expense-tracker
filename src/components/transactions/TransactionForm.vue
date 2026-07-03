@@ -246,7 +246,7 @@ function removeTransaction(): void {
       <PencilLine v-else class="size-5 text-amber-700" aria-hidden="true" />
     </div>
 
-    <div class="mt-4 grid gap-3" :class="compact ? 'md:grid-cols-2' : 'md:grid-cols-7'">
+    <div class="mt-4 grid gap-3" :class="compact ? 'md:grid-cols-2' : 'md:grid-cols-4'">
       <div class="grid gap-1 text-sm font-medium text-stone-700">
         <span>類型</span>
         <template v-if="isEditing">
@@ -342,7 +342,8 @@ function removeTransaction(): void {
 
     <div
       v-if="form.kind === 'expense'"
-      class="mt-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 md:grid-cols-3"
+      class="mt-3 grid gap-3 rounded-md border border-stone-200 p-3 transition-opacity md:grid-cols-3"
+      :class="form.recurring ? 'bg-stone-50 opacity-100' : 'bg-stone-100 opacity-60'"
     >
       <label class="flex items-center gap-2 text-sm font-medium text-stone-700">
         <input v-model="form.recurring" type="checkbox" class="size-4 rounded border-stone-300" />

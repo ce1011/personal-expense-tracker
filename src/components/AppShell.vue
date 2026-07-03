@@ -25,15 +25,18 @@ const props = defineProps<{
 
 const appData = useAppData()
 
-const navItems = [
+const mainNavItems = [
   { label: '總覽', to: '/', icon: LayoutDashboard },
   { label: '交易', to: '/transactions', icon: ListChecks },
-  { label: 'JSON 匯入', to: '/import-transactions', icon: Braces },
   { label: '預算週期', to: '/budgets', icon: ChartNoAxesCombined },
   { label: '分類預算', to: '/category-budget', icon: ChartPie },
-  { label: '分類', to: '/categories', icon: FolderKanban },
   { label: '旅程', to: '/trips', icon: Plane },
   { label: '每月快照', to: '/monthly-snapshot', icon: BarChart3 },
+]
+
+const secondaryNavItems = [
+  { label: '分類', to: '/categories', icon: FolderKanban },
+  { label: 'JSON 匯入', to: '/import-transactions', icon: Braces },
   { label: '設定', to: '/settings', icon: ArchiveRestore },
 ]
 
@@ -89,7 +92,7 @@ function getTripStatusLabel(status: TripStatus): string {
 
       <nav class="space-y-1">
         <RouterLink
-          v-for="item in navItems"
+          v-for="item in mainNavItems"
           :key="item.to"
           :to="item.to"
           class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-white hover:text-stone-950"
@@ -99,6 +102,24 @@ function getTripStatusLabel(status: TripStatus): string {
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
+
+      <div class="mt-6">
+        <p class="px-3 text-xs font-semibold uppercase tracking-[0.14em] text-stone-400">
+          資料維護
+        </p>
+        <nav class="mt-2 space-y-1">
+          <RouterLink
+            v-for="item in secondaryNavItems"
+            :key="item.to"
+            :to="item.to"
+            class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-white hover:text-stone-950"
+            active-class="bg-white text-emerald-900 shadow-sm"
+          >
+            <component :is="item.icon" class="size-4" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </RouterLink>
+        </nav>
+      </div>
 
       <div class="mt-8 rounded-md border border-stone-200 bg-white p-4">
         <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">目前週期</p>
@@ -172,7 +193,18 @@ function getTripStatusLabel(status: TripStatus): string {
         </div>
         <nav class="mt-3 flex gap-2 overflow-x-auto pb-1">
           <RouterLink
-            v-for="item in navItems"
+            v-for="item in mainNavItems"
+            :key="item.to"
+            :to="item.to"
+            class="flex shrink-0 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700"
+            active-class="border-emerald-700 text-emerald-900"
+          >
+            <component :is="item.icon" class="size-4" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </RouterLink>
+          <span class="shrink-0 self-center text-stone-300" aria-hidden="true">| </span>
+          <RouterLink
+            v-for="item in secondaryNavItems"
             :key="item.to"
             :to="item.to"
             class="flex shrink-0 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700"

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, shallowRef } from 'vue'
-import { CirclePlus, X } from 'lucide-vue-next'
+import { CirclePlus, History } from 'lucide-vue-next'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import MetricCard from '@/components/common/MetricCard.vue'
+import BaseModal from '@/components/common/BaseModal.vue'
 import CategoryAlertsList from '@/components/dailyFinance/CategoryAlertsList.vue'
 import RecurringExpensesSummary from '@/components/dailyFinance/RecurringExpensesSummary.vue'
 import SavingChallengesList from '@/components/dailyFinance/SavingChallengesList.vue'
@@ -139,7 +140,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="grid gap-6">
-    <section class="grid gap-4 xl:grid-cols-[1fr_320px]">
+    <section class="grid gap-4">
       <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">
@@ -160,33 +161,29 @@ onBeforeUnmount(() => {
             目前只顯示已綁定這次旅程的交易，方便集中查看預算與每日開支節奏。
           </p>
         </div>
-        <p v-if="appData.error.value" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {{ appData.error.value }}
-        </p>
-      </div>
-
-      <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <div class="flex h-full flex-col justify-between gap-4">
-          <div>
-            <h2 class="text-lg font-semibold text-stone-950">快速記一筆</h2>
-            <p class="mt-1 text-sm text-stone-500">
-              {{
-                isTripMode
-                  ? '新增後會自動帶入目前旅程，支出、收入或儲蓄都可以快速記錄。'
-                  : '用彈出視窗快速新增支出、收入或儲蓄。'
-              }}
-            </p>
-          </div>
+        <div v-if="!isTripMode" class="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
+            class="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+            @click="openWeeklyReview"
+          >
+            <History class="size-4" aria-hidden="true" />
+            上週回顧
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900"
             @click="openQuickAdd"
           >
             <CirclePlus class="size-4" aria-hidden="true" />
             新增交易
           </button>
         </div>
-      </section>
+      </div>
+
+      <p v-if="appData.error.value" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ appData.error.value }}
+      </p>
     </section>
 
     <section v-if="!isTripMode" class="grid gap-3 md:grid-cols-4">
@@ -217,33 +214,7 @@ onBeforeUnmount(() => {
       />
     </section>
 
-    <section v-if="!isTripMode" class="flex justify-end">
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-        @click="openWeeklyReview"
-      >
-        上週回顧
-      </button>
-    </section>
-
     <section v-if="!isTripMode" class="grid gap-3 lg:grid-cols-2">
-      <CategoryAlertsList
-        :alerts="appData.categoryAlerts.value"
-        :currency="appData.currency.value"
-      />
-      <RecurringExpensesSummary
-        :fixed-total="appData.cycleFixedExpensesTotal.value"
-        :upcoming-bills="appData.upcomingBills.value"
-        :currency="appData.currency.value"
-      />
-      <SavingChallengesList
-        :challenges="appData.activeChallenges.value"
-        :currency="appData.currency.value"
-        @create="createSavingChallenge"
-        @update-status="updateSavingChallengeStatus"
-        @delete="deleteSavingChallenge"
-      />
       <QuickAddShortcuts
         :suggestions="appData.quickAddSuggestions.value"
         :expense-categories="appData.activeExpenseCategories.value"
@@ -253,6 +224,22 @@ onBeforeUnmount(() => {
         @create-expense="addExpense"
         @create-income="addIncome"
         @create-saving="addSaving"
+      />
+      <SavingChallengesList
+        :challenges="appData.activeChallenges.value"
+        :currency="appData.currency.value"
+        @create="createSavingChallenge"
+        @update-status="updateSavingChallengeStatus"
+        @delete="deleteSavingChallenge"
+      />
+      <CategoryAlertsList
+        :alerts="appData.categoryAlerts.value"
+        :currency="appData.currency.value"
+      />
+      <RecurringExpensesSummary
+        :fixed-total="appData.cycleFixedExpensesTotal.value"
+        :upcoming-bills="appData.upcomingBills.value"
+        :currency="appData.currency.value"
       />
     </section>
 
@@ -312,12 +299,12 @@ onBeforeUnmount(() => {
           :income-categories="appData.data.value.incomeCategories"
           :currency="appData.currency.value"
         />
-        <p
+        <EmptyState
           v-else
-          class="mt-4 rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
-        >
-          建議在旅途中當天記帳，之後回看每日拆分會更清楚。
-        </p>
+          class="mt-4"
+          title="這一天尚未記錄旅程交易"
+          message="建議在旅途中當天記帳，之後回看每日拆分會更清楚。"
+        />
       </article>
     </section>
 
@@ -340,7 +327,7 @@ onBeforeUnmount(() => {
         :message="
           isTripMode
             ? '這個旅程還未綁定任何交易，可以先用快速記一筆開始記錄。'
-            : '用右側快速記一筆，先把第一筆支出、收入或儲蓄記下來。'
+            : '用上方新增交易按鈕，或快速新增卡片把第一筆支出、收入或儲蓄記下來。'
         "
       />
     </section>
@@ -352,44 +339,30 @@ onBeforeUnmount(() => {
       @close="closeWeeklyReview"
     />
 
-    <div
-      v-if="isQuickAddOpen"
-      class="fixed inset-0 z-40 grid place-items-center bg-stone-950/40 px-4 py-8 backdrop-blur-sm"
-      @click.self="closeQuickAdd"
+    <BaseModal
+      :show="isQuickAddOpen"
+      title="快速記一筆"
+      subtitle="新增後會立即寫入帳目，並自動換算成港幣。"
+      max-width="max-w-4xl"
+      @close="closeQuickAdd"
     >
-      <div class="w-full max-w-4xl rounded-md bg-[#f9f6ef] p-4 shadow-xl">
-        <div class="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-semibold text-stone-950">快速記一筆</h2>
-            <p class="mt-1 text-sm text-stone-500">新增後會立即寫入帳目，並自動換算成港幣。</p>
-          </div>
-          <button
-            type="button"
-            class="rounded-md border border-stone-200 bg-white p-2 text-stone-600 transition hover:bg-stone-50"
-            @click="closeQuickAdd"
-          >
-            <X class="size-4" aria-hidden="true" />
-          </button>
-        </div>
-
-        <TransactionForm
-          :expense-categories="appData.activeExpenseCategories.value"
-          :income-categories="appData.activeIncomeCategories.value"
-          :saving-challenges="appData.savingChallenges.value"
-          :trip-options="appData.trips.value"
-          :default-trip-id="appData.activeTripId.value || undefined"
-          :fx-rate-map="appData.fxRateMap.value"
-          :latest-fx-date="appData.latestFxDate.value"
-          @create-expense="addExpense"
-          @create-income="addIncome"
-          @create-saving="addSaving"
-        />
-      </div>
-    </div>
+      <TransactionForm
+        :expense-categories="appData.activeExpenseCategories.value"
+        :income-categories="appData.activeIncomeCategories.value"
+        :saving-challenges="appData.savingChallenges.value"
+        :trip-options="appData.trips.value"
+        :default-trip-id="appData.activeTripId.value || undefined"
+        :fx-rate-map="appData.fxRateMap.value"
+        :latest-fx-date="appData.latestFxDate.value"
+        @create-expense="addExpense"
+        @create-income="addIncome"
+        @create-saving="addSaving"
+      />
+    </BaseModal>
 
     <div
       v-if="toastMessage"
-      class="fixed bottom-4 right-4 z-50 rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-900 shadow-lg"
+      class="fixed bottom-4 right-4 z-50 rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-900 shadow-lg max-sm:bottom-8 max-sm:right-1/2 max-sm:translate-x-1/2"
       role="status"
       aria-live="polite"
     >

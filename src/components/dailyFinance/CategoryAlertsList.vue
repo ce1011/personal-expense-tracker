@@ -1,11 +1,17 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+import EmptyState from '@/components/common/EmptyState.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
 import { formatCurrency } from '@/lib/formatters'
 import type { CategoryAlert } from '@/lib/dailyFinance/categoryAlerts'
 
-defineProps<{
+const props = defineProps<{
   alerts: readonly CategoryAlert[]
   currency: string
 }>()
+
+const visibleAlerts = computed(() => props.alerts.filter((alert) => alert.severity !== 'ok'))
 
 function severityLabel(severity: CategoryAlert['severity']): string {
   switch (severity) {
@@ -15,6 +21,17 @@ function severityLabel(severity: CategoryAlert['severity']): string {
       return '接近上限'
     case 'danger':
       return '已超支'
+  }
+}
+
+function severityColorClass(severity: CategoryAlert['severity']): string {
+  switch (severity) {
+    case 'ok':
+      return 'bg-emerald-600'
+    case 'warning':
+      return 'bg-amber-500'
+    case 'danger':
+      return 'bg-red-600'
   }
 }
 </script>
@@ -28,8 +45,8 @@ function severityLabel(severity: CategoryAlert['severity']): string {
       </div>
     </div>
 
-    <div v-if="alerts.length" class="space-y-4">
-      <div v-for="alert in alerts" :key="alert.category_id" class="space-y-2">
+    <div v-if="visibleAlerts.length" class="space-y-4">
+      <div v-for="alert in visibleAlerts" :key="alert.category_id" class="space-y-2">
         <div class="flex items-center justify-between gap-3 text-sm">
           <div class="flex items-center gap-2">
             <span
@@ -57,29 +74,28 @@ function severityLabel(severity: CategoryAlert['severity']): string {
           </div>
         </div>
 
-        <div class="h-2 w-full overflow-hidden rounded-full bg-stone-100">
-          <div
-            class="h-full rounded-full transition-all"
-            :class="{
-              'bg-emerald-600': alert.severity === 'ok',
-              'bg-amber-500': alert.severity === 'warning',
-              'bg-red-600': alert.severity === 'danger',
-            }"
-            :style="{ width: `${Math.min(alert.percentage, 100)}%` }"
-          />
-        </div>
+        <ProgressBar
+          :percentage="alert.percentage"
+          :color-class="severityColorClass(alert.severity)"
+        />
 
         <p class="text-right text-xs text-stone-500">
-          尚餘 {{ formatCurrency(alert.remaining, currency) }} · {{ Math.round(alert.percentage) }}%
+          <template v-if="alert.severity === 'danger'">
+            已超支 {{ formatCurrency(Math.abs(alert.remaining), currency) }} ·
+            {{ Math.round(alert.percentage) }}%
+          </template>
+          <template v-else>
+            尚餘 {{ formatCurrency(alert.remaining, currency) }} ·
+            {{ Math.round(alert.percentage) }}%
+          </template>
         </p>
       </div>
     </div>
 
-    <p
+    <EmptyState
       v-else
-      class="rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
-    >
-      目前沒有設定分類支出上限。
-    </p>
+      title="目前沒有分類預算警報"
+      message="所有分類支出都在健康範圍內，暫時無需特別留意。"
+    />
   </article>
 </template>

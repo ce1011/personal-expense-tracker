@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CalendarClock } from 'lucide-vue-next'
 
+import EmptyState from '@/components/common/EmptyState.vue'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import type { UpcomingBill } from '@/lib/dailyFinance/recurringExpenses'
 
@@ -42,11 +43,11 @@ defineProps<{
         </div>
       </div>
     </div>
-    <p
+    <EmptyState
       v-else
-      class="mt-4 rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
-    >
-      未來 14 天內沒有即將到期的固定支出。
-    </p>
+      class="mt-4"
+      title="沒有即將到期的固定支出"
+      message="未來 14 天內沒有即將到期的固定支出。"
+    />
   </article>
 </template>

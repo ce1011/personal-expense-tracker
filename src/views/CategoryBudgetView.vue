@@ -3,6 +3,7 @@ import { computed, shallowRef } from 'vue'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import MetricCard from '@/components/common/MetricCard.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
 import { useAppData } from '@/composables/useAppData'
 import { buildCategoryBudgetInsights } from '@/lib/categoryBudgetInsights'
 import { buildCategoryProgressRows } from '@/lib/categoryProgress'
@@ -199,15 +200,11 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
               </span>
             </div>
 
-            <div class="mt-2 h-2 overflow-hidden rounded-full bg-stone-100">
-              <div
-                class="h-full rounded-full"
-                :style="{
-                  width: `${row.target ? row.ratio * 100 : row.spent > 0 ? 100 : 0}%`,
-                  backgroundColor: withHash(row.category.color_code),
-                }"
-              />
-            </div>
+            <ProgressBar
+              class="mt-2"
+              :percentage="row.target ? row.ratio * 100 : row.spent > 0 ? 100 : 0"
+              :color-style="withHash(row.category.color_code)"
+            />
           </div>
         </div>
         <EmptyState
@@ -234,15 +231,11 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
                   {{ formatPercent(row.share) }}
                 </span>
               </div>
-              <div class="mt-2 h-2 overflow-hidden rounded-full bg-stone-100">
-                <div
-                  class="h-full rounded-full"
-                  :style="{
-                    width: `${row.share * 100}%`,
-                    backgroundColor: withHash(row.category.color_code),
-                  }"
-                />
-              </div>
+              <ProgressBar
+                class="mt-2"
+                :percentage="row.share * 100"
+                :color-style="withHash(row.category.color_code)"
+              />
             </div>
           </div>
           <EmptyState

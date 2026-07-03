@@ -80,6 +80,24 @@ const spareChange = computed(() => {
   return calculateSpareChange(parsed.value.amount)
 })
 
+const inputClass = computed(() => {
+  if (!parsed.value) {
+    return 'border-stone-300 focus:border-emerald-800'
+  }
+
+  return parsed.value.category_id
+    ? 'border-emerald-500 focus:border-emerald-800'
+    : 'border-amber-500 focus:border-amber-700'
+})
+
+const categoryHint = computed(() => {
+  if (!parsed.value || parsed.value.category_id) {
+    return ''
+  }
+
+  return '未偵測到分類，將使用預設支出分類'
+})
+
 function applySuggestion(suggestion: QuickAddSuggestion): void {
   text.value = `${suggestion.name} `
   isSpareChangeEnabled.value = false
@@ -157,7 +175,8 @@ function submit(): void {
         <input
           v-model="text"
           type="text"
-          class="flex-1 rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-emerald-800 focus:outline-none"
+          class="flex-1 rounded-md border px-3 py-2 text-sm focus:outline-none"
+          :class="inputClass"
           placeholder="例如：麥當勞 55"
         />
         <button
@@ -174,6 +193,7 @@ function submit(): void {
           識別：{{ parsed.name }} · {{ formatCurrency(parsed.amount, currency) }}
           <span v-if="parsed.category_id" class="ml-1 text-emerald-700">（已配對分類）</span>
         </p>
+        <p v-if="categoryHint" class="mt-1 text-amber-700">{{ categoryHint }}</p>
       </div>
 
       <label

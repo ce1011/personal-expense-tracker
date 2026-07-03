@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowDownLeft, ArrowUpRight, PencilLine, Trash2 } from 'lucide-vue-next'
+import { ArrowDownLeft, ArrowUpRight, PiggyBank, PencilLine, Trash2 } from 'lucide-vue-next'
 
 import { formatCurrency, formatDate, withHash } from '@/lib/formatters'
 import { savingCategories } from '@/lib/savingCategories'
@@ -46,7 +46,7 @@ const categoryById = computed(() => {
           class="size-4 text-white"
           aria-hidden="true"
         />
-        <ArrowUpRight v-else class="size-4 text-white" aria-hidden="true" />
+        <PiggyBank v-else class="size-4 text-white" aria-hidden="true" />
       </div>
       <div class="min-w-0">
         <p class="truncate text-sm font-semibold text-stone-950">{{ item.name }}</p>

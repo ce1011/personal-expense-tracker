@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import MetricCard from '@/components/common/MetricCard.vue'
+import ProgressBar from '@/components/common/ProgressBar.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { useAppData } from '@/composables/useAppData'
 import { formatCurrency, formatPercent } from '@/lib/formatters'
 
@@ -107,21 +109,20 @@ function deltaLabel(delta: number): string {
               {{ Math.round(category.percentage) }}%
             </span>
           </div>
-          <div class="h-2 w-full overflow-hidden rounded-full bg-stone-100">
-            <div
-              class="h-full rounded-full bg-emerald-600 transition-all"
-              :style="{ width: `${Math.min(category.percentage, 100)}%` }"
-            />
-          </div>
+          <ProgressBar
+            class="mt-2"
+            :percentage="category.percentage"
+            color-class="bg-emerald-600"
+          />
         </div>
       </div>
 
-      <p
+      <EmptyState
         v-else
-        class="mt-4 rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
-      >
-        本期尚未有支出紀錄。
-      </p>
+        class="mt-4"
+        title="本期尚未有支出紀錄"
+        message="記下一些支出後，這裡會顯示主要支出分類佔比。"
+      />
     </section>
   </div>
 </template>
