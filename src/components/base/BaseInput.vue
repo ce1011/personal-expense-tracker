@@ -13,22 +13,36 @@ const props = defineProps<{
   inputmode?: 'decimal' | 'numeric' | 'search' | 'text' | 'email' | 'tel' | 'url' | 'none'
   disabled?: boolean
   autofocus?: boolean
+  modelModifiers?: { number?: boolean; trim?: boolean }
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string]
+  'update:modelValue': [value: string | number]
 }>()
 
 const inputId = computed(
   () => props.id ?? props.name ?? `base-input-${Math.random().toString(36).slice(2, 9)}`,
 )
 
-const inputValue = computed({
+const inputValue = computed<string | number>({
   get() {
     return props.modelValue
   },
-  set(value: string) {
-    emit('update:modelValue', value)
+  set(value: string | number) {
+    const stringValue = String(value)
+
+    if (props.type === 'number' || props.modelModifiers?.number) {
+      const parsed = stringValue === '' ? 0 : Number(stringValue)
+      emit('update:modelValue', Number.isNaN(parsed) ? 0 : parsed)
+      return
+    }
+
+    if (props.modelModifiers?.trim) {
+      emit('update:modelValue', stringValue.trim())
+      return
+    }
+
+    emit('update:modelValue', stringValue)
   },
 })
 

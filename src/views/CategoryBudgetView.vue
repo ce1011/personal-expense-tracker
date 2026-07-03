@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
+import { AlertTriangle, PieChart, TrendingUp } from 'lucide-vue-next'
 
-import EmptyState from '@/components/common/EmptyState.vue'
-import MetricCard from '@/components/common/MetricCard.vue'
-import ProgressBar from '@/components/common/ProgressBar.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import EmptyState from '@/components/base/EmptyState.vue'
+import CategoryProgressItem from '@/components/categoryBudget/CategoryProgressItem.vue'
 import { useAppData } from '@/composables/useAppData'
 import { buildCategoryBudgetInsights } from '@/lib/categoryBudgetInsights'
 import { buildCategoryProgressRows } from '@/lib/categoryProgress'
@@ -66,18 +67,16 @@ const riskRows = computed(() =>
   rankedRows.value.filter((row) => row.spent > row.target || (row.target > 0 && row.ratio >= 0.8)),
 )
 
-function rowTone(
-  row: (typeof rankedRows.value)[number],
-): 'text-red-700' | 'text-amber-700' | 'text-emerald-700' {
+function rowTone(row: (typeof rankedRows.value)[number]): 'danger' | 'warning' | 'good' {
   if (row.target > 0 && row.spent > row.target) {
-    return 'text-red-700'
+    return 'danger'
   }
 
   if (row.target > 0 && row.ratio >= 0.8) {
-    return 'text-amber-700'
+    return 'warning'
   }
 
-  return 'text-emerald-700'
+  return 'good'
 }
 
 function rowStatus(row: (typeof rankedRows.value)[number]): string {
@@ -98,72 +97,134 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-      <div>
-        <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">分類預算</p>
-        <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">分類預算進度</h1>
-        <p class="mt-2 max-w-3xl text-sm text-stone-600">
-          用分類角度看清楚本期預算健康、今日可用空間、支出集中位置，以及哪些分類開始失速。
+  <div class="grid gap-4">
+    <header>
+      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">分類預算</p>
+      <h1 class="mt-1 text-h1 font-bold text-text">分類預算進度</h1>
+      <p class="mt-1 text-body-sm text-text-2">
+        用分類角度看清楚本期預算健康、今日可用空間、支出集中位置，以及哪些分類開始失速。
+      </p>
+    </header>
+
+    <div class="inline-flex rounded-xl border border-border bg-accent p-1">
+      <button
+        type="button"
+        class="min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition"
+        :class="
+          budgetProgressMode === 'today'
+            ? 'bg-surface text-text shadow-sm'
+            : 'text-text-2 hover:text-text'
+        "
+        @click="budgetProgressMode = 'today'"
+      >
+        今日
+      </button>
+      <button
+        type="button"
+        class="min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition"
+        :class="
+          budgetProgressMode === 'cycle'
+            ? 'bg-surface text-text shadow-sm'
+            : 'text-text-2 hover:text-text'
+        "
+        @click="budgetProgressMode = 'cycle'"
+      >
+        本期
+      </button>
+    </div>
+
+    <section class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">預算上限</p>
+        <p class="mt-2 text-amount font-bold text-text">
+          {{ formatCurrency(insights.totalTarget, appData.currency.value) }}
         </p>
-      </div>
-
-      <div class="inline-flex rounded-md border border-stone-200 bg-stone-50 p-1">
-        <button
-          type="button"
-          class="rounded-md px-3 py-1.5 text-sm font-medium transition"
-          :class="
-            budgetProgressMode === 'today' ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-500'
-          "
-          @click="budgetProgressMode = 'today'"
+        <p class="mt-1 text-caption text-text-2">
+          {{ budgetProgressMode === 'today' ? '以每日剩餘預算上限計算' : '所有分類上限合計' }}
+        </p>
+      </BaseCard>
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">已使用</p>
+        <p class="mt-2 text-amount font-bold text-text">
+          {{ formatCurrency(insights.totalSpent, appData.currency.value) }}
+        </p>
+        <p class="mt-1 text-caption text-text-2">{{ insights.activeCategories }} 個分類有活動</p>
+      </BaseCard>
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">進度餘額</p>
+        <p
+          class="mt-2 text-amount font-bold"
+          :class="insights.totalRemaining > 0 ? 'text-primary' : 'text-danger'"
         >
-          今日
-        </button>
-        <button
-          type="button"
-          class="rounded-md px-3 py-1.5 text-sm font-medium transition"
-          :class="
-            budgetProgressMode === 'cycle' ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-500'
-          "
-          @click="budgetProgressMode = 'cycle'"
+          {{ formatCurrency(insights.totalRemaining, appData.currency.value) }}
+        </p>
+        <p class="mt-1 text-caption text-text-2">
+          {{ insights.overBudgetCount }} 個超支，{{ insights.nearLimitCount }} 個接近上限
+        </p>
+      </BaseCard>
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">使用率</p>
+        <p
+          class="mt-2 text-amount font-bold"
+          :class="insights.utilizationRate >= 1 ? 'text-danger' : 'text-primary'"
         >
-          本期
-        </button>
-      </div>
+          {{ formatPercent(insights.utilizationRate) }}
+        </p>
+        <p class="mt-1 text-caption text-text-2">
+          {{ insights.unplannedCount }} 個分類未設上限但已有支出
+        </p>
+      </BaseCard>
     </section>
 
-    <section class="grid gap-3 md:grid-cols-4">
-      <MetricCard
-        label="預算上限"
-        :value="formatCurrency(insights.totalTarget, appData.currency.value)"
-        :detail="budgetProgressMode === 'today' ? '以每日剩餘預算上限計算' : '所有分類上限合計'"
-      />
-      <MetricCard
-        label="已使用"
-        :value="formatCurrency(insights.totalSpent, appData.currency.value)"
-        :detail="`${insights.activeCategories} 個分類有預算或支出活動`"
-        :tone="insights.utilizationRate >= 1 ? 'warn' : 'neutral'"
-      />
-      <MetricCard
-        label="進度餘額"
-        :value="formatCurrency(insights.totalRemaining, appData.currency.value)"
-        :detail="`${insights.overBudgetCount} 個超支，${insights.nearLimitCount} 個接近上限`"
-        :tone="insights.totalRemaining > 0 ? 'good' : 'warn'"
-      />
-      <MetricCard
-        label="使用率"
-        :value="formatPercent(insights.utilizationRate)"
-        :detail="`${insights.unplannedCount} 個分類未設上限但已有支出`"
-        :tone="insights.utilizationRate >= 1 ? 'warn' : 'good'"
-      />
-    </section>
+    <BaseCard v-if="riskRows.length" variant="warning">
+      <div class="flex items-center gap-2">
+        <AlertTriangle class="size-5 text-warning" aria-hidden="true" />
+        <h2 class="text-h3 font-semibold text-text">風險提示</h2>
+      </div>
+      <p class="mt-1 text-body-sm text-text-2">集中看需要優先留意的分類。</p>
 
-    <div class="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-      <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
+      <div class="mt-4 grid gap-3">
+        <div
+          v-for="row in riskRows"
+          :key="row.category.category_id"
+          class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3"
+        >
+          <div class="flex items-center gap-3">
+            <span
+              class="size-3 rounded-full"
+              :style="{ backgroundColor: withHash(row.category.color_code) }"
+            />
+            <div>
+              <p class="text-body-sm font-semibold text-text">
+                {{ row.category.name_tc || row.category.name_en }}
+              </p>
+              <p class="text-caption text-text-2">
+                {{ formatCurrency(row.spent, appData.currency.value) }} /
+                {{ row.target ? formatCurrency(row.target, appData.currency.value) : '未設定上限' }}
+              </p>
+            </div>
+          </div>
+          <span
+            class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+            :class="{
+              'bg-danger/10 text-danger': rowTone(row) === 'danger',
+              'bg-warning/10 text-warning': rowTone(row) === 'warning',
+              'bg-success/10 text-success': rowTone(row) === 'good',
+            }"
+          >
+            {{ rowStatus(row) }}
+          </span>
+        </div>
+      </div>
+    </BaseCard>
+
+    <div class="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+      <BaseCard>
+        <div class="flex items-center gap-2">
+          <TrendingUp class="size-5 text-primary" aria-hidden="true" />
           <div>
-            <h2 class="text-lg font-semibold text-stone-950">分類比較</h2>
-            <p class="text-sm text-stone-500">
+            <h2 class="text-h3 font-semibold text-text">分類進度</h2>
+            <p class="text-body-sm text-text-2">
               {{
                 budgetProgressMode === 'today'
                   ? '今日支出對比每日剩餘上限。'
@@ -174,110 +235,67 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
         </div>
 
         <div v-if="rankedRows.length" class="mt-4 grid gap-4">
-          <div v-for="row in rankedRows" :key="row.category.category_id">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 text-sm font-semibold text-stone-900">
-                  <span
-                    class="size-3 rounded-full"
-                    :style="{ backgroundColor: withHash(row.category.color_code) }"
-                  />
-                  {{ row.category.name_tc || row.category.name_en }}
-                </div>
-                <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
-                  <span>已用 {{ formatCurrency(row.spent, appData.currency.value) }}</span>
-                  <span
-                    >上限
-                    {{
-                      row.target ? formatCurrency(row.target, appData.currency.value) : '未設定'
-                    }}</span
-                  >
-                  <span>餘額 {{ formatCurrency(row.remaining, appData.currency.value) }}</span>
-                </div>
-              </div>
-              <span class="shrink-0 text-sm font-semibold" :class="rowTone(row)">
-                {{ rowStatus(row) }}
+          <CategoryProgressItem
+            v-for="row in rankedRows"
+            :key="row.category.category_id"
+            :row="row"
+            :currency="appData.currency.value"
+          />
+        </div>
+        <EmptyState
+          v-else
+          class="mt-4"
+          :icon="AlertTriangle"
+          title="尚未有分類預算資料"
+          message="先到預算週期頁設定分類上限，這裡才會開始有分析。"
+        />
+      </BaseCard>
+
+      <BaseCard>
+        <div class="flex items-center gap-2">
+          <PieChart class="size-5 text-primary" aria-hidden="true" />
+          <div>
+            <h2 class="text-h3 font-semibold text-text">支出集中度</h2>
+            <p class="text-body-sm text-text-2">看清楚現在哪些分類正在吃掉最多預算空間。</p>
+          </div>
+        </div>
+
+        <div v-if="spendingShareRows.length" class="mt-4 grid gap-4">
+          <div v-for="row in spendingShareRows" :key="row.category.category_id">
+            <div class="flex items-center justify-between gap-3 text-body-sm">
+              <span class="font-semibold text-text">{{
+                row.category.name_tc || row.category.name_en
+              }}</span>
+              <span class="text-text-2">
+                {{ formatCurrency(row.spent, appData.currency.value) }} ·
+                {{ formatPercent(row.share) }}
               </span>
             </div>
-
-            <ProgressBar
-              class="mt-2"
-              :percentage="row.target ? row.ratio * 100 : row.spent > 0 ? 100 : 0"
-              :color-style="withHash(row.category.color_code)"
-            />
+            <div
+              class="mt-2 h-3 w-full overflow-hidden rounded-full bg-border"
+              role="progressbar"
+              :aria-valuenow="Math.min(row.share * 100, 100)"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div
+                class="h-3 rounded-full transition-all"
+                :style="{
+                  width: `${Math.min(row.share * 100, 100)}%`,
+                  backgroundColor: withHash(row.category.color_code),
+                }"
+              />
+            </div>
           </div>
         </div>
         <EmptyState
           v-else
           class="mt-4"
-          title="尚未有分類預算資料"
-          message="先到預算週期頁設定分類上限，這裡才會開始有分析。"
+          :icon="PieChart"
+          title="還沒有支出"
+          message="記下一些支出後，這裡會顯示分類支出佔比。"
         />
-      </section>
-
-      <div class="grid gap-6">
-        <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-          <h2 class="text-lg font-semibold text-stone-950">支出集中度</h2>
-          <p class="mt-1 text-sm text-stone-500">看清楚現在哪些分類正在吃掉最多預算空間。</p>
-
-          <div v-if="spendingShareRows.length" class="mt-4 grid gap-4">
-            <div v-for="row in spendingShareRows" :key="row.category.category_id">
-              <div class="flex items-center justify-between gap-3 text-sm">
-                <span class="font-semibold text-stone-900">{{
-                  row.category.name_tc || row.category.name_en
-                }}</span>
-                <span class="text-stone-500">
-                  {{ formatCurrency(row.spent, appData.currency.value) }} ·
-                  {{ formatPercent(row.share) }}
-                </span>
-              </div>
-              <ProgressBar
-                class="mt-2"
-                :percentage="row.share * 100"
-                :color-style="withHash(row.category.color_code)"
-              />
-            </div>
-          </div>
-          <EmptyState
-            v-else
-            class="mt-4"
-            title="還沒有支出"
-            message="記下一些支出後，這裡會顯示分類支出佔比。"
-          />
-        </section>
-
-        <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-          <h2 class="text-lg font-semibold text-stone-950">風險提示</h2>
-          <p class="mt-1 text-sm text-stone-500">集中看需要優先留意的分類。</p>
-
-          <div v-if="riskRows.length" class="mt-4 grid gap-3">
-            <div
-              v-for="row in riskRows"
-              :key="row.category.category_id"
-              class="rounded-md border border-stone-200 bg-stone-50 px-3 py-3"
-            >
-              <div class="flex items-center justify-between gap-3">
-                <span class="font-semibold text-stone-900">{{
-                  row.category.name_tc || row.category.name_en
-                }}</span>
-                <span class="text-sm font-semibold" :class="rowTone(row)">{{
-                  rowStatus(row)
-                }}</span>
-              </div>
-              <p class="mt-1 text-sm text-stone-600">
-                {{ formatCurrency(row.spent, appData.currency.value) }} /
-                {{ row.target ? formatCurrency(row.target, appData.currency.value) : '未設定上限' }}
-              </p>
-            </div>
-          </div>
-          <EmptyState
-            v-else
-            class="mt-4"
-            title="目前沒有明顯風險"
-            message="分類預算狀態健康，暫時沒有超支或逼近上限的項目。"
-          />
-        </section>
-      </div>
+      </BaseCard>
     </div>
   </div>
 </template>
