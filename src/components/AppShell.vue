@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Plane,
+  Receipt,
 } from 'lucide-vue-next'
 
 import { useAppData } from '@/composables/useAppData'
@@ -36,6 +37,7 @@ const mainNavItems = [
 
 const secondaryNavItems = [
   { label: '分類', to: '/categories', icon: FolderKanban },
+  { label: '固定開支', to: '/fixed-expenses', icon: Receipt },
   { label: 'JSON 匯入', to: '/import-transactions', icon: Braces },
   { label: '設定', to: '/settings', icon: ArchiveRestore },
 ]

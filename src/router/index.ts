@@ -4,6 +4,7 @@ import BudgetsView from '@/views/BudgetsView.vue'
 import CategoryBudgetView from '@/views/CategoryBudgetView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import FixedExpensesView from '@/views/FixedExpensesView.vue'
 import ImportTransactionsView from '@/views/ImportTransactionsView.vue'
 import MonthlySnapshotView from '@/views/MonthlySnapshotView.vue'
 import SettingsView from '@/views/SettingsView.vue'
@@ -23,6 +24,7 @@ const router = createRouter({
     { path: '/budgets', name: 'budgets', component: BudgetsView },
     { path: '/category-budget', name: 'category-budget', component: CategoryBudgetView },
     { path: '/categories', name: 'categories', component: CategoriesView },
+    { path: '/fixed-expenses', name: 'fixed-expenses', component: FixedExpensesView },
     { path: '/trips', name: 'trips', component: TripsView },
     { path: '/monthly-snapshot', name: 'monthly-snapshot', component: MonthlySnapshotView },
     { path: '/settings', name: 'settings', component: SettingsView },
