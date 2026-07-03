@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { CalendarClock } from 'lucide-vue-next'
+import { CalendarClock, ChevronRight } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import type { UpcomingBill } from '@/lib/dailyFinance/recurringExpenses'
 
-defineProps<{
+const props = defineProps<{
   fixedTotal: number
   upcomingBills: readonly UpcomingBill[]
   currency: string
 }>()
+
+const router = useRouter()
+
+function goToFixedExpenses(): void {
+  void router.push('/fixed-expenses')
+}
 </script>
 
 <template>
@@ -19,9 +26,19 @@ defineProps<{
         <h2 class="text-base font-semibold text-stone-950">固定支出</h2>
         <p class="mt-1 text-sm text-stone-500">本期預估固定支出總額</p>
       </div>
-      <p class="text-right text-lg font-semibold text-stone-950">
-        {{ formatCurrency(fixedTotal, currency) }}
-      </p>
+      <div class="flex flex-col items-end gap-2">
+        <p class="text-right text-lg font-semibold text-stone-950">
+          {{ formatCurrency(fixedTotal, currency) }}
+        </p>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-50"
+          @click="goToFixedExpenses"
+        >
+          管理
+          <ChevronRight class="size-3.5" aria-hidden="true" />
+        </button>
+      </div>
     </div>
 
     <div v-if="upcomingBills.length" class="mt-4 space-y-2">
