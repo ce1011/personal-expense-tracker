@@ -45,8 +45,27 @@ export function getCycleFixedExpensesTotal(expenses: ExpenseTransaction[], cycle
       }
     }
 
+    if (expense.frequency === 'weekly') {
+      return sum + expense.amount * countWeekdayOccurrences(expense.recurring_day, cycleWindow.start, cycleWindow.end)
+    }
+
     return sum
   }, 0)
+}
+
+function countWeekdayOccurrences(weekday: number, start: number, end: number): number {
+  let count = 0
+  const current = new Date(start)
+
+  while (current.getTime() < end) {
+    if (current.getDay() === weekday) {
+      count++
+    }
+
+    current.setDate(current.getDate() + 1)
+  }
+
+  return count
 }
 
 export function getUpcomingBills(
@@ -63,12 +82,14 @@ export function getUpcomingBills(
 
     if (expense.frequency === 'weekly') {
       const currentDay = nowDate.getDay()
-      const diff = expense.recurring_day - currentDay + (expense.recurring_day <= currentDay ? 7 : 0)
+      const diff = expense.recurring_day - currentDay
       due = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() + diff)
     }
 
     if (due.getTime() < now) {
-      if (expense.frequency === 'monthly') {
+      if (expense.frequency === 'weekly') {
+        due = new Date(due.getFullYear(), due.getMonth(), due.getDate() + 7)
+      } else if (expense.frequency === 'monthly') {
         due = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, expense.recurring_day)
       } else if (expense.frequency === 'yearly') {
         due = new Date(nowDate.getFullYear() + 1, nowDate.getMonth(), expense.recurring_day)

@@ -41,6 +41,17 @@ describe('getCycleFixedExpensesTotal', () => {
 
     expect(result).toBe(5000)
   })
+
+  test('counts weekly recurring by occurrences within the cycle window', () => {
+    const expenses: ExpenseTransaction[] = [
+      expense({ name: 'Gym', recurring: true, recurring_frequency: 'weekly', recurring_day: 2, amount: 100 }),
+    ]
+
+    const window = { start: new Date('2026-07-01').getTime(), end: new Date('2026-08-01').getTime(), label: '' }
+    const result = getCycleFixedExpensesTotal(expenses, window)
+
+    expect(result).toBe(400)
+  })
 })
 
 describe('getUpcomingBills', () => {
@@ -55,5 +66,18 @@ describe('getUpcomingBills', () => {
     expect(result).toHaveLength(1)
     expect(result[0]?.name).toBe('Netflix')
     expect(result[0]?.daysUntilDue).toBeGreaterThan(0)
+  })
+
+  test('rolls weekly due date forward after the due day passes', () => {
+    const now = new Date('2026-07-07T12:00:00').getTime()
+    const expenses: ExpenseTransaction[] = [
+      expense({ name: 'Gym', recurring: true, recurring_frequency: 'weekly', recurring_day: 2, amount: 100 }),
+    ]
+
+    const result = getUpcomingBills(expenses, now, 7)
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.name).toBe('Gym')
+    expect(result[0]?.daysUntilDue).toBe(7)
   })
 })
