@@ -1,7 +1,9 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 import type { ExpenseTransaction } from '@/types/app-data'
 import {
   getCycleFixedExpensesTotal,
+  getFrequencyLabel,
+  getRecurringDayLabel,
   getRecurringExpenses,
   getUpcomingBills,
 } from './recurringExpenses'
@@ -115,5 +117,29 @@ describe('getUpcomingBills', () => {
     expect(result).toHaveLength(1)
     expect(result[0]?.name).toBe('Gym')
     expect(result[0]?.daysUntilDue).toBe(7)
+  })
+})
+
+describe('getFrequencyLabel', () => {
+  it('returns Chinese labels', () => {
+    expect(getFrequencyLabel('weekly')).toBe('每週')
+    expect(getFrequencyLabel('monthly')).toBe('每月')
+    expect(getFrequencyLabel('yearly')).toBe('每年')
+  })
+})
+
+describe('getRecurringDayLabel', () => {
+  it('returns weekly labels', () => {
+    expect(getRecurringDayLabel('weekly', 0)).toBe('每週日')
+    expect(getRecurringDayLabel('weekly', 6)).toBe('每週六')
+  })
+
+  it('returns monthly labels', () => {
+    expect(getRecurringDayLabel('monthly', 1)).toBe('每月 1 日')
+    expect(getRecurringDayLabel('monthly', 31)).toBe('每月 31 日')
+  })
+
+  it('returns yearly labels', () => {
+    expect(getRecurringDayLabel('yearly', 15)).toBe('每年 15 日')
   })
 })

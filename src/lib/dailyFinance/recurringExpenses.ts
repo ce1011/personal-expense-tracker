@@ -128,3 +128,27 @@ function startOfDay(timestamp: number): number {
   const date = new Date(timestamp)
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
 }
+
+const weeklyDayLabels = ['日', '一', '二', '三', '四', '五', '六']
+
+export function getFrequencyLabel(frequency: 'weekly' | 'monthly' | 'yearly'): string {
+  switch (frequency) {
+    case 'weekly':
+      return '每週'
+    case 'monthly':
+      return '每月'
+    case 'yearly':
+      return '每年'
+  }
+}
+
+export function getRecurringDayLabel(
+  frequency: 'weekly' | 'monthly' | 'yearly',
+  day: number,
+): string {
+  if (frequency === 'weekly') {
+    return `每週${weeklyDayLabels[day] ?? day}`
+  }
+
+  return `每${frequency === 'yearly' ? '年' : '月'} ${day} 日`
+}
