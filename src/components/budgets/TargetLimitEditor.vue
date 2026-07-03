@@ -57,10 +57,17 @@ function save(categoryId: string): void {
         class="grid gap-3 rounded-md border border-stone-100 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center"
       >
         <div class="flex items-center gap-3">
-          <span class="size-3 rounded-full" :style="{ backgroundColor: withHash(category.color_code) }" />
+          <span
+            class="size-3 rounded-full"
+            :style="{ backgroundColor: withHash(category.color_code) }"
+          />
           <div>
-            <p class="text-sm font-semibold text-stone-950">{{ category.name_tc || category.name_en }}</p>
-            <p class="text-xs text-stone-500">{{ formatCurrency(amounts[category.category_id] ?? 0, currency) }}</p>
+            <p class="text-sm font-semibold text-stone-950">
+              {{ category.name_tc || category.name_en }}
+            </p>
+            <p class="text-xs text-stone-500">
+              {{ formatCurrency(amounts[category.category_id] ?? 0, currency) }}
+            </p>
           </div>
         </div>
         <input

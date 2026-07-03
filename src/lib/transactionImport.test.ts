@@ -193,14 +193,11 @@ describe('parseTransactionImportJson', () => {
   })
 
   test('rejects non-array JSON payloads', () => {
-    const result = parseTransactionImportJson(
-      JSON.stringify({ hello: 'world' }),
-      {
-        expenseCategories,
-        incomeCategories,
-        fxRateMap,
-      },
-    )
+    const result = parseTransactionImportJson(JSON.stringify({ hello: 'world' }), {
+      expenseCategories,
+      incomeCategories,
+      fxRateMap,
+    })
 
     expect(result.transactions).toEqual([])
     expect(result.errors).toEqual(['JSON 內容必須是陣列'])

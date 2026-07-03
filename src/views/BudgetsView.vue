@@ -20,7 +20,9 @@ const selectedCycle = computed(() =>
   appData.data.value.cycles.find((cycle) => cycle.cycle_id === selectedCycleId.value),
 )
 const cycleLimits = computed(() =>
-  appData.data.value.targetExpenses.filter((limit) => limit.cycle_id === selectedCycle.value?.cycle_id),
+  appData.data.value.targetExpenses.filter(
+    (limit) => limit.cycle_id === selectedCycle.value?.cycle_id,
+  ),
 )
 const selectedWindowLabel = computed(() =>
   form.cycle_code && /^\d{6}$/.test(form.cycle_code)
@@ -80,7 +82,9 @@ function saveCycle(): void {
       <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-stone-950">週期清單</h2>
-          <button type="button" class="text-sm font-semibold text-emerald-800" @click="newCycle">新增</button>
+          <button type="button" class="text-sm font-semibold text-emerald-800" @click="newCycle">
+            新增
+          </button>
         </div>
         <div v-if="appData.data.value.cycles.length" class="mt-4 grid gap-2">
           <button
@@ -88,14 +92,23 @@ function saveCycle(): void {
             :key="cycle.cycle_id"
             type="button"
             class="rounded-md border px-3 py-2 text-left text-sm"
-            :class="cycle.cycle_id === selectedCycleId ? 'border-emerald-700 bg-emerald-50' : 'border-stone-200'"
+            :class="
+              cycle.cycle_id === selectedCycleId
+                ? 'border-emerald-700 bg-emerald-50'
+                : 'border-stone-200'
+            "
             @click="selectedCycleId = cycle.cycle_id"
           >
             <span class="font-semibold">{{ cycle.cycle_code }}</span>
             <span class="block text-xs text-stone-500">入糧日：每月 {{ cycle.income_day }} 號</span>
           </button>
         </div>
-        <EmptyState v-else class="mt-4" title="尚未有週期" message="先建立一個預算週期，總覽和分類預算才有計算基準。" />
+        <EmptyState
+          v-else
+          class="mt-4"
+          title="尚未有週期"
+          message="先建立一個預算週期，總覽和分類預算才有計算基準。"
+        />
       </section>
 
       <div class="grid gap-6">
@@ -104,26 +117,52 @@ function saveCycle(): void {
           <div class="mt-4 grid gap-3 md:grid-cols-4">
             <label class="grid gap-1 text-sm font-medium text-stone-700">
               週期代碼
-              <input v-model.trim="form.cycle_code" placeholder="202605" class="rounded-md border border-stone-300 px-3 py-2" />
+              <input
+                v-model.trim="form.cycle_code"
+                placeholder="202605"
+                class="rounded-md border border-stone-300 px-3 py-2"
+              />
             </label>
             <label class="grid gap-1 text-sm font-medium text-stone-700">
               入糧日
-              <input v-model.number="form.income_day" min="1" max="31" type="number" class="rounded-md border border-stone-300 px-3 py-2" />
+              <input
+                v-model.number="form.income_day"
+                min="1"
+                max="31"
+                type="number"
+                class="rounded-md border border-stone-300 px-3 py-2"
+              />
             </label>
             <label class="grid gap-1 text-sm font-medium text-stone-700">
               固定收入
-              <input v-model.number="form.income" min="0" type="number" class="rounded-md border border-stone-300 px-3 py-2" />
+              <input
+                v-model.number="form.income"
+                min="0"
+                type="number"
+                class="rounded-md border border-stone-300 px-3 py-2"
+              />
             </label>
             <label class="grid gap-1 text-sm font-medium text-stone-700">
               儲蓄目標
-              <input v-model.number="form.saving_target" min="0" type="number" class="rounded-md border border-stone-300 px-3 py-2" />
+              <input
+                v-model.number="form.saving_target"
+                min="0"
+                type="number"
+                class="rounded-md border border-stone-300 px-3 py-2"
+              />
             </label>
           </div>
           <div class="mt-4 rounded-md bg-stone-50 p-3 text-sm text-stone-600">
             <p v-if="selectedWindowLabel">這個週期會涵蓋：{{ selectedWindowLabel }}</p>
-            <p class="mt-1 text-xs text-stone-500">例如入糧日是 25 號，`202605` 代表 4 月 25 日到 5 月 24 日。</p>
+            <p class="mt-1 text-xs text-stone-500">
+              例如入糧日是 25 號，`202605` 代表 4 月 25 日到 5 月 24 日。
+            </p>
           </div>
-          <button type="button" class="mt-4 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white" @click="saveCycle">
+          <button
+            type="button"
+            class="mt-4 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white"
+            @click="saveCycle"
+          >
             儲存週期
           </button>
         </section>

@@ -1,8 +1,4 @@
-import type {
-  ExpenseCategory,
-  ExpenseTransaction,
-  TargetExpenseLimit,
-} from '@/types/app-data'
+import type { ExpenseCategory, ExpenseTransaction, TargetExpenseLimit } from '@/types/app-data'
 
 export interface CategoryProgressRow {
   category: ExpenseCategory
@@ -29,7 +25,10 @@ export function buildCategoryProgressRows(
   }
 
   for (const expense of cycleExpenses) {
-    cycleTotals.set(expense.category_id, (cycleTotals.get(expense.category_id) ?? 0) + expense.amount)
+    cycleTotals.set(
+      expense.category_id,
+      (cycleTotals.get(expense.category_id) ?? 0) + expense.amount,
+    )
   }
 
   return categories.map((category) => {

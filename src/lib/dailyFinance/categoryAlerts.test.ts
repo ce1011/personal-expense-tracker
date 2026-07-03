@@ -28,7 +28,11 @@ function category(id: string): ExpenseCategory {
 }
 
 describe('getCategoryAlerts', () => {
-  const window = { start: new Date('2026-07-01').getTime(), end: new Date('2026-08-01').getTime(), label: '' }
+  const window = {
+    start: new Date('2026-07-01').getTime(),
+    end: new Date('2026-08-01').getTime(),
+    label: '',
+  }
   const categories = [category('food'), category('transport')]
   const targets: TargetExpenseLimit[] = [
     { target_expense_id: 't1', cycle_id: 'cycle-1', category_id: 'food', amount: 1000 },

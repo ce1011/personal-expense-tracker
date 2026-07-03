@@ -1,9 +1,5 @@
 import { savingCategories } from '@/lib/savingCategories'
-import type {
-  ExpenseCategory,
-  IncomeCategory,
-  SupportedCurrency,
-} from '@/types/app-data'
+import type { ExpenseCategory, IncomeCategory, SupportedCurrency } from '@/types/app-data'
 
 export interface ImportTransactionRecord {
   type: 'expense' | 'income' | 'saving'
@@ -60,8 +56,12 @@ export function parseTransactionImportJson(
     }
   }
 
-  const expenseCategoryIds = new Set(options.expenseCategories.map((category) => category.category_id))
-  const incomeCategoryIds = new Set(options.incomeCategories.map((category) => category.category_id))
+  const expenseCategoryIds = new Set(
+    options.expenseCategories.map((category) => category.category_id),
+  )
+  const incomeCategoryIds = new Set(
+    options.incomeCategories.map((category) => category.category_id),
+  )
   const savingCategoryIds = new Set(savingCategories.map((category) => category.category_id))
   const errors: string[] = []
   const transactions: ImportTransactionRecord[] = []
@@ -113,12 +113,17 @@ export function parseTransactionImportJson(
       return
     }
 
-    if (typeof currencyCode !== 'string' || !supportedCurrencies.includes(currencyCode as SupportedCurrency)) {
+    if (
+      typeof currencyCode !== 'string' ||
+      !supportedCurrencies.includes(currencyCode as SupportedCurrency)
+    ) {
       errors.push(`${path}：currency_code 必須是 ${supportedCurrencies.join('/')}`)
       return
     }
 
-    if (!isCategoryAllowed(type, categoryId, expenseCategoryIds, incomeCategoryIds, savingCategoryIds)) {
+    if (
+      !isCategoryAllowed(type, categoryId, expenseCategoryIds, incomeCategoryIds, savingCategoryIds)
+    ) {
       errors.push(`${path}：category_id 不存在或不屬於該交易類型`)
       return
     }
@@ -196,6 +201,8 @@ function buildSummary(transactions: readonly ImportTransactionRecord[]): ImportP
     expenseCount: transactions.filter((transaction) => transaction.type === 'expense').length,
     incomeCount: transactions.filter((transaction) => transaction.type === 'income').length,
     savingCount: transactions.filter((transaction) => transaction.type === 'saving').length,
-    currencies: [...new Set(transactions.map((transaction) => transaction.currency_code))].sort() as SupportedCurrency[],
+    currencies: [
+      ...new Set(transactions.map((transaction) => transaction.currency_code)),
+    ].sort() as SupportedCurrency[],
   }
 }

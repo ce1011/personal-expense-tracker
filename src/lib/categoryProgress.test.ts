@@ -26,7 +26,12 @@ const categories: ExpenseCategory[] = [
 
 const targetExpenses: TargetExpenseLimit[] = [
   { target_expense_id: 'food-target', cycle_id: 'cycle-1', category_id: 'food', amount: 500 },
-  { target_expense_id: 'transport-target', cycle_id: 'cycle-1', category_id: 'transport', amount: 100 },
+  {
+    target_expense_id: 'transport-target',
+    cycle_id: 'cycle-1',
+    category_id: 'transport',
+    amount: 100,
+  },
 ]
 
 describe('buildCategoryProgressRows', () => {

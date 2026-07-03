@@ -12,6 +12,7 @@ import type {
   ExpenseDraft,
   IncomeCategory,
   IncomeDraft,
+  SavingChallenge,
   SavingDraft,
   SupportedCurrency,
   TransactionKind,
@@ -22,6 +23,7 @@ import type { SavingCategoryOption } from '@/lib/savingCategories'
 const props = defineProps<{
   expenseCategories: readonly ExpenseCategory[]
   incomeCategories: readonly IncomeCategory[]
+  savingChallenges?: readonly SavingChallenge[]
   tripOptions?: readonly Pick<TripSession, 'trip_id' | 'name' | 'destination'>[]
   defaultTripId?: string
   fxRateMap: ReadonlyMap<SupportedCurrency, number>
@@ -49,6 +51,7 @@ const form = reactive({
   currency_code: 'HKD' as SupportedCurrency,
   date: toDateInputValue(Date.now()),
   trip_id: '',
+  challenge_id: '',
   recurring: false,
   recurring_frequency: 'monthly' as 'weekly' | 'monthly' | 'yearly',
   recurring_day: 1,
@@ -57,16 +60,18 @@ const form = reactive({
 const supportedCurrencies: SupportedCurrency[] = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB']
 const isEditing = computed(() => Boolean(props.transaction))
 const tripOptions = computed(() => props.tripOptions ?? [])
+const savingChallengeOptions = computed(() => props.savingChallenges ?? [])
 const availableTripIds = computed(() => new Set(tripOptions.value.map((trip) => trip.trip_id)))
 const normalizedDefaultTripId = computed(() =>
   props.defaultTripId && availableTripIds.value.has(props.defaultTripId) ? props.defaultTripId : '',
 )
-const categories = computed<readonly (ExpenseCategory | IncomeCategory | SavingCategoryOption)[]>(() =>
-  form.kind === 'expense'
-    ? props.expenseCategories
-    : form.kind === 'income'
-      ? props.incomeCategories
-      : savingCategories,
+const categories = computed<readonly (ExpenseCategory | IncomeCategory | SavingCategoryOption)[]>(
+  () =>
+    form.kind === 'expense'
+      ? props.expenseCategories
+      : form.kind === 'income'
+        ? props.incomeCategories
+        : savingCategories,
 )
 const selectedRate = computed(() => props.fxRateMap.get(form.currency_code) ?? 0)
 const convertedAmount = computed(() =>
@@ -99,9 +104,11 @@ watch(
     form.currency_code = transaction.original_currency ?? 'HKD'
     form.date = toDateInputValue(transaction.date)
     form.trip_id = normalizeTripId(transaction.trip_id)
-    form.recurring = transaction.kind === 'expense' ? transaction.recurring ?? false : false
-    form.recurring_frequency = transaction.kind === 'expense' ? transaction.recurring_frequency ?? 'monthly' : 'monthly'
-    form.recurring_day = transaction.kind === 'expense' ? transaction.recurring_day ?? 1 : 1
+    form.challenge_id = transaction.kind === 'saving' ? (transaction.challenge_id ?? '') : ''
+    form.recurring = transaction.kind === 'expense' ? (transaction.recurring ?? false) : false
+    form.recurring_frequency =
+      transaction.kind === 'expense' ? (transaction.recurring_frequency ?? 'monthly') : 'monthly'
+    form.recurring_day = transaction.kind === 'expense' ? (transaction.recurring_day ?? 1) : 1
   },
   { immediate: true },
 )
@@ -113,7 +120,11 @@ watch(
       return
     }
 
-    if (!form.trip_id || form.trip_id === previousDefaultTripId || !availableTripIds.value.has(form.trip_id)) {
+    if (
+      !form.trip_id ||
+      form.trip_id === previousDefaultTripId ||
+      !availableTripIds.value.has(form.trip_id)
+    ) {
       form.trip_id = nextDefaultTripId
     }
   },
@@ -135,7 +146,7 @@ function submitForm(): void {
     return
   }
 
-  const draft = {
+  const baseDraft = {
     category_id: form.category_id,
     name: form.name,
     amount: Number(form.amount),
@@ -143,24 +154,35 @@ function submitForm(): void {
     currency_code: form.currency_code,
     exchange_rate_hkd: selectedRate.value,
     trip_id: form.trip_id || undefined,
-    recurring: form.kind === 'expense' ? form.recurring : undefined,
-    recurring_frequency: form.kind === 'expense' && form.recurring ? form.recurring_frequency : undefined,
-    recurring_day: form.kind === 'expense' && form.recurring ? form.recurring_day : undefined,
   }
 
   if (form.kind === 'expense') {
+    const draft: ExpenseDraft = {
+      ...baseDraft,
+      recurring: form.recurring,
+      recurring_frequency: form.recurring ? form.recurring_frequency : undefined,
+      recurring_day: form.recurring ? form.recurring_day : undefined,
+    }
+
     if (props.transaction) {
       emit('updateExpense', props.transaction.id, draft)
     } else {
       emit('createExpense', draft)
     }
   } else if (form.kind === 'income') {
+    const draft: IncomeDraft = baseDraft
+
     if (props.transaction) {
       emit('updateIncome', props.transaction.id, draft)
     } else {
       emit('createIncome', draft)
     }
   } else {
+    const draft: SavingDraft = {
+      ...baseDraft,
+      challenge_id: form.challenge_id || undefined,
+    }
+
     if (props.transaction) {
       emit('updateSaving', props.transaction.id, draft)
     } else {
@@ -171,6 +193,7 @@ function submitForm(): void {
   if (!props.transaction) {
     form.name = ''
     form.amount = 0
+    form.challenge_id = ''
   }
 }
 
@@ -182,6 +205,7 @@ function resetForm(): void {
   form.currency_code = 'HKD'
   form.date = toDateInputValue(Date.now())
   form.trip_id = normalizedDefaultTripId.value
+  form.challenge_id = ''
   form.recurring = false
   form.recurring_frequency = 'monthly'
   form.recurring_day = 1
@@ -201,14 +225,21 @@ function removeTransaction(): void {
 </script>
 
 <template>
-  <form class="rounded-md border border-stone-200 bg-white p-4 shadow-sm" @submit.prevent="submitForm">
+  <form
+    class="rounded-md border border-stone-200 bg-white p-4 shadow-sm"
+    @submit.prevent="submitForm"
+  >
     <div class="flex items-center justify-between gap-3">
       <div>
         <p class="text-sm font-semibold text-stone-950">
           {{ isEditing ? '修改交易' : compact ? '快速記一筆' : '新增交易' }}
         </p>
         <p class="text-xs text-stone-500">
-          {{ isEditing ? '修改後會覆蓋原有紀錄，交易類型會保持不變。' : '支出、收入與儲蓄都會先按原幣輸入，再自動換算成港幣入帳。' }}
+          {{
+            isEditing
+              ? '修改後會覆蓋原有紀錄，交易類型會保持不變。'
+              : '支出、收入與儲蓄都會先按原幣輸入，再自動換算成港幣入帳。'
+          }}
         </p>
       </div>
       <CirclePlus v-if="!isEditing" class="size-5 text-emerald-800" aria-hidden="true" />
@@ -223,7 +254,11 @@ function removeTransaction(): void {
             {{ form.kind === 'expense' ? '支出' : form.kind === 'income' ? '收入' : '儲蓄' }}
           </div>
         </template>
-        <select v-else v-model="form.kind" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+        <select
+          v-else
+          v-model="form.kind"
+          class="rounded-md border border-stone-300 bg-white px-3 py-2"
+        >
           <option value="expense">支出</option>
           <option value="income">收入</option>
           <option value="saving">儲蓄</option>
@@ -232,8 +267,15 @@ function removeTransaction(): void {
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         分類
-        <select v-model="form.category_id" class="rounded-md border border-stone-300 bg-white px-3 py-2">
-          <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
+        <select
+          v-model="form.category_id"
+          class="rounded-md border border-stone-300 bg-white px-3 py-2"
+        >
+          <option
+            v-for="category in categories"
+            :key="category.category_id"
+            :value="category.category_id"
+          >
             {{ category.name_tc || category.name_en }}
           </option>
         </select>
@@ -250,8 +292,15 @@ function removeTransaction(): void {
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         幣別
-        <select v-model="form.currency_code" class="rounded-md border border-stone-300 bg-white px-3 py-2">
-          <option v-for="currencyCode in supportedCurrencies" :key="currencyCode" :value="currencyCode">
+        <select
+          v-model="form.currency_code"
+          class="rounded-md border border-stone-300 bg-white px-3 py-2"
+        >
+          <option
+            v-for="currencyCode in supportedCurrencies"
+            :key="currencyCode"
+            :value="currencyCode"
+          >
             {{ currencyCode }}
           </option>
         </select>
@@ -259,17 +308,30 @@ function removeTransaction(): void {
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         原幣金額
-        <input v-model.number="form.amount" min="0" step="0.01" type="number" class="rounded-md border border-stone-300 px-3 py-2" />
+        <input
+          v-model.number="form.amount"
+          min="0"
+          step="0.01"
+          type="number"
+          class="rounded-md border border-stone-300 px-3 py-2"
+        />
       </label>
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         日期
-        <input v-model="form.date" type="date" class="rounded-md border border-stone-300 px-3 py-2" />
+        <input
+          v-model="form.date"
+          type="date"
+          class="rounded-md border border-stone-300 px-3 py-2"
+        />
       </label>
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         旅程
-        <select v-model="form.trip_id" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+        <select
+          v-model="form.trip_id"
+          class="rounded-md border border-stone-300 bg-white px-3 py-2"
+        >
           <option value="">不關聯旅程</option>
           <option v-for="trip in tripOptions" :key="trip.trip_id" :value="trip.trip_id">
             {{ trip.name }}｜{{ trip.destination }}
@@ -278,7 +340,10 @@ function removeTransaction(): void {
       </label>
     </div>
 
-    <div v-if="form.kind === 'expense'" class="mt-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 md:grid-cols-3">
+    <div
+      v-if="form.kind === 'expense'"
+      class="mt-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 md:grid-cols-3"
+    >
       <label class="flex items-center gap-2 text-sm font-medium text-stone-700">
         <input v-model="form.recurring" type="checkbox" class="size-4 rounded border-stone-300" />
         定期支出
@@ -286,7 +351,11 @@ function removeTransaction(): void {
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         週期
-        <select v-model="form.recurring_frequency" :disabled="!form.recurring" class="rounded-md border border-stone-300 bg-white px-3 py-2 disabled:bg-stone-100">
+        <select
+          v-model="form.recurring_frequency"
+          :disabled="!form.recurring"
+          class="rounded-md border border-stone-300 bg-white px-3 py-2 disabled:bg-stone-100"
+        >
           <option value="weekly">每週</option>
           <option value="monthly">每月</option>
           <option value="yearly">每年</option>
@@ -295,18 +364,45 @@ function removeTransaction(): void {
 
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         到期日
-        <input v-model.number="form.recurring_day" :disabled="!form.recurring" min="1" max="31" type="number" class="rounded-md border border-stone-300 px-3 py-2 disabled:bg-stone-100" />
+        <input
+          v-model.number="form.recurring_day"
+          :disabled="!form.recurring"
+          min="1"
+          max="31"
+          type="number"
+          class="rounded-md border border-stone-300 px-3 py-2 disabled:bg-stone-100"
+        />
+      </label>
+    </div>
+
+    <div
+      v-if="form.kind === 'saving'"
+      class="mt-3 rounded-md border border-stone-200 bg-stone-50 p-3"
+    >
+      <label class="grid gap-1 text-sm font-medium text-stone-700">
+        儲蓄挑戰
+        <select
+          v-model="form.challenge_id"
+          class="rounded-md border border-stone-300 bg-white px-3 py-2"
+        >
+          <option value="">不綁定挑戰</option>
+          <option
+            v-for="challenge in savingChallengeOptions"
+            :key="challenge.challenge_id"
+            :value="challenge.challenge_id"
+          >
+            {{ challenge.name }}
+          </option>
+        </select>
       </label>
     </div>
 
     <div class="mt-3 rounded-md bg-stone-50 px-3 py-2 text-sm text-stone-600">
       <p>
-        以 {{ form.currency_code }} 兌港幣匯率 {{ selectedRate || '-' }} 計，
-        將入帳 {{ formatCurrency(convertedAmount, 'HKD') }}
+        以 {{ form.currency_code }} 兌港幣匯率 {{ selectedRate || '-' }} 計， 將入帳
+        {{ formatCurrency(convertedAmount, 'HKD') }}
       </p>
-      <p class="mt-1 text-xs text-stone-500">
-        匯率日期：{{ latestFxDate || '尚未取得' }}
-      </p>
+      <p class="mt-1 text-xs text-stone-500">匯率日期：{{ latestFxDate || '尚未取得' }}</p>
     </div>
 
     <div class="mt-4 flex flex-wrap items-center gap-3">

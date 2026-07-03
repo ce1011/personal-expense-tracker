@@ -11,13 +11,19 @@ import {
   getTripRemainingBudget,
   getTripSpentTotal,
 } from '@/lib/trips'
+import { getActiveChallenges } from '@/lib/dailyFinance/savingChallenges'
+import { getWeeklyReview } from '@/lib/dailyFinance/weeklyReview'
+import { getFrequentTransactions } from '@/lib/dailyFinance/quickAdd'
+import { getMonthlySnapshot } from '@/lib/dailyFinance/monthlySnapshot'
 import {
   createExpense,
   createIncome,
   createSaving,
+  createSavingChallenge,
   deleteExpense,
   deleteIncome,
   deleteSaving,
+  deleteSavingChallenge,
   importTransactions,
   loadAppData,
   replaceAllData,
@@ -32,6 +38,7 @@ import {
   updateExpense,
   updateIncome,
   updateSaving,
+  updateSavingChallenge,
 } from '@/services/appDataService'
 import type { ImportTransactionRecord } from '@/lib/transactionImport'
 import type {
@@ -44,6 +51,7 @@ import type {
   ExpenseTransaction,
   IncomeDraft,
   IncomeTransaction,
+  SavingChallenge,
   SavingDraft,
   SavingRecord,
   TripDraft,
@@ -61,6 +69,7 @@ const emptyPayload: AppDataPayload = {
   settings: [],
   trips: [],
   fxRates: [],
+  savingChallenges: [],
 }
 
 const data = shallowRef<AppDataPayload>(emptyPayload)
@@ -81,9 +90,7 @@ export function useAppData() {
     data.value.incomeCategories.filter((category) => !category.deleted),
   )
   const currency = computed(
-    () =>
-      data.value.settings.find((setting) => setting.name === 'currency')?.parameter ??
-      'HKD',
+    () => data.value.settings.find((setting) => setting.name === 'currency')?.parameter ?? 'HKD',
   )
   const fxRates = computed(() => data.value.fxRates ?? [])
   const fxRateMap = computed(() => {
@@ -111,14 +118,20 @@ export function useAppData() {
     const window = currentWindow.value
     return window ? data.value.incomes.filter((income) => isInCycleWindow(income.date, window)) : []
   })
-  const cycleExpenseTotal = computed(() =>
-    cycleExpenses.value.reduce((sum, expense) => sum + expense.amount, 0) +
-    data.value.savings
-      .filter((saving) => (currentWindow.value ? isInCycleWindow(saving.date, currentWindow.value) : false))
-      .reduce((sum, saving) => sum + saving.amount, 0),
+  const cycleExpenseTotal = computed(
+    () =>
+      cycleExpenses.value.reduce((sum, expense) => sum + expense.amount, 0) +
+      data.value.savings
+        .filter((saving) =>
+          currentWindow.value ? isInCycleWindow(saving.date, currentWindow.value) : false,
+        )
+        .reduce((sum, saving) => sum + saving.amount, 0),
   )
   const cycleIncomeTotal = computed(() =>
-    cycleIncomes.value.reduce((sum, income) => sum + income.amount, currentCycle.value?.income ?? 0),
+    cycleIncomes.value.reduce(
+      (sum, income) => sum + income.amount,
+      currentCycle.value?.income ?? 0,
+    ),
   )
   const remainingBudget = computed(() => cycleIncomeTotal.value - cycleExpenseTotal.value)
   const daysUntilNextIncome = computed(() =>
@@ -128,8 +141,28 @@ export function useAppData() {
     currentWindow.value ? getCycleFixedExpensesTotal(data.value.expenses, currentWindow.value) : 0,
   )
   const upcomingBills = computed(() => getUpcomingBills(data.value.expenses, Date.now(), 14))
-  const averageDailyBudgetUntilIncome = computed(() =>
-    remainingBudget.value / Math.max(1, daysUntilNextIncome.value),
+  const savingChallenges = computed(() => data.value.savingChallenges ?? [])
+  const activeChallenges = computed(() =>
+    getActiveChallenges(savingChallenges.value, data.value.savings),
+  )
+  const weeklyReview = computed(() =>
+    getWeeklyReview(combinedTransactions.value, activeExpenseCategories.value, Date.now()),
+  )
+  const quickAddSuggestions = computed(() =>
+    getFrequentTransactions(combinedTransactions.value, 6, Date.now()),
+  )
+  const monthlySnapshot = computed(() =>
+    getMonthlySnapshot(
+      data.value.cycles,
+      data.value.expenses.map((expense) => expenseToCombinedTransaction(expense)),
+      data.value.incomes.map((income) => incomeToCombinedTransaction(income)),
+      data.value.savings.map((saving) => savingToCombinedTransaction(saving)),
+      activeExpenseCategories.value,
+      Date.now(),
+    ),
+  )
+  const averageDailyBudgetUntilIncome = computed(
+    () => remainingBudget.value / Math.max(1, daysUntilNextIncome.value),
   )
   const todaySpent = computed(() => {
     const today = startOfLocalDay(new Date())
@@ -151,13 +184,17 @@ export function useAppData() {
       savingTarget: cycle.saving_target,
     })
   })
-  const combinedTransactions = computed<CombinedTransaction[]>(() => buildCombinedTransactions(data.value))
+  const combinedTransactions = computed<CombinedTransaction[]>(() =>
+    buildCombinedTransactions(data.value),
+  )
   const recentTransactions = computed(() => combinedTransactions.value.slice(0, 8))
   const trips = computed(() =>
     [...(data.value.trips ?? [])].sort((left, right) => left.start_date - right.start_date),
   )
   const activeTripId = computed(() => {
-    const tripId = data.value.settings.find((setting) => setting.name === 'active_trip_id')?.parameter
+    const tripId = data.value.settings.find(
+      (setting) => setting.name === 'active_trip_id',
+    )?.parameter
 
     if (!tripId) {
       return ''
@@ -165,9 +202,7 @@ export function useAppData() {
 
     return trips.value.some((trip) => trip.trip_id === tripId) ? tripId : ''
   })
-  const activeTrip = computed(() =>
-    trips.value.find((trip) => trip.trip_id === activeTripId.value),
-  )
+  const activeTrip = computed(() => trips.value.find((trip) => trip.trip_id === activeTripId.value))
   const tripTransactions = computed(() =>
     filterTransactionsByTrip(combinedTransactions.value, activeTripId.value || undefined),
   )
@@ -185,7 +220,9 @@ export function useAppData() {
   )
   const tripSpentTotal = computed(() => getTripSpentTotal(tripTransactions.value))
   const tripRemainingBudget = computed(() =>
-    activeTrip.value ? getTripRemainingBudget(activeTrip.value.budget_amount, tripTransactions.value) : 0,
+    activeTrip.value
+      ? getTripRemainingBudget(activeTrip.value.budget_amount, tripTransactions.value)
+      : 0,
   )
   const tripDailyBreakdown = computed(() =>
     activeTrip.value ? getTripDailyBreakdown(activeTrip.value, tripTransactions.value) : [],
@@ -265,6 +302,11 @@ export function useAppData() {
     daysUntilNextIncome,
     cycleFixedExpensesTotal,
     upcomingBills,
+    savingChallenges,
+    activeChallenges,
+    weeklyReview,
+    quickAddSuggestions,
+    monthlySnapshot,
     averageDailyBudgetUntilIncome,
     todaySpent,
     dailySafeToSpend,
@@ -331,7 +373,16 @@ export function useAppData() {
     deleteExpense: (transactionId: string) => withRefresh(() => deleteExpense(transactionId)),
     deleteIncome: (transactionId: string) => withRefresh(() => deleteIncome(transactionId)),
     deleteSaving: (transactionId: string) => withRefresh(() => deleteSaving(transactionId)),
-    saveCycle: (draft: CycleDraft, cycleId?: string) => withRefresh(() => saveCycle(draft, cycleId)),
+    addSavingChallenge: (name: string, target_amount: number) =>
+      withRefresh(() => createSavingChallenge(name, target_amount)),
+    updateSavingChallenge: (
+      challengeId: string,
+      draft: Pick<SavingChallenge, 'name' | 'target_amount' | 'status'>,
+    ) => withRefresh(() => updateSavingChallenge(challengeId, draft)),
+    deleteSavingChallenge: (challengeId: string) =>
+      withRefresh(() => deleteSavingChallenge(challengeId)),
+    saveCycle: (draft: CycleDraft, cycleId?: string) =>
+      withRefresh(() => saveCycle(draft, cycleId)),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>
       withRefresh(() => saveTargetLimit(cycleId, categoryId, amount)),
     saveExpenseCategory: (draft: CategoryDraft, categoryId?: string) =>
@@ -403,5 +454,6 @@ function savingToCombinedTransaction(saving: SavingRecord): CombinedTransaction 
     original_currency: saving.original_currency,
     original_amount: saving.original_amount,
     exchange_rate_hkd: saving.exchange_rate_hkd,
+    challenge_id: saving.challenge_id,
   }
 }

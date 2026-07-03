@@ -9,6 +9,7 @@ export interface AppDataPayload {
   settings: AppSetting[]
   trips?: TripSession[]
   fxRates?: FxRateRecord[]
+  savingChallenges?: SavingChallenge[]
 }
 
 export type TripStatus = 'planned' | 'active' | 'completed'
@@ -109,6 +110,17 @@ export interface SavingRecord {
   original_currency?: SupportedCurrency
   original_amount?: number
   exchange_rate_hkd?: number
+  challenge_id?: string
+}
+
+export interface SavingChallenge {
+  challenge_id: string
+  name: string
+  target_amount: number
+  current_amount: number
+  status: 'active' | 'completed' | 'paused'
+  created_at: number
+  updated_at: number
 }
 
 export interface AppSetting {
@@ -143,6 +155,7 @@ export interface CombinedTransaction {
   recurring?: boolean
   recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
   recurring_day?: number
+  challenge_id?: string
 }
 
 export interface ExpenseDraft {
@@ -176,6 +189,7 @@ export interface SavingDraft {
   trip_id?: string
   currency_code: SupportedCurrency
   exchange_rate_hkd: number
+  challenge_id?: string
 }
 
 export interface TripDraft {

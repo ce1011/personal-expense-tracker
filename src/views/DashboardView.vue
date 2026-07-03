@@ -6,6 +6,9 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import MetricCard from '@/components/common/MetricCard.vue'
 import CategoryAlertsList from '@/components/dailyFinance/CategoryAlertsList.vue'
 import RecurringExpensesSummary from '@/components/dailyFinance/RecurringExpensesSummary.vue'
+import SavingChallengesList from '@/components/dailyFinance/SavingChallengesList.vue'
+import WeeklyReviewModal from '@/components/dailyFinance/WeeklyReviewModal.vue'
+import QuickAddShortcuts from '@/components/dailyFinance/QuickAddShortcuts.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
 import { useAppData } from '@/composables/useAppData'
@@ -15,6 +18,7 @@ import type { ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const isQuickAddOpen = shallowRef(false)
+const isWeeklyReviewOpen = shallowRef(false)
 const toastMessage = shallowRef('')
 let toastTimeout: ReturnType<typeof setTimeout> | undefined
 
@@ -39,17 +43,17 @@ const tripTotalDays = computed(() => {
   const endDay = startOfLocalDay(new Date(trip.end_date))
   return Math.floor((endDay - startDay) / 86_400_000) + 1
 })
-const tripDaysWithTransactions = computed(() =>
-  appData.tripDailyBreakdown.value.filter((day) => day.count > 0).length,
+const tripDaysWithTransactions = computed(
+  () => appData.tripDailyBreakdown.value.filter((day) => day.count > 0).length,
 )
 const tripTransactionCount = computed(() => appData.tripTransactions.value.length)
 const visibleRecentTransactions = computed(() => {
   const endOfToday = startOfLocalDay(new Date()) + 86_400_000
-  const source = isTripMode.value ? appData.tripTransactions.value : appData.combinedTransactions.value
+  const source = isTripMode.value
+    ? appData.tripTransactions.value
+    : appData.combinedTransactions.value
 
-  return source
-    .filter((transaction) => transaction.date < endOfToday)
-    .slice(0, 8)
+  return source.filter((transaction) => transaction.date < endOfToday).slice(0, 8)
 })
 
 function openQuickAdd(): void {
@@ -58,6 +62,14 @@ function openQuickAdd(): void {
 
 function closeQuickAdd(): void {
   isQuickAddOpen.value = false
+}
+
+function openWeeklyReview(): void {
+  isWeeklyReviewOpen.value = true
+}
+
+function closeWeeklyReview(): void {
+  isWeeklyReviewOpen.value = false
 }
 
 function showToast(message: string): void {
@@ -90,6 +102,34 @@ async function addSaving(draft: SavingDraft): Promise<void> {
   showToast('已新增儲蓄')
 }
 
+async function createSavingChallenge(name: string, target_amount: number): Promise<void> {
+  await appData.addSavingChallenge(name, target_amount)
+  showToast('已新增儲蓄挑戰')
+}
+
+async function updateSavingChallengeStatus(
+  challengeId: string,
+  status: 'active' | 'completed' | 'paused',
+): Promise<void> {
+  const challenge = appData.savingChallenges.value.find(
+    (entry) => entry.challenge_id === challengeId,
+  )
+
+  if (!challenge) {
+    return
+  }
+
+  await appData.updateSavingChallenge(challengeId, {
+    name: challenge.name,
+    target_amount: challenge.target_amount,
+    status,
+  })
+}
+
+async function deleteSavingChallenge(challengeId: string): Promise<void> {
+  await appData.deleteSavingChallenge(challengeId)
+}
+
 onBeforeUnmount(() => {
   if (toastTimeout) {
     clearTimeout(toastTimeout)
@@ -112,7 +152,8 @@ onBeforeUnmount(() => {
             {{
               isTripMode
                 ? `${tripDateLabel} · ${appData.activeTrip.value?.destination ?? ''}`
-                : appData.currentWindow.value?.label ?? '先建立預算週期，之後所有交易都會按入糧日自動歸期。'
+                : (appData.currentWindow.value?.label ??
+                  '先建立預算週期，之後所有交易都會按入糧日自動歸期。')
             }}
           </p>
           <p v-if="isTripMode" class="mt-2 text-sm text-stone-500">
@@ -129,7 +170,11 @@ onBeforeUnmount(() => {
           <div>
             <h2 class="text-lg font-semibold text-stone-950">快速記一筆</h2>
             <p class="mt-1 text-sm text-stone-500">
-              {{ isTripMode ? '新增後會自動帶入目前旅程，支出、收入或儲蓄都可以快速記錄。' : '用彈出視窗快速新增支出、收入或儲蓄。' }}
+              {{
+                isTripMode
+                  ? '新增後會自動帶入目前旅程，支出、收入或儲蓄都可以快速記錄。'
+                  : '用彈出視窗快速新增支出、收入或儲蓄。'
+              }}
             </p>
           </div>
           <button
@@ -164,10 +209,22 @@ onBeforeUnmount(() => {
       />
       <MetricCard
         label="今日可用"
-        :value="formatCurrency(appData.dailySafeToSpend.value.safeToSpendToday, appData.currency.value)"
+        :value="
+          formatCurrency(appData.dailySafeToSpend.value.safeToSpendToday, appData.currency.value)
+        "
         :detail="`今日已用 ${formatCurrency(appData.todaySpent.value, appData.currency.value)}`"
         :tone="appData.dailySafeToSpend.value.isOverToday ? 'warn' : 'good'"
       />
+    </section>
+
+    <section v-if="!isTripMode" class="flex justify-end">
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+        @click="openWeeklyReview"
+      >
+        上週回顧
+      </button>
     </section>
 
     <section v-if="!isTripMode" class="grid gap-3 lg:grid-cols-2">
@@ -180,12 +237,34 @@ onBeforeUnmount(() => {
         :upcoming-bills="appData.upcomingBills.value"
         :currency="appData.currency.value"
       />
+      <SavingChallengesList
+        :challenges="appData.activeChallenges.value"
+        :currency="appData.currency.value"
+        @create="createSavingChallenge"
+        @update-status="updateSavingChallengeStatus"
+        @delete="deleteSavingChallenge"
+      />
+      <QuickAddShortcuts
+        :suggestions="appData.quickAddSuggestions.value"
+        :expense-categories="appData.activeExpenseCategories.value"
+        :income-categories="appData.activeIncomeCategories.value"
+        :currency="appData.currency.value"
+        :fx-rate-map="appData.fxRateMap.value"
+        @create-expense="addExpense"
+        @create-income="addIncome"
+        @create-saving="addSaving"
+      />
     </section>
 
     <section v-else class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <MetricCard
         label="總預算"
-        :value="formatCurrency(appData.activeTrip.value?.budget_amount ?? 0, appData.activeTrip.value?.budget_currency ?? appData.currency.value)"
+        :value="
+          formatCurrency(
+            appData.activeTrip.value?.budget_amount ?? 0,
+            appData.activeTrip.value?.budget_currency ?? appData.currency.value,
+          )
+        "
         :detail="`旅程共 ${tripTotalDays} 日`"
         tone="good"
       />
@@ -233,7 +312,10 @@ onBeforeUnmount(() => {
           :income-categories="appData.data.value.incomeCategories"
           :currency="appData.currency.value"
         />
-        <p v-else class="mt-4 rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500">
+        <p
+          v-else
+          class="mt-4 rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
+        >
           建議在旅途中當天記帳，之後回看每日拆分會更清楚。
         </p>
       </article>
@@ -241,7 +323,9 @@ onBeforeUnmount(() => {
 
     <section>
       <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-stone-950">{{ isTripMode ? '旅程最近交易' : '最近交易' }}</h2>
+        <h2 class="text-lg font-semibold text-stone-950">
+          {{ isTripMode ? '旅程最近交易' : '最近交易' }}
+        </h2>
       </div>
       <TransactionList
         v-if="visibleRecentTransactions.length"
@@ -260,6 +344,13 @@ onBeforeUnmount(() => {
         "
       />
     </section>
+
+    <WeeklyReviewModal
+      v-if="isWeeklyReviewOpen"
+      :review="appData.weeklyReview.value"
+      :currency="appData.currency.value"
+      @close="closeWeeklyReview"
+    />
 
     <div
       v-if="isQuickAddOpen"
@@ -284,6 +375,7 @@ onBeforeUnmount(() => {
         <TransactionForm
           :expense-categories="appData.activeExpenseCategories.value"
           :income-categories="appData.activeIncomeCategories.value"
+          :saving-challenges="appData.savingChallenges.value"
           :trip-options="appData.trips.value"
           :default-trip-id="appData.activeTripId.value || undefined"
           :fx-rate-map="appData.fxRateMap.value"

@@ -129,7 +129,9 @@ describe('validateAppDataPayload', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.errors).toContain('trips[0].budget_currency must be one of HKD, USD, CNY, JPY, TWD, THB')
+    expect(result.errors).toContain(
+      'trips[0].budget_currency must be one of HKD, USD, CNY, JPY, TWD, THB',
+    )
   })
 
   test('rejects expenses with an invalid recurring_frequency', () => {
@@ -153,7 +155,9 @@ describe('validateAppDataPayload', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.errors).toContain('expenses[0].recurring_frequency must be one of weekly, monthly, yearly')
+    expect(result.errors).toContain(
+      'expenses[0].recurring_frequency must be one of weekly, monthly, yearly',
+    )
   })
 
   test('rejects incomes with a non-string original currency type', () => {
@@ -175,7 +179,9 @@ describe('validateAppDataPayload', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.errors).toContain('incomes[0].original_currency must be one of HKD, USD, CNY, JPY, TWD, THB')
+    expect(result.errors).toContain(
+      'incomes[0].original_currency must be one of HKD, USD, CNY, JPY, TWD, THB',
+    )
   })
 
   test('rejects malformed fxRates when present but not an array', () => {
@@ -186,5 +192,123 @@ describe('validateAppDataPayload', () => {
 
     expect(result.ok).toBe(false)
     expect(result.errors).toContain('fxRates must be an array')
+  })
+
+  test('accepts payloads with savingChallenges', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      savingChallenges: [
+        {
+          challenge_id: 'challenge-1',
+          name: 'Travel fund',
+          target_amount: 5000,
+          current_amount: 1200,
+          status: 'active',
+          created_at: 1779000000000,
+          updated_at: 1779086400000,
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+  })
+
+  test('accepts legacy payloads with no savingChallenges array', () => {
+    const result = validateAppDataPayload(validPayload)
+
+    expect(result.ok).toBe(true)
+  })
+
+  test('rejects savingChallenges with an invalid status', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      savingChallenges: [
+        {
+          challenge_id: 'challenge-1',
+          name: 'Travel fund',
+          target_amount: 5000,
+          current_amount: 0,
+          status: 'archived',
+          created_at: 1779000000000,
+          updated_at: 1779086400000,
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain(
+      'savingChallenges[0].status must be one of active, completed, paused',
+    )
+  })
+
+  test('rejects savingChallenges when not an array', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      savingChallenges: 'not-an-array',
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('savingChallenges must be an array')
+  })
+
+  test('accepts savings with an optional challenge_id', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      savings: [
+        {
+          saving_id: 'saving-1',
+          category_id: 'saving-cash',
+          amount: 5000,
+          date: 1780272000000,
+          description: '緊急基金',
+          challenge_id: 'challenge-1',
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+  })
+
+  test('rejects savings with a non-string challenge_id', () => {
+    const result = validateAppDataPayload({
+      ...validPayload,
+      savings: [
+        {
+          saving_id: 'saving-1',
+          category_id: 'saving-cash',
+          amount: 5000,
+          date: 1780272000000,
+          description: '緊急基金',
+          challenge_id: 123,
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain('savings[0].challenge_id must be a string')
+  })
+
+  test('accepts legacy payloads with no optional fields', () => {
+    const legacyPayload = {
+      cycles: validPayload.cycles,
+      expenseCategories: [],
+      incomeCategories: [],
+      expenses: [],
+      incomes: [],
+      targetExpenses: [],
+      savings: [
+        {
+          saving_id: 'saving-1',
+          amount: 1000,
+          date: 1780272000000,
+          description: 'Legacy saving',
+        },
+      ],
+      settings: [],
+    }
+
+    const result = validateAppDataPayload(legacyPayload)
+
+    expect(result.ok).toBe(true)
   })
 })

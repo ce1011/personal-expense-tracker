@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   ArchiveRestore,
+  BarChart3,
   Braces,
   ChartNoAxesCombined,
   ChartPie,
@@ -32,6 +33,7 @@ const navItems = [
   { label: '分類預算', to: '/category-budget', icon: ChartPie },
   { label: '分類', to: '/categories', icon: FolderKanban },
   { label: '旅程', to: '/trips', icon: Plane },
+  { label: '每月快照', to: '/monthly-snapshot', icon: BarChart3 },
   { label: '設定', to: '/settings', icon: ArchiveRestore },
 ]
 
@@ -131,10 +133,14 @@ function getTripStatusLabel(status: TripStatus): string {
     </aside>
 
     <div class="xl:pl-68">
-      <header class="sticky top-0 z-20 border-b border-stone-200/80 bg-[#f9f6ef]/95 px-4 py-3 backdrop-blur xl:hidden">
+      <header
+        class="sticky top-0 z-20 border-b border-stone-200/80 bg-[#f9f6ef]/95 px-4 py-3 backdrop-blur xl:hidden"
+      >
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">個人收支追蹤</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800">
+              個人收支追蹤
+            </p>
             <p class="text-sm font-medium text-stone-700">{{ cycleLabel }}</p>
           </div>
           <p v-if="loading" class="text-xs font-medium text-stone-500">載入中</p>
@@ -142,7 +148,9 @@ function getTripStatusLabel(status: TripStatus): string {
         <div class="mt-3 rounded-md border border-stone-200 bg-white px-3 py-3 shadow-sm hidden">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">旅程模式</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                旅程模式
+              </p>
               <p class="mt-1 text-sm font-semibold text-stone-950">{{ tripModeLabel }}</p>
               <p class="mt-1 text-xs text-stone-500">{{ tripSummaryLabel }}</p>
             </div>

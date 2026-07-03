@@ -68,8 +68,12 @@ function refreshAppVersion(): void {
       <div class="flex items-start justify-between gap-4">
         <div>
           <h2 class="text-lg font-semibold text-stone-950">App 更新</h2>
-          <p class="mt-1 text-sm text-stone-500">重新載入目前頁面並加上更新參數，盡量抓取 GitHub Pages 的最新版本。</p>
-          <p class="mt-2 text-xs text-stone-400">在 iPhone 主畫面 Web App 上，若仍看到舊版本，可能還需要完全關閉 App 再打開一次。</p>
+          <p class="mt-1 text-sm text-stone-500">
+            重新載入目前頁面並加上更新參數，盡量抓取 GitHub Pages 的最新版本。
+          </p>
+          <p class="mt-2 text-xs text-stone-400">
+            在 iPhone 主畫面 Web App 上，若仍看到舊版本，可能還需要完全關閉 App 再打開一次。
+          </p>
         </div>
         <RefreshCw class="size-5 text-stone-700" aria-hidden="true" />
       </div>
@@ -92,7 +96,11 @@ function refreshAppVersion(): void {
           </div>
           <Download class="size-5 text-emerald-800" aria-hidden="true" />
         </div>
-        <button type="button" class="mt-4 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white" @click="exportBackup">
+        <button
+          type="button"
+          class="mt-4 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white"
+          @click="exportBackup"
+        >
           匯出 JSON 備份
         </button>
       </section>
@@ -101,14 +109,21 @@ function refreshAppVersion(): void {
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold text-stone-950">還原</h2>
-            <p class="mt-1 text-sm text-stone-500">會先驗證內容，通過後才整體覆蓋本機 IndexedDB 資料。</p>
+            <p class="mt-1 text-sm text-stone-500">
+              會先驗證內容，通過後才整體覆蓋本機 IndexedDB 資料。
+            </p>
           </div>
           <Upload class="size-5 text-stone-700" aria-hidden="true" />
         </div>
 
         <label class="mt-4 grid gap-1 text-sm font-medium text-stone-700">
           選擇備份檔
-          <input type="file" accept="application/json,.json" class="rounded-md border border-stone-300 bg-white px-3 py-2" @change="readFile" />
+          <input
+            type="file"
+            accept="application/json,.json"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+            @change="readFile"
+          />
         </label>
 
         <label class="mt-3 grid gap-1 text-sm font-medium text-stone-700">
@@ -117,7 +132,7 @@ function refreshAppVersion(): void {
             v-model="restoreText"
             rows="8"
             class="rounded-md border border-stone-300 px-3 py-2 font-mono text-xs"
-            placeholder="{ &quot;cycles&quot;: [], ... }"
+            placeholder='{ "cycles": [], ... }'
           />
         </label>
 

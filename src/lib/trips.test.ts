@@ -89,11 +89,9 @@ describe('getTripDayBuckets', () => {
 
     expect(result).toHaveLength(3)
     expect(result.map((bucket) => bucket.date)).toEqual([day1, day2, day3])
-    expect(result.map((bucket) => bucket.transactions.map((transaction) => transaction.id))).toEqual([
-      ['expense-1'],
-      [],
-      ['income-1', 'saving-1'],
-    ])
+    expect(
+      result.map((bucket) => bucket.transactions.map((transaction) => transaction.id)),
+    ).toEqual([['expense-1'], [], ['income-1', 'saving-1']])
   })
 
   test('does not place out-of-range transactions into any bucket', () => {
@@ -110,11 +108,9 @@ describe('getTripDayBuckets', () => {
       },
     ])
 
-    expect(result.map((bucket) => bucket.transactions.map((transaction) => transaction.id))).toEqual([
-      ['expense-1'],
-      [],
-      ['income-1', 'saving-1'],
-    ])
+    expect(
+      result.map((bucket) => bucket.transactions.map((transaction) => transaction.id)),
+    ).toEqual([['expense-1'], [], ['income-1', 'saving-1']])
   })
 
   test('keeps transactions at day edges in the correct UTC day bucket', () => {
@@ -139,11 +135,9 @@ describe('getTripDayBuckets', () => {
       },
     ])
 
-    expect(result.map((bucket) => bucket.transactions.map((transaction) => transaction.id))).toEqual([
-      ['expense-start-edge'],
-      [],
-      ['expense-end-edge'],
-    ])
+    expect(
+      result.map((bucket) => bucket.transactions.map((transaction) => transaction.id)),
+    ).toEqual([['expense-start-edge'], [], ['expense-end-edge']])
   })
 })
 
@@ -168,7 +162,10 @@ describe('getTripSpentTotal', () => {
 
 describe('getTripDailyBreakdown', () => {
   test('returns per-day trip spend totals alongside the bucketed transactions', () => {
-    const result = getTripDailyBreakdown(trip, filterTransactionsByTrip(tripTransactions, trip.trip_id))
+    const result = getTripDailyBreakdown(
+      trip,
+      filterTransactionsByTrip(tripTransactions, trip.trip_id),
+    )
 
     expect(result).toEqual([
       {

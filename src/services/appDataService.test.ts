@@ -18,7 +18,9 @@ const {
   mockSettingFirst,
   mockSettingDelete,
 } = vi.hoisted(() => ({
-  mockDbTransaction: vi.fn(async (_mode: string, _tables: unknown[], callback: () => Promise<void>) => callback()),
+  mockDbTransaction: vi.fn(
+    async (_mode: string, _tables: unknown[], callback: () => Promise<void>) => callback(),
+  ),
   mockExpenseAdd: vi.fn(),
   mockIncomeAdd: vi.fn(),
   mockSavingAdd: vi.fn(),

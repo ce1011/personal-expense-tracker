@@ -152,7 +152,8 @@ function completeSelectedTrip(): void {
     return
   }
 
-  const confirmed = globalThis.confirm?.(`確定把「${selectedTrip.value.name}」標記為已完成嗎？`) ?? true
+  const confirmed =
+    globalThis.confirm?.(`確定把「${selectedTrip.value.name}」標記為已完成嗎？`) ?? true
 
   if (!confirmed) {
     return
@@ -206,7 +207,9 @@ function statusHint(trip: TripSession): string {
           <div class="flex items-center justify-between gap-3">
             <div>
               <h2 class="text-lg font-semibold text-stone-950">旅程清單</h2>
-              <p class="mt-1 text-sm text-stone-500">已儲存 {{ appData.trips.value.length }} 個旅程</p>
+              <p class="mt-1 text-sm text-stone-500">
+                已儲存 {{ appData.trips.value.length }} 個旅程
+              </p>
             </div>
             <button
               type="button"
@@ -236,13 +239,20 @@ function statusHint(trip: TripSession): string {
                   <p class="font-semibold text-stone-950">{{ trip.name }}</p>
                   <p class="mt-1 text-sm text-stone-600">{{ trip.destination }}</p>
                 </div>
-                <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="getStatusClasses(trip.status)">
+                <span
+                  class="rounded-full px-2 py-1 text-xs font-semibold"
+                  :class="getStatusClasses(trip.status)"
+                >
                   {{ getStatusLabel(trip.status) }}
                 </span>
               </div>
               <p class="mt-3 text-xs text-stone-500">{{ trip.summary }}</p>
-              <p class="mt-1 text-xs text-stone-500">{{ formatCurrency(trip.budget_amount, trip.budget_currency) }}</p>
-              <p v-if="trip.isActive" class="mt-2 text-xs font-semibold text-emerald-800">目前旅程模式</p>
+              <p class="mt-1 text-xs text-stone-500">
+                {{ formatCurrency(trip.budget_amount, trip.budget_currency) }}
+              </p>
+              <p v-if="trip.isActive" class="mt-2 text-xs font-semibold text-emerald-800">
+                目前旅程模式
+              </p>
             </button>
           </div>
 
@@ -259,7 +269,11 @@ function statusHint(trip: TripSession): string {
             <div>
               <h2 class="text-lg font-semibold text-stone-950">目前模式</h2>
               <p class="mt-1 text-sm text-stone-500">
-                {{ appData.activeTrip.value ? `${appData.activeTrip.value.name} · ${appData.activeTrip.value.destination}` : '一般模式' }}
+                {{
+                  appData.activeTrip.value
+                    ? `${appData.activeTrip.value.name} · ${appData.activeTrip.value.destination}`
+                    : '一般模式'
+                }}
               </p>
             </div>
             <Route class="size-5 text-emerald-800" aria-hidden="true" />
@@ -295,7 +309,11 @@ function statusHint(trip: TripSession): string {
               {{ selectedTrip ? selectedTrip.name : '建立新的旅程 Session' }}
             </h2>
             <p class="mt-2 text-sm text-stone-500">
-              {{ selectedTrip ? statusHint(selectedTrip) : '建立後可再設為目前旅程，讓交易與總覽聚焦在這段行程。' }}
+              {{
+                selectedTrip
+                  ? statusHint(selectedTrip)
+                  : '建立後可再設為目前旅程，讓交易與總覽聚焦在這段行程。'
+              }}
             </p>
           </div>
           <MapPinned class="size-5 text-stone-700" aria-hidden="true" />
@@ -304,39 +322,68 @@ function statusHint(trip: TripSession): string {
         <div class="mt-4 grid gap-3 md:grid-cols-2">
           <label class="grid gap-1 text-sm font-medium text-stone-700">
             旅程名稱
-            <input v-model.trim="form.name" class="rounded-md border border-stone-300 bg-white px-3 py-2" placeholder="例如：東京賞櫻" />
+            <input
+              v-model.trim="form.name"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2"
+              placeholder="例如：東京賞櫻"
+            />
           </label>
 
           <label class="grid gap-1 text-sm font-medium text-stone-700">
             目的地
-            <input v-model.trim="form.destination" class="rounded-md border border-stone-300 bg-white px-3 py-2" placeholder="例如：東京" />
+            <input
+              v-model.trim="form.destination"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2"
+              placeholder="例如：東京"
+            />
           </label>
 
           <label class="grid gap-1 text-sm font-medium text-stone-700">
             開始日期
-            <input v-model="form.startDate" type="date" class="rounded-md border border-stone-300 bg-white px-3 py-2" />
+            <input
+              v-model="form.startDate"
+              type="date"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2"
+            />
           </label>
 
           <label class="grid gap-1 text-sm font-medium text-stone-700">
             結束日期
-            <input v-model="form.endDate" type="date" class="rounded-md border border-stone-300 bg-white px-3 py-2" />
+            <input
+              v-model="form.endDate"
+              type="date"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2"
+            />
           </label>
 
           <label class="grid gap-1 text-sm font-medium text-stone-700">
             預算金額
-            <input v-model.number="form.budgetAmount" min="0" type="number" class="rounded-md border border-stone-300 bg-white px-3 py-2" />
+            <input
+              v-model.number="form.budgetAmount"
+              min="0"
+              type="number"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2"
+            />
           </label>
 
           <label class="grid gap-1 text-sm font-medium text-stone-700">
             預算幣別
-            <select v-model="form.budgetCurrency" class="rounded-md border border-stone-300 bg-white px-3 py-2">
-              <option v-for="option in tripOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            <select
+              v-model="form.budgetCurrency"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2"
+            >
+              <option v-for="option in tripOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
             </select>
           </label>
 
           <label class="grid gap-1 text-sm font-medium text-stone-700 md:col-span-2">
             狀態
-            <select v-model="form.status" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+            <select
+              v-model="form.status"
+              class="rounded-md border border-stone-300 bg-white px-3 py-2"
+            >
               <option value="planned">規劃中</option>
               <option value="active">進行中</option>
               <option value="completed">已完成</option>
@@ -356,11 +403,16 @@ function statusHint(trip: TripSession): string {
 
         <div class="mt-4 rounded-md bg-stone-50 p-3 text-sm text-stone-600">
           <p v-if="selectedTrip">
-            旅程期間：{{ formatDate(selectedTrip.start_date) }} - {{ formatDate(selectedTrip.end_date) }}
+            旅程期間：{{ formatDate(selectedTrip.start_date) }} -
+            {{ formatDate(selectedTrip.end_date) }}
           </p>
           <p v-else>建立後可從 app shell 切換成這個旅程模式，專注查看相關交易。</p>
-          <p class="mt-1 text-xs text-stone-500">若結束日期早於開始日期，系統不會儲存這筆旅程設定。</p>
-          <p v-if="!canSaveTrip" class="mt-1 text-xs text-amber-700">請填妥名稱、目的地、日期，並確認結束日期不早於開始日期。</p>
+          <p class="mt-1 text-xs text-stone-500">
+            若結束日期早於開始日期，系統不會儲存這筆旅程設定。
+          </p>
+          <p v-if="!canSaveTrip" class="mt-1 text-xs text-amber-700">
+            請填妥名稱、目的地、日期，並確認結束日期不早於開始日期。
+          </p>
         </div>
 
         <div class="mt-4 flex flex-col gap-2 sm:flex-row">

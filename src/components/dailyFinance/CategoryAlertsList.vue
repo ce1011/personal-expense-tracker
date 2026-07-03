@@ -29,11 +29,7 @@ function severityLabel(severity: CategoryAlert['severity']): string {
     </div>
 
     <div v-if="alerts.length" class="space-y-4">
-      <div
-        v-for="alert in alerts"
-        :key="alert.category_id"
-        class="space-y-2"
-      >
+      <div v-for="alert in alerts" :key="alert.category_id" class="space-y-2">
         <div class="flex items-center justify-between gap-3 text-sm">
           <div class="flex items-center gap-2">
             <span
@@ -55,7 +51,8 @@ function severityLabel(severity: CategoryAlert['severity']): string {
               {{ severityLabel(alert.severity) }}
             </span>
             <span class="text-stone-700">
-              {{ formatCurrency(alert.spent, currency) }} / {{ formatCurrency(alert.target, currency) }}
+              {{ formatCurrency(alert.spent, currency) }} /
+              {{ formatCurrency(alert.target, currency) }}
             </span>
           </div>
         </div>
@@ -78,7 +75,10 @@ function severityLabel(severity: CategoryAlert['severity']): string {
       </div>
     </div>
 
-    <p v-else class="rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500">
+    <p
+      v-else
+      class="rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
+    >
       目前沒有設定分類支出上限。
     </p>
   </article>

@@ -279,15 +279,30 @@ function copyTextFallback(text: string): void {
             可先複製上方 AI Prompt，連同圖片交給 AI 產生批量匯入 JSON，再貼回這個頁面驗證。
           </p>
           <ul class="mt-3 space-y-2 text-sm text-stone-600">
-            <li><span class="font-semibold text-stone-900">type</span>: `expense` / `income` / `saving`</li>
+            <li>
+              <span class="font-semibold text-stone-900">type</span>: `expense` / `income` /
+              `saving`
+            </li>
             <li><span class="font-semibold text-stone-900">date</span>: 毫秒 Unix timestamp</li>
-            <li><span class="font-semibold text-stone-900">currency_code</span>: `HKD/USD/CNY/JPY/TWD/THB`</li>
-            <li><span class="font-semibold text-stone-900">exchange_rate_hkd</span>: 可省略，會改用 app 目前快取匯率</li>
-            <li><span class="font-semibold text-stone-900">saving 類別</span>: `saving-cash` / `saving-time-deposit` / `saving-stocks`</li>
+            <li>
+              <span class="font-semibold text-stone-900">currency_code</span>:
+              `HKD/USD/CNY/JPY/TWD/THB`
+            </li>
+            <li>
+              <span class="font-semibold text-stone-900">exchange_rate_hkd</span>: 可省略，會改用
+              app 目前快取匯率
+            </li>
+            <li>
+              <span class="font-semibold text-stone-900">saving 類別</span>: `saving-cash` /
+              `saving-time-deposit` / `saving-stocks`
+            </li>
           </ul>
         </section>
 
-        <section ref="previewSection" class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+        <section
+          ref="previewSection"
+          class="rounded-md border border-stone-200 bg-white p-4 shadow-sm"
+        >
           <h2 class="text-lg font-semibold text-stone-950">預覽摘要</h2>
 
           <div v-if="previewSummary" class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -297,16 +312,23 @@ function copyTextFallback(text: string): void {
             </div>
             <div class="rounded-md bg-stone-50 px-3 py-3">
               <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">幣別</p>
-              <p class="mt-2 text-sm font-semibold text-stone-950">{{ previewSummary.currencies.join('、') }}</p>
-            </div>
-            <div class="rounded-md bg-stone-50 px-3 py-3">
-              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">支出 / 收入 / 儲蓄</p>
               <p class="mt-2 text-sm font-semibold text-stone-950">
-                {{ previewSummary.expenseCount }} / {{ previewSummary.incomeCount }} / {{ previewSummary.savingCount }}
+                {{ previewSummary.currencies.join('、') }}
               </p>
             </div>
             <div class="rounded-md bg-stone-50 px-3 py-3">
-              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">匯入策略</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                支出 / 收入 / 儲蓄
+              </p>
+              <p class="mt-2 text-sm font-semibold text-stone-950">
+                {{ previewSummary.expenseCount }} / {{ previewSummary.incomeCount }} /
+                {{ previewSummary.savingCount }}
+              </p>
+            </div>
+            <div class="rounded-md bg-stone-50 px-3 py-3">
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                匯入策略
+              </p>
               <p class="mt-2 text-sm font-semibold text-stone-950">全有或全無</p>
             </div>
           </div>
@@ -316,22 +338,46 @@ function copyTextFallback(text: string): void {
               <h3 class="text-sm font-semibold text-stone-950">按交易類型金額摘要</h3>
               <div class="mt-3 grid gap-3 sm:grid-cols-3">
                 <div class="rounded-md bg-white px-3 py-3">
-                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">支出</p>
-                  <p class="mt-2 text-sm font-semibold text-stone-950">{{ amountSummary.expense.count }} 筆</p>
-                  <p class="mt-1 text-xs text-stone-500">原幣合計 {{ amountSummary.expense.originalTotal.toFixed(2) }}</p>
-                  <p class="mt-1 text-xs text-stone-500">預計入帳 {{ formatCurrency(amountSummary.expense.hkdTotal, 'HKD') }}</p>
+                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                    支出
+                  </p>
+                  <p class="mt-2 text-sm font-semibold text-stone-950">
+                    {{ amountSummary.expense.count }} 筆
+                  </p>
+                  <p class="mt-1 text-xs text-stone-500">
+                    原幣合計 {{ amountSummary.expense.originalTotal.toFixed(2) }}
+                  </p>
+                  <p class="mt-1 text-xs text-stone-500">
+                    預計入帳 {{ formatCurrency(amountSummary.expense.hkdTotal, 'HKD') }}
+                  </p>
                 </div>
                 <div class="rounded-md bg-white px-3 py-3">
-                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">收入</p>
-                  <p class="mt-2 text-sm font-semibold text-stone-950">{{ amountSummary.income.count }} 筆</p>
-                  <p class="mt-1 text-xs text-stone-500">原幣合計 {{ amountSummary.income.originalTotal.toFixed(2) }}</p>
-                  <p class="mt-1 text-xs text-stone-500">預計入帳 {{ formatCurrency(amountSummary.income.hkdTotal, 'HKD') }}</p>
+                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                    收入
+                  </p>
+                  <p class="mt-2 text-sm font-semibold text-stone-950">
+                    {{ amountSummary.income.count }} 筆
+                  </p>
+                  <p class="mt-1 text-xs text-stone-500">
+                    原幣合計 {{ amountSummary.income.originalTotal.toFixed(2) }}
+                  </p>
+                  <p class="mt-1 text-xs text-stone-500">
+                    預計入帳 {{ formatCurrency(amountSummary.income.hkdTotal, 'HKD') }}
+                  </p>
                 </div>
                 <div class="rounded-md bg-white px-3 py-3">
-                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">儲蓄</p>
-                  <p class="mt-2 text-sm font-semibold text-stone-950">{{ amountSummary.saving.count }} 筆</p>
-                  <p class="mt-1 text-xs text-stone-500">原幣合計 {{ amountSummary.saving.originalTotal.toFixed(2) }}</p>
-                  <p class="mt-1 text-xs text-stone-500">預計入帳 {{ formatCurrency(amountSummary.saving.hkdTotal, 'HKD') }}</p>
+                  <p class="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                    儲蓄
+                  </p>
+                  <p class="mt-2 text-sm font-semibold text-stone-950">
+                    {{ amountSummary.saving.count }} 筆
+                  </p>
+                  <p class="mt-1 text-xs text-stone-500">
+                    原幣合計 {{ amountSummary.saving.originalTotal.toFixed(2) }}
+                  </p>
+                  <p class="mt-1 text-xs text-stone-500">
+                    預計入帳 {{ formatCurrency(amountSummary.saving.hkdTotal, 'HKD') }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -362,15 +408,21 @@ function copyTextFallback(text: string): void {
                   </div>
                   <div>
                     <p class="text-xs text-stone-500">原幣金額</p>
-                    <p class="font-semibold text-stone-950">{{ row.currency_code }} {{ row.amount.toFixed(2) }}</p>
+                    <p class="font-semibold text-stone-950">
+                      {{ row.currency_code }} {{ row.amount.toFixed(2) }}
+                    </p>
                   </div>
                   <div>
                     <p class="text-xs text-stone-500">匯率</p>
-                    <p class="font-semibold text-stone-950">{{ row.exchange_rate_hkd.toFixed(4) }}</p>
+                    <p class="font-semibold text-stone-950">
+                      {{ row.exchange_rate_hkd.toFixed(4) }}
+                    </p>
                   </div>
                   <div>
                     <p class="text-xs text-stone-500">預計入帳</p>
-                    <p class="font-semibold text-stone-950">{{ formatCurrency(row.convertedAmount, 'HKD') }}</p>
+                    <p class="font-semibold text-stone-950">
+                      {{ formatCurrency(row.convertedAmount, 'HKD') }}
+                    </p>
                   </div>
                   <div>
                     <p class="text-xs text-stone-500">日期</p>
@@ -379,8 +431,12 @@ function copyTextFallback(text: string): void {
                 </div>
               </div>
 
-              <p v-if="previewTransactions.length > previewRows.length" class="mt-2 text-xs text-stone-500">
-                尚有 {{ previewTransactions.length - previewRows.length }} 筆未展開，匯入時仍會一併處理。
+              <p
+                v-if="previewTransactions.length > previewRows.length"
+                class="mt-2 text-xs text-stone-500"
+              >
+                尚有
+                {{ previewTransactions.length - previewRows.length }} 筆未展開，匯入時仍會一併處理。
               </p>
             </div>
           </div>
@@ -426,7 +482,8 @@ function copyTextFallback(text: string): void {
         <div>
           <h2 class="text-lg font-semibold">驗證成功</h2>
           <p class="mt-1 text-sm">
-            可以匯入 {{ previewTransactions.length }} 筆交易。確認後會一次寫入支出、收入與儲蓄資料表。
+            可以匯入
+            {{ previewTransactions.length }} 筆交易。確認後會一次寫入支出、收入與儲蓄資料表。
           </p>
         </div>
       </div>

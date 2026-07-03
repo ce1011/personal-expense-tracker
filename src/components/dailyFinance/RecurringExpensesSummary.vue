@@ -36,11 +36,16 @@ defineProps<{
         </div>
         <div class="text-right text-sm">
           <p class="font-medium text-stone-900">{{ formatCurrency(bill.amount, currency) }}</p>
-          <p class="text-xs text-stone-500">{{ formatDate(bill.dueTimestamp) }} · 還有 {{ bill.daysUntilDue }} 天</p>
+          <p class="text-xs text-stone-500">
+            {{ formatDate(bill.dueTimestamp) }} · 還有 {{ bill.daysUntilDue }} 天
+          </p>
         </div>
       </div>
     </div>
-    <p v-else class="mt-4 rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500">
+    <p
+      v-else
+      class="mt-4 rounded-md border border-dashed border-stone-200 bg-stone-50 px-3 py-4 text-sm text-stone-500"
+    >
       未來 14 天內沒有即將到期的固定支出。
     </p>
   </article>

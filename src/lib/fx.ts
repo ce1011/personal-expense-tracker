@@ -45,7 +45,10 @@ export function parseHkdFxApiResponse(payload: unknown): ParsedFxResponse {
   }
 }
 
-export function shouldRefreshFxRates(cachedDayKey: string | undefined, currentDayKey: string): boolean {
+export function shouldRefreshFxRates(
+  cachedDayKey: string | undefined,
+  currentDayKey: string,
+): boolean {
   return !cachedDayKey || cachedDayKey !== currentDayKey
 }
 

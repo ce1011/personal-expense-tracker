@@ -68,7 +68,13 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireOptionalNumber(transaction, 'original_amount', `expenses[${index}]`, errors)
     requireOptionalNumber(transaction, 'exchange_rate_hkd', `expenses[${index}]`, errors)
     requireOptionalBoolean(transaction, 'recurring', `expenses[${index}]`, errors)
-    requireOptionalEnum(transaction, 'recurring_frequency', RECURRING_FREQUENCIES, `expenses[${index}]`, errors)
+    requireOptionalEnum(
+      transaction,
+      'recurring_frequency',
+      RECURRING_FREQUENCIES,
+      `expenses[${index}]`,
+      errors,
+    )
     requireOptionalNumber(transaction, 'recurring_day', `expenses[${index}]`, errors)
   })
 
@@ -100,6 +106,7 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireNumber(saving, 'date', `savings[${index}]`, errors)
     requireString(saving, 'description', `savings[${index}]`, errors)
     requireOptionalString(saving, 'category_id', `savings[${index}]`, errors)
+    requireOptionalString(saving, 'challenge_id', `savings[${index}]`, errors)
     requireOptionalNumber(saving, 'create_date', `savings[${index}]`, errors)
     requireOptionalNumber(saving, 'edit_date', `savings[${index}]`, errors)
     requireOptionalBoolean(saving, 'synced', `savings[${index}]`, errors)
@@ -145,6 +152,22 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
         requireNumber(rate, 'rate_to_hkd', `fxRates[${index}]`, errors)
         requireString(rate, 'source_date', `fxRates[${index}]`, errors)
         requireNumber(rate, 'fetched_at', `fxRates[${index}]`, errors)
+      })
+    }
+  }
+
+  if (payload.savingChallenges !== undefined) {
+    if (!Array.isArray(payload.savingChallenges)) {
+      errors.push('savingChallenges must be an array')
+    } else {
+      payload.savingChallenges.forEach((challenge, index) => {
+        requireString(challenge, 'challenge_id', `savingChallenges[${index}]`, errors)
+        requireString(challenge, 'name', `savingChallenges[${index}]`, errors)
+        requireNumber(challenge, 'target_amount', `savingChallenges[${index}]`, errors)
+        requireNumber(challenge, 'current_amount', `savingChallenges[${index}]`, errors)
+        requireChallengeStatus(challenge, 'status', `savingChallenges[${index}]`, errors)
+        requireNumber(challenge, 'created_at', `savingChallenges[${index}]`, errors)
+        requireNumber(challenge, 'updated_at', `savingChallenges[${index}]`, errors)
       })
     }
   }
@@ -238,9 +261,18 @@ function requireOptionalEnum<T extends string>(
 const SUPPORTED_CURRENCIES = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB'] as const
 const TRIP_STATUSES = ['planned', 'active', 'completed'] as const
 const RECURRING_FREQUENCIES = ['weekly', 'monthly', 'yearly'] as const
+const CHALLENGE_STATUSES = ['active', 'completed', 'paused'] as const
 
-function requireSupportedCurrency(value: unknown, key: string, path: string, errors: string[]): void {
-  if (!isRecord(value) || !SUPPORTED_CURRENCIES.includes(value[key] as (typeof SUPPORTED_CURRENCIES)[number])) {
+function requireSupportedCurrency(
+  value: unknown,
+  key: string,
+  path: string,
+  errors: string[],
+): void {
+  if (
+    !isRecord(value) ||
+    !SUPPORTED_CURRENCIES.includes(value[key] as (typeof SUPPORTED_CURRENCIES)[number])
+  ) {
     errors.push(`${path}.${key} must be one of ${SUPPORTED_CURRENCIES.join(', ')}`)
   }
 }
@@ -259,5 +291,14 @@ function requireOptionalSupportedCurrency(
 function requireTripStatus(value: unknown, key: string, path: string, errors: string[]): void {
   if (!isRecord(value) || !TRIP_STATUSES.includes(value[key] as (typeof TRIP_STATUSES)[number])) {
     errors.push(`${path}.${key} must be one of ${TRIP_STATUSES.join(', ')}`)
+  }
+}
+
+function requireChallengeStatus(value: unknown, key: string, path: string, errors: string[]): void {
+  if (
+    !isRecord(value) ||
+    !CHALLENGE_STATUSES.includes(value[key] as (typeof CHALLENGE_STATUSES)[number])
+  ) {
+    errors.push(`${path}.${key} must be one of ${CHALLENGE_STATUSES.join(', ')}`)
   }
 }

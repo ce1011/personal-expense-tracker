@@ -41,8 +41,14 @@ const availableCategories = computed(() => {
   }
 
   return [
-    ...appData.activeExpenseCategories.value.map((category) => ({ ...category, kind: 'expense' as const })),
-    ...appData.activeIncomeCategories.value.map((category) => ({ ...category, kind: 'income' as const })),
+    ...appData.activeExpenseCategories.value.map((category) => ({
+      ...category,
+      kind: 'expense' as const,
+    })),
+    ...appData.activeIncomeCategories.value.map((category) => ({
+      ...category,
+      kind: 'income' as const,
+    })),
     ...savingCategories.map((category) => ({ ...category, kind: 'saving' as const })),
   ]
 })
@@ -60,7 +66,9 @@ const baseTransactions = computed(() => {
     return appData.tripTransactions.value
   }
 
-  return appData.combinedTransactions.value.filter((transaction) => transaction.trip_id === filters.tripId)
+  return appData.combinedTransactions.value.filter(
+    (transaction) => transaction.trip_id === filters.tripId,
+  )
 })
 
 const filteredTransactions = computed(() => {
@@ -218,6 +226,7 @@ function resetFilters(): void {
       :key="`edit-${selectedTransaction.id}`"
       :expense-categories="appData.activeExpenseCategories.value"
       :income-categories="appData.activeIncomeCategories.value"
+      :saving-challenges="appData.savingChallenges.value"
       :trip-options="appData.trips.value"
       :default-trip-id="appData.activeTripId.value || undefined"
       :fx-rate-map="appData.fxRateMap.value"
@@ -234,6 +243,7 @@ function resetFilters(): void {
       key="create"
       :expense-categories="appData.activeExpenseCategories.value"
       :income-categories="appData.activeIncomeCategories.value"
+      :saving-challenges="appData.savingChallenges.value"
       :trip-options="appData.trips.value"
       :default-trip-id="appData.activeTripId.value || undefined"
       :fx-rate-map="appData.fxRateMap.value"
@@ -246,13 +256,22 @@ function resetFilters(): void {
     <section class="grid gap-3">
       <label class="grid gap-1 text-sm font-medium text-stone-700">
         搜尋交易
-        <input v-model="search" class="rounded-md border border-stone-300 bg-white px-3 py-2" placeholder="按名稱搜尋" />
+        <input
+          v-model="search"
+          class="rounded-md border border-stone-300 bg-white px-3 py-2"
+          placeholder="按名稱搜尋"
+        />
       </label>
 
-      <div class="grid gap-3 rounded-md border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-6">
+      <div
+        class="grid gap-3 rounded-md border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-6"
+      >
         <label class="grid gap-1 text-sm font-medium text-stone-700">
           旅程
-          <select v-model="filters.tripId" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+          <select
+            v-model="filters.tripId"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+          >
             <option value="all">全部交易</option>
             <option value="unassigned">未關聯旅程</option>
             <option v-for="trip in appData.trips.value" :key="trip.trip_id" :value="trip.trip_id">
@@ -263,7 +282,10 @@ function resetFilters(): void {
 
         <label class="grid gap-1 text-sm font-medium text-stone-700">
           類型
-          <select v-model="filters.kind" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+          <select
+            v-model="filters.kind"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+          >
             <option value="all">全部</option>
             <option value="expense">支出</option>
             <option value="income">收入</option>
@@ -273,11 +295,18 @@ function resetFilters(): void {
 
         <label class="grid gap-1 text-sm font-medium text-stone-700">
           分類
-          <select v-model="filters.categoryId" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+          <select
+            v-model="filters.categoryId"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+          >
             <option value="all">全部分類</option>
             <option
               v-for="category in availableCategories"
-              :key="'kind' in category ? `${category.kind}-${category.category_id}` : category.category_id"
+              :key="
+                'kind' in category
+                  ? `${category.kind}-${category.category_id}`
+                  : category.category_id
+              "
               :value="category.category_id"
             >
               {{ category.name_tc || category.name_en }}
@@ -287,7 +316,10 @@ function resetFilters(): void {
 
         <label class="grid gap-1 text-sm font-medium text-stone-700">
           時間快捷
-          <select v-model="filters.datePreset" class="rounded-md border border-stone-300 bg-white px-3 py-2">
+          <select
+            v-model="filters.datePreset"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+          >
             <option value="all">全部</option>
             <option value="today">今天</option>
             <option value="cycle">本期</option>
@@ -297,12 +329,20 @@ function resetFilters(): void {
 
         <label class="grid gap-1 text-sm font-medium text-stone-700">
           開始日期
-          <input v-model="filters.fromDate" type="date" class="rounded-md border border-stone-300 bg-white px-3 py-2" />
+          <input
+            v-model="filters.fromDate"
+            type="date"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+          />
         </label>
 
         <label class="grid gap-1 text-sm font-medium text-stone-700">
           結束日期
-          <input v-model="filters.toDate" type="date" class="rounded-md border border-stone-300 bg-white px-3 py-2" />
+          <input
+            v-model="filters.toDate"
+            type="date"
+            class="rounded-md border border-stone-300 bg-white px-3 py-2"
+          />
         </label>
       </div>
 

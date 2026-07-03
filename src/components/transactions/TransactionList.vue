@@ -20,10 +20,9 @@ const emit = defineEmits<{
 }>()
 
 const categoryById = computed(() => {
-  const entries = [...props.expenseCategories, ...props.incomeCategories, ...savingCategories].map((category) => [
-    category.category_id,
-    category,
-  ] as const)
+  const entries = [...props.expenseCategories, ...props.incomeCategories, ...savingCategories].map(
+    (category) => [category.category_id, category] as const,
+  )
   return new Map(entries)
 })
 </script>
@@ -37,16 +36,27 @@ const categoryById = computed(() => {
     >
       <div
         class="grid size-9 place-items-center rounded-md"
-        :style="{ backgroundColor: withHash(categoryById.get(item.category_id)?.color_code ?? 'd6d0c4') }"
+        :style="{
+          backgroundColor: withHash(categoryById.get(item.category_id)?.color_code ?? 'd6d0c4'),
+        }"
       >
         <ArrowUpRight v-if="item.kind === 'expense'" class="size-4 text-white" aria-hidden="true" />
-        <ArrowDownLeft v-else-if="item.kind === 'income'" class="size-4 text-white" aria-hidden="true" />
+        <ArrowDownLeft
+          v-else-if="item.kind === 'income'"
+          class="size-4 text-white"
+          aria-hidden="true"
+        />
         <ArrowUpRight v-else class="size-4 text-white" aria-hidden="true" />
       </div>
       <div class="min-w-0">
         <p class="truncate text-sm font-semibold text-stone-950">{{ item.name }}</p>
         <p class="text-xs text-stone-500">
-          {{ categoryById.get(item.category_id)?.name_tc || categoryById.get(item.category_id)?.name_en || '未分類' }} · {{ formatDate(item.date) }}
+          {{
+            categoryById.get(item.category_id)?.name_tc ||
+            categoryById.get(item.category_id)?.name_en ||
+            '未分類'
+          }}
+          · {{ formatDate(item.date) }}
         </p>
         <p v-if="item.original_currency && item.original_amount" class="text-xs text-stone-400">
           原幣：{{ item.original_currency }} {{ item.original_amount }}

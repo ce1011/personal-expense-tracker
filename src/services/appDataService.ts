@@ -6,6 +6,7 @@ import {
   parseHkdFxApiResponse,
   shouldRefreshFxRates,
 } from '@/lib/fx'
+import { createChallenge } from '@/lib/dailyFinance/savingChallenges'
 import type { ImportTransactionRecord } from '@/lib/transactionImport'
 import type {
   AppDataPayload,
@@ -20,6 +21,7 @@ import type {
   IncomeCategory,
   IncomeDraft,
   IncomeTransaction,
+  SavingChallenge,
   SavingDraft,
   SavingRecord,
   SupportedCurrency,
@@ -69,6 +71,7 @@ export async function loadAppData(): Promise<AppDataPayload> {
     settings,
     trips,
     fxRates,
+    savingChallenges,
   ] = await Promise.all([
     db.cycles.toArray(),
     db.expenseCategories.toArray(),
@@ -80,6 +83,7 @@ export async function loadAppData(): Promise<AppDataPayload> {
     db.settings.toArray(),
     db.trips.toArray(),
     db.fxRates.toArray(),
+    db.savingChallenges.toArray(),
   ])
 
   return {
@@ -93,6 +97,7 @@ export async function loadAppData(): Promise<AppDataPayload> {
     settings,
     trips: trips.sort((a, b) => b.updated_at - a.updated_at),
     fxRates: fxRates.sort((a, b) => a.currency_code.localeCompare(b.currency_code)),
+    savingChallenges: savingChallenges.sort((a, b) => b.updated_at - a.updated_at),
   }
 }
 
@@ -116,6 +121,7 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
       db.settings,
       db.trips,
       db.fxRates,
+      db.savingChallenges,
     ],
     async () => {
       await Promise.all([
@@ -129,6 +135,7 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
         db.settings.clear(),
         db.trips.clear(),
         db.fxRates.clear(),
+        db.savingChallenges.clear(),
       ])
 
       await Promise.all([
@@ -142,6 +149,7 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
         db.settings.bulkPut(payload.settings),
         db.trips.bulkPut(payload.trips ?? []),
         db.fxRates.bulkPut(payload.fxRates ?? []),
+        db.savingChallenges.bulkPut(payload.savingChallenges ?? []),
       ])
     },
   )
@@ -190,6 +198,7 @@ export async function createSaving(draft: SavingDraft): Promise<void> {
     category_id: draft.category_id,
     date: draft.date,
     description: draft.name.trim(),
+    challenge_id: draft.challenge_id,
     create_date: now,
     edit_date: now,
     ...persistedFields,
@@ -198,7 +207,9 @@ export async function createSaving(draft: SavingDraft): Promise<void> {
   await db.savings.add(record)
 }
 
-export async function importTransactions(records: readonly ImportTransactionRecordWithTrip[]): Promise<void> {
+export async function importTransactions(
+  records: readonly ImportTransactionRecordWithTrip[],
+): Promise<void> {
   const now = Date.now()
 
   await db.transaction('rw', [db.expenses, db.incomes, db.savings], async () => {
@@ -278,6 +289,7 @@ export async function updateSaving(transactionId: string, draft: SavingDraft): P
     category_id: draft.category_id,
     description: draft.name.trim(),
     date: draft.date,
+    challenge_id: draft.challenge_id,
     edit_date: Date.now(),
     ...persistedFields,
   })
@@ -295,13 +307,39 @@ export async function deleteSaving(transactionId: string): Promise<void> {
   await db.savings.delete(transactionId)
 }
 
+export async function createSavingChallenge(name: string, target_amount: number): Promise<void> {
+  const now = Date.now()
+  const challenge: SavingChallenge = createChallenge(name, target_amount, now)
+
+  await db.savingChallenges.add(challenge)
+}
+
+export async function updateSavingChallenge(
+  challengeId: string,
+  draft: Pick<SavingChallenge, 'name' | 'target_amount' | 'status'>,
+): Promise<void> {
+  await db.savingChallenges.update(challengeId, {
+    name: draft.name.trim(),
+    target_amount: draft.target_amount,
+    status: draft.status,
+    updated_at: Date.now(),
+  })
+}
+
+export async function deleteSavingChallenge(challengeId: string): Promise<void> {
+  await db.savingChallenges.delete(challengeId)
+}
+
 export async function getTrips(): Promise<TripSession[]> {
   const trips = await db.trips.toArray()
 
   return trips.sort((a, b) => b.updated_at - a.updated_at)
 }
 
-export async function saveTrip(draft: TripDraft, existing?: Partial<TripSaveMetadata>): Promise<void> {
+export async function saveTrip(
+  draft: TripDraft,
+  existing?: Partial<TripSaveMetadata>,
+): Promise<void> {
   const now = Date.now()
   const storedTrip = existing?.trip_id ? await db.trips.get(existing.trip_id) : undefined
   const trip: TripSession = {
@@ -362,7 +400,10 @@ export async function saveTargetLimit(
   category_id: string,
   amount: number,
 ): Promise<void> {
-  const existing = await db.targetExpenses.where('[cycle_id+category_id]').equals([cycle_id, category_id]).first()
+  const existing = await db.targetExpenses
+    .where('[cycle_id+category_id]')
+    .equals([cycle_id, category_id])
+    .first()
   const target: TargetExpenseLimit = {
     target_expense_id: existing?.target_expense_id ?? makeId('target'),
     cycle_id,
@@ -377,7 +418,9 @@ export async function saveExpenseCategory(
   draft: CategoryDraft,
   categoryId?: string,
 ): Promise<void> {
-  await db.expenseCategories.put(toCategory(draft, categoryId, 'expense-category') as ExpenseCategory)
+  await db.expenseCategories.put(
+    toCategory(draft, categoryId, 'expense-category') as ExpenseCategory,
+  )
 }
 
 export async function saveIncomeCategory(draft: CategoryDraft, categoryId?: string): Promise<void> {
@@ -461,7 +504,12 @@ async function findActiveTripSetting(): Promise<AppSetting | undefined> {
 
 async function buildTripLinkedPersistenceFields(
   input: TripLinkedPersistenceInput,
-): Promise<Pick<ExpenseTransaction, 'amount' | 'synced' | 'trip_id' | 'original_currency' | 'original_amount' | 'exchange_rate_hkd'>> {
+): Promise<
+  Pick<
+    ExpenseTransaction,
+    'amount' | 'synced' | 'trip_id' | 'original_currency' | 'original_amount' | 'exchange_rate_hkd'
+  >
+> {
   await assertTripExists(input.trip_id)
 
   return {

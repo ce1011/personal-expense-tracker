@@ -19,7 +19,12 @@ export interface UpcomingBill {
 
 export function getRecurringExpenses(expenses: ExpenseTransaction[]): RecurringExpense[] {
   return expenses
-    .filter((expense) => expense.recurring === true && expense.recurring_frequency && expense.recurring_day !== undefined)
+    .filter(
+      (expense) =>
+        expense.recurring === true &&
+        expense.recurring_frequency &&
+        expense.recurring_day !== undefined,
+    )
     .map((expense) => ({
       transaction_id: expense.transaction_id,
       name: expense.name,
@@ -29,7 +34,10 @@ export function getRecurringExpenses(expenses: ExpenseTransaction[]): RecurringE
     }))
 }
 
-export function getCycleFixedExpensesTotal(expenses: ExpenseTransaction[], cycleWindow: CycleWindow): number {
+export function getCycleFixedExpensesTotal(
+  expenses: ExpenseTransaction[],
+  cycleWindow: CycleWindow,
+): number {
   const recurring = getRecurringExpenses(expenses)
 
   return recurring.reduce((sum, expense) => {
@@ -46,7 +54,11 @@ export function getCycleFixedExpensesTotal(expenses: ExpenseTransaction[], cycle
     }
 
     if (expense.frequency === 'weekly') {
-      return sum + expense.amount * countWeekdayOccurrences(expense.recurring_day, cycleWindow.start, cycleWindow.end)
+      return (
+        sum +
+        expense.amount *
+          countWeekdayOccurrences(expense.recurring_day, cycleWindow.start, cycleWindow.end)
+      )
     }
 
     return sum
