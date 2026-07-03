@@ -2,6 +2,7 @@ import { computed, readonly, shallowRef } from 'vue'
 
 import { getCycleWindow, isInCycleWindow } from '@/lib/budgetCycle'
 import { getDaysUntilNextIncomeDay, startOfLocalDay } from '@/lib/date'
+import { getCategoryAlerts } from '@/lib/dailyFinance/categoryAlerts'
 import { getCycleFixedExpensesTotal, getUpcomingBills } from '@/lib/dailyFinance/recurringExpenses'
 import { getSafeToSpend } from '@/lib/dailyFinance/safeToSpend'
 import {
@@ -96,6 +97,16 @@ export function useAppData() {
       ? data.value.expenses.filter((expense) => isInCycleWindow(expense.date, window))
       : []
   })
+  const categoryAlerts = computed(() =>
+    currentWindow.value
+      ? getCategoryAlerts(
+          data.value.expenses,
+          data.value.targetExpenses,
+          activeExpenseCategories.value,
+          currentWindow.value,
+        )
+      : [],
+  )
   const cycleIncomes = computed(() => {
     const window = currentWindow.value
     return window ? data.value.incomes.filter((income) => isInCycleWindow(income.date, window)) : []
@@ -246,6 +257,7 @@ export function useAppData() {
     fxRateMap,
     latestFxDate,
     cycleExpenses,
+    categoryAlerts,
     cycleIncomes,
     cycleExpenseTotal,
     cycleIncomeTotal,

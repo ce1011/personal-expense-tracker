@@ -4,6 +4,7 @@ import { CirclePlus, X } from 'lucide-vue-next'
 
 import EmptyState from '@/components/common/EmptyState.vue'
 import MetricCard from '@/components/common/MetricCard.vue'
+import CategoryAlertsList from '@/components/dailyFinance/CategoryAlertsList.vue'
 import RecurringExpensesSummary from '@/components/dailyFinance/RecurringExpensesSummary.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import TransactionList from '@/components/transactions/TransactionList.vue'
@@ -170,6 +171,10 @@ onBeforeUnmount(() => {
     </section>
 
     <section v-if="!isTripMode" class="grid gap-3 lg:grid-cols-2">
+      <CategoryAlertsList
+        :alerts="appData.categoryAlerts.value"
+        :currency="appData.currency.value"
+      />
       <RecurringExpensesSummary
         :fixed-total="appData.cycleFixedExpensesTotal.value"
         :upcoming-bills="appData.upcomingBills.value"
