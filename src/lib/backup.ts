@@ -68,7 +68,7 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     requireOptionalNumber(transaction, 'original_amount', `expenses[${index}]`, errors)
     requireOptionalNumber(transaction, 'exchange_rate_hkd', `expenses[${index}]`, errors)
     requireOptionalBoolean(transaction, 'recurring', `expenses[${index}]`, errors)
-    requireOptionalString(transaction, 'recurring_frequency', `expenses[${index}]`, errors)
+    requireOptionalEnum(transaction, 'recurring_frequency', RECURRING_FREQUENCIES, `expenses[${index}]`, errors)
     requireOptionalNumber(transaction, 'recurring_day', `expenses[${index}]`, errors)
   })
 
@@ -223,8 +223,21 @@ function requireOptionalBoolean(value: unknown, key: string, path: string, error
   }
 }
 
+function requireOptionalEnum<T extends string>(
+  value: unknown,
+  key: string,
+  allowed: readonly T[],
+  path: string,
+  errors: string[],
+): void {
+  if (isRecord(value) && value[key] !== undefined && !allowed.includes(value[key] as T)) {
+    errors.push(`${path}.${key} must be one of ${allowed.join(', ')}`)
+  }
+}
+
 const SUPPORTED_CURRENCIES = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB'] as const
 const TRIP_STATUSES = ['planned', 'active', 'completed'] as const
+const RECURRING_FREQUENCIES = ['weekly', 'monthly', 'yearly'] as const
 
 function requireSupportedCurrency(value: unknown, key: string, path: string, errors: string[]): void {
   if (!isRecord(value) || !SUPPORTED_CURRENCIES.includes(value[key] as (typeof SUPPORTED_CURRENCIES)[number])) {

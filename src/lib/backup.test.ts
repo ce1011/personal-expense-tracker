@@ -132,7 +132,7 @@ describe('validateAppDataPayload', () => {
     expect(result.errors).toContain('trips[0].budget_currency must be one of HKD, USD, CNY, JPY, TWD, THB')
   })
 
-  test('rejects expenses with an invalid original currency value', () => {
+  test('rejects expenses with an invalid recurring_frequency', () => {
     const result = validateAppDataPayload({
       ...validPayload,
       expenses: [
@@ -145,13 +145,15 @@ describe('validateAppDataPayload', () => {
           create_date: 1780272000000,
           edit_date: 1780272000000,
           synced: false,
-          original_currency: 'EUR',
+          recurring: true,
+          recurring_frequency: 'daily',
+          recurring_day: 1,
         },
       ],
     })
 
     expect(result.ok).toBe(false)
-    expect(result.errors).toContain('expenses[0].original_currency must be one of HKD, USD, CNY, JPY, TWD, THB')
+    expect(result.errors).toContain('expenses[0].recurring_frequency must be one of weekly, monthly, yearly')
   })
 
   test('rejects incomes with a non-string original currency type', () => {
