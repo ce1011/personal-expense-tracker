@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useAttrs } from 'vue'
+
+defineOptions({
+  inheritAttrs: false,
+})
 
 const props = defineProps<{
   modelValue: string | number
@@ -19,6 +23,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string | number]
 }>()
+
+const attrs = useAttrs()
 
 const inputId = computed(
   () => props.id ?? props.name ?? `base-input-${Math.random().toString(36).slice(2, 9)}`,
@@ -57,6 +63,7 @@ const inputClasses = computed(() => ['input-base', props.error ? 'input-base-err
     <input
       :id="inputId"
       v-model="inputValue"
+      v-bind="attrs"
       :type="type ?? 'text'"
       :name="name"
       :placeholder="placeholder"

@@ -53,7 +53,7 @@ function handlePanelClick(event: MouseEvent): void {
       >
         <div
           v-if="show"
-          class="absolute bottom-0 left-0 right-0 flex h-[90vh] flex-col rounded-t-2xl bg-surface shadow-xl sm:relative sm:mx-auto sm:mt-auto sm:max-w-lg sm:rounded-2xl sm:h-auto sm:max-h-[85vh]"
+          class="absolute bottom-0 left-0 right-0 flex h-[90vh] touch-pan-y flex-col rounded-t-2xl bg-surface shadow-xl sm:relative sm:mx-auto sm:mt-auto sm:max-w-lg sm:rounded-2xl sm:h-auto sm:max-h-[85vh]"
           @click="handlePanelClick"
         >
           <div class="flex shrink-0 items-center justify-center pt-3 pb-2">

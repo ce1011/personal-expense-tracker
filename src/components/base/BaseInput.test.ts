@@ -58,6 +58,17 @@ describe('BaseInput', () => {
     expect(wrapper.find('p').text()).toBe('Required field')
   })
 
+  test('forwards native input attributes to the inner input', () => {
+    const wrapper = mount(BaseInput, {
+      props: { modelValue: 0, type: 'number' },
+      attrs: { min: '0', step: '0.01' },
+    })
+
+    const input = wrapper.find('input')
+    expect(input.attributes('min')).toBe('0')
+    expect(input.attributes('step')).toBe('0.01')
+  })
+
   test('disables input when disabled prop is true', () => {
     const wrapper = mount(BaseInput, {
       props: { modelValue: '', disabled: true },
@@ -65,3 +76,4 @@ describe('BaseInput', () => {
     expect(wrapper.find('input').attributes('disabled')).toBeDefined()
   })
 })
+
