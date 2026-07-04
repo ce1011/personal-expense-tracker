@@ -4,8 +4,8 @@ export interface CycleWindow {
   label: string
 }
 
+import { startOfLocalDay, getDaysInMonth } from './date'
 import { formatShortDate } from './formatters'
-import { getDaysInMonth } from './date'
 
 function parseCycleCode(cycleCode: string): { year: number; monthIndex: number } {
   if (!/^\d{6}$/.test(cycleCode)) {
@@ -45,4 +45,12 @@ export function getCycleWindow(cycleCode: string, incomeDay: number): CycleWindo
 
 export function isInCycleWindow(timestamp: number, window: CycleWindow): boolean {
   return timestamp >= window.start && timestamp < window.end
+}
+
+export function getRemainingCycleDays(window: CycleWindow, now = Date.now()): number {
+  const today = startOfLocalDay(new Date(now))
+  const cycleEndDay = startOfLocalDay(new Date(window.end - 1))
+  const diffDays = Math.round((cycleEndDay - today) / 86_400_000)
+
+  return Math.max(1, diffDays + 1)
 }

@@ -9,6 +9,7 @@ import CategoryProgressItem from '@/components/categoryBudget/CategoryProgressIt
 import { useAppData } from '@/composables/useAppData'
 import { buildCategoryBudgetInsights } from '@/lib/categoryBudgetInsights'
 import { buildCategoryProgressRows } from '@/lib/categoryProgress'
+import { getRemainingCycleDays } from '@/lib/budgetCycle'
 import { startOfLocalDay } from '@/lib/date'
 import { formatCurrency, formatPercent, withHash } from '@/lib/formatters'
 
@@ -23,20 +24,20 @@ const todayExpenses = computed(() => {
   )
 })
 
-const cycleDays = computed(() => {
+const remainingCycleDays = computed(() => {
   const window = appData.currentWindow.value
 
   if (!window) {
     return 1
   }
 
-  return Math.max(1, Math.round((window.end - window.start) / 86_400_000))
+  return getRemainingCycleDays(window)
 })
 
 const progressRows = computed(() => {
   const expenses =
     budgetProgressMode.value === 'today' ? todayExpenses.value : appData.cycleExpenses.value
-  const targetDivisor = budgetProgressMode.value === 'today' ? cycleDays.value : 1
+  const targetDivisor = budgetProgressMode.value === 'today' ? remainingCycleDays.value : 1
 
   return buildCategoryProgressRows(
     appData.activeExpenseCategories.value,

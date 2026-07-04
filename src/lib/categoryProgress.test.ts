@@ -88,7 +88,7 @@ describe('buildCategoryProgressRows', () => {
     expect(rows[1]?.remaining).toBe(0)
   })
 
-  test('supports dividing the remaining category budget for daily view', () => {
+  test('supports dividing the remaining category budget by remaining cycle days for daily view', () => {
     const expenses: ExpenseTransaction[] = [
       {
         transaction_id: 'expense-1',
