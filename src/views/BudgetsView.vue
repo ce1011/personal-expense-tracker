@@ -149,7 +149,13 @@ function saveCycle(): void {
             inputmode="numeric"
             autocomplete="off"
           />
-          <BaseInput v-model.number="form.income_day" label="入糧日" type="number" min="1" max="31" />
+          <BaseInput
+            v-model.number="form.income_day"
+            label="入糧日"
+            type="number"
+            min="1"
+            max="31"
+          />
           <BaseInput v-model.number="form.income" label="固定收入" type="number" min="0" />
           <BaseInput v-model.number="form.saving_target" label="儲蓄目標" type="number" min="0" />
         </div>

@@ -48,7 +48,9 @@ function deltaLabel(delta: number): string {
         <div class="flex items-center gap-2">
           <FileText class="size-5 text-primary" aria-hidden="true" />
           <div>
-            <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">本期結餘</p>
+            <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">
+              本期結餘
+            </p>
             <p class="mt-1 text-amount-lg font-bold text-text">
               {{ formatCurrency(snapshot.remainingBudget, appData.currency.value) }}
             </p>
