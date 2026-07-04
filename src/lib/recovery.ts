@@ -1,5 +1,6 @@
 import type { AppDataPayload, AppSnapshot } from '@/types/app-data'
 import { parseBackupJson, validateAppDataPayload } from '@/lib/backup'
+import { savingCategoryMap } from '@/lib/savingCategories'
 
 export interface SnapshotSummary {
   snapshotId: string
@@ -86,6 +87,7 @@ export function validateSnapshotPayload(payload: AppDataPayload): IntegrityValid
   const errors: string[] = []
   const expenseCategoryIds = new Set(payload.expenseCategories.map((category) => category.category_id))
   const incomeCategoryIds = new Set(payload.incomeCategories.map((category) => category.category_id))
+  const savingCategoryIds = new Set(savingCategoryMap.keys())
   const cycleIds = new Set(payload.cycles.map((cycle) => cycle.cycle_id))
   const tripIds = new Set((payload.trips ?? []).map((trip) => trip.trip_id))
   const challengeIds = new Set((payload.savingChallenges ?? []).map((challenge) => challenge.challenge_id))
@@ -114,7 +116,7 @@ export function validateSnapshotPayload(payload: AppDataPayload): IntegrityValid
   }
 
   for (const saving of payload.savings) {
-    if (saving.category_id && saving.category_id !== 'saving-cash' && !expenseCategoryIds.has(saving.category_id)) {
+    if (saving.category_id && !savingCategoryIds.has(saving.category_id)) {
       errors.push(`Saving ${saving.saving_id} references unknown category ${saving.category_id}`)
     }
 

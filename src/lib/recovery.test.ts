@@ -77,7 +77,7 @@ const payload: AppDataPayload = {
   savings: [
     {
       saving_id: 'saving-1',
-      category_id: 'saving-cash',
+      category_id: 'saving-stocks',
       amount: 500,
       date: 1780272000000,
       description: 'Emergency',
@@ -166,7 +166,7 @@ describe('recovery helpers', () => {
     })
   })
 
-  test('passes integrity validation for consistent payloads', () => {
+  test('passes integrity validation for consistent payloads including built-in saving categories', () => {
     expect(validateSnapshotPayload(payload)).toEqual({ ok: true, errors: [] })
   })
 
