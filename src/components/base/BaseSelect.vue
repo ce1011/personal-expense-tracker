@@ -10,10 +10,11 @@ const props = defineProps<{
   id?: string
   name?: string
   disabled?: boolean
+  modelModifiers?: { number?: boolean }
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string]
+  'update:modelValue': [value: string | number]
 }>()
 
 const selectId = computed(
@@ -25,6 +26,18 @@ const selectValue = computed({
     return props.modelValue
   },
   set(value: string) {
+    const matched = props.options.find((option) => String(option.value) === value)
+
+    if (matched) {
+      emit('update:modelValue', matched.value)
+      return
+    }
+
+    if (props.modelModifiers?.number) {
+      emit('update:modelValue', value === '' ? 0 : Number(value))
+      return
+    }
+
     emit('update:modelValue', value)
   },
 })

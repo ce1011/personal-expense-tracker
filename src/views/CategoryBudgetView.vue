@@ -4,6 +4,7 @@ import { AlertTriangle, PieChart, TrendingUp } from 'lucide-vue-next'
 
 import BaseCard from '@/components/base/BaseCard.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
+import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import CategoryProgressItem from '@/components/categoryBudget/CategoryProgressItem.vue'
 import { useAppData } from '@/composables/useAppData'
 import { buildCategoryBudgetInsights } from '@/lib/categoryBudgetInsights'
@@ -133,7 +134,11 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       </button>
     </div>
 
-    <section class="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <section v-if="appData.loading.value" class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <SkeletonCard v-for="index in 4" :key="index" />
+    </section>
+
+    <section v-else class="grid grid-cols-2 gap-3 md:grid-cols-4">
       <BaseCard>
         <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">預算上限</p>
         <p class="mt-2 text-amount font-bold text-text">
@@ -176,7 +181,9 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       </BaseCard>
     </section>
 
-    <BaseCard v-if="riskRows.length" variant="warning">
+    <SkeletonCard v-if="appData.loading.value" :lines="4" />
+
+    <BaseCard v-else-if="riskRows.length" variant="warning">
       <div class="flex items-center gap-2">
         <AlertTriangle class="size-5 text-warning" aria-hidden="true" />
         <h2 class="text-h3 font-semibold text-text">風險提示</h2>
@@ -218,7 +225,12 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       </div>
     </BaseCard>
 
-    <div class="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+    <div v-if="appData.loading.value" class="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+      <SkeletonCard :lines="6" />
+      <SkeletonCard :lines="6" />
+    </div>
+
+    <div v-else class="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
       <BaseCard>
         <div class="flex items-center gap-2">
           <TrendingUp class="size-5 text-primary" aria-hidden="true" />

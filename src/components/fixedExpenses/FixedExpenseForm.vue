@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 
-import BaseModal from '@/components/common/BaseModal.vue'
+import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
 import type { ExpenseCategory, ExpenseDraft, ExpenseTransaction } from '@/types/app-data'
 
 const props = defineProps<{
@@ -43,6 +46,13 @@ const weeklyDayOptions = [
   { value: 5, label: '五' },
   { value: 6, label: '六' },
 ]
+
+const categoryOptions = computed(() =>
+  props.expenseCategories.map((category) => ({
+    value: category.category_id,
+    label: category.name_tc || category.name_en,
+  })),
+)
 
 const dayMin = computed(() => (form.recurring_frequency === 'weekly' ? 0 : 1))
 const dayMax = computed(() => (form.recurring_frequency === 'weekly' ? 6 : 31))
@@ -133,113 +143,63 @@ function close(): void {
 </script>
 
 <template>
-  <BaseModal
+  <BaseBottomSheet
     :show="show"
     :title="isEditing ? '修改固定開支' : '新增固定開支'"
     :subtitle="isEditing ? '更新這筆固定開支的內容' : '建立一筆會定期發生的開支'"
-    max-width="max-w-lg"
     @close="close"
   >
     <form class="grid gap-4" @submit.prevent="submit">
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        名稱
-        <input
-          v-model.trim="form.name"
-          type="text"
-          class="rounded-md border border-stone-300 px-3 py-2"
-          :class="errors.name ? 'border-red-300' : ''"
-          placeholder="例如：租金、水電費、會員費"
-        />
-        <span v-if="errors.name" class="text-xs text-red-600">{{ errors.name }}</span>
-      </label>
+      <BaseInput
+        v-model.trim="form.name"
+        label="名稱"
+        placeholder="例如：租金、水電費、會員費"
+        :error="errors.name"
+        autocomplete="off"
+      />
 
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        金額 ({{ currency }})
-        <input
-          v-model.number="form.amount"
-          type="number"
-          min="0.01"
-          step="0.01"
-          class="rounded-md border border-stone-300 px-3 py-2"
-          :class="errors.amount ? 'border-red-300' : ''"
-          placeholder="0.00"
-        />
-        <span v-if="errors.amount" class="text-xs text-red-600">{{ errors.amount }}</span>
-      </label>
+      <BaseInput
+        v-model.number="form.amount"
+        label="金額 ({{ currency }})"
+        type="number"
+        min="0.01"
+        step="0.01"
+        placeholder="0.00"
+        :error="errors.amount"
+      />
 
-      <label class="grid gap-1 text-sm font-medium text-stone-700">
-        分類
-        <select
-          v-model="form.category_id"
-          class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          :class="errors.category_id ? 'border-red-300' : ''"
-        >
-          <option
-            v-for="category in expenseCategories"
-            :key="category.category_id"
-            :value="category.category_id"
-          >
-            {{ category.name_tc || category.name_en }}
-          </option>
-        </select>
-        <span v-if="errors.category_id" class="text-xs text-red-600">{{ errors.category_id }}</span>
-      </label>
+      <BaseSelect
+        v-model="form.category_id"
+        label="分類"
+        :options="categoryOptions"
+        :error="errors.category_id"
+      />
 
       <div class="grid gap-4 md:grid-cols-2">
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          週期
-          <select
-            v-model="form.recurring_frequency"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          >
-            <option v-for="option in frequencyOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </label>
+        <BaseSelect v-model="form.recurring_frequency" label="週期" :options="frequencyOptions" />
 
-        <label class="grid gap-1 text-sm font-medium text-stone-700">
-          <template v-if="form.recurring_frequency === 'weekly'">星期</template>
-          <template v-else>到期日</template>
-          <select
-            v-if="form.recurring_frequency === 'weekly'"
-            v-model.number="form.recurring_day"
-            class="rounded-md border border-stone-300 bg-white px-3 py-2"
-          >
-            <option v-for="option in weeklyDayOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-          <input
-            v-else
-            v-model.number="form.recurring_day"
-            type="number"
-            :min="dayMin"
-            :max="dayMax"
-            class="rounded-md border border-stone-300 px-3 py-2"
-            :class="errors.recurring_day ? 'border-red-300' : ''"
-          />
-          <span v-if="errors.recurring_day" class="text-xs text-red-600">{{
-            errors.recurring_day
-          }}</span>
-        </label>
+        <BaseSelect
+          v-if="form.recurring_frequency === 'weekly'"
+          v-model.number="form.recurring_day"
+          label="星期"
+          :options="weeklyDayOptions"
+          :error="errors.recurring_day"
+        />
+        <BaseInput
+          v-else
+          v-model.number="form.recurring_day"
+          label="到期日"
+          type="number"
+          :min="dayMin"
+          :max="dayMax"
+          :error="errors.recurring_day"
+        />
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2">
-        <button
-          type="button"
-          class="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-          @click="close"
-        >
-          取消
-        </button>
-        <button
-          type="submit"
-          class="rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900"
-        >
-          {{ isEditing ? '儲存修改' : '新增固定開支' }}
-        </button>
+        <BaseButton variant="secondary" type="button" @click="close">取消</BaseButton>
+        <BaseButton type="submit">{{ isEditing ? '儲存修改' : '新增固定開支' }}</BaseButton>
       </div>
     </form>
-  </BaseModal>
+  </BaseBottomSheet>
 </template>

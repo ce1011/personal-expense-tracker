@@ -2,7 +2,8 @@
 import { Pencil, Trash2 } from 'lucide-vue-next'
 import { computed } from 'vue'
 
-import EmptyState from '@/components/common/EmptyState.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import EmptyState from '@/components/base/EmptyState.vue'
 import { getFrequencyLabel, getRecurringDayLabel } from '@/lib/dailyFinance/recurringExpenses'
 import { formatCurrency } from '@/lib/formatters'
 import type { ExpenseCategory, ExpenseTransaction } from '@/types/app-data'
@@ -38,75 +39,75 @@ function confirmDelete(transaction: ExpenseTransaction): void {
 </script>
 
 <template>
-  <article class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-    <div class="mb-4 flex items-start justify-between gap-4">
-      <div>
-        <h2 class="text-base font-semibold text-stone-950">固定開支列表</h2>
-        <p class="mt-1 text-sm text-stone-500">管理會定期發生的支出</p>
-      </div>
+  <BaseCard>
+    <div class="mb-4">
+      <h2 class="text-h3 font-semibold text-text">固定開支列表</h2>
+      <p class="text-body-sm text-text-2">管理會定期發生的支出</p>
     </div>
 
-    <div v-if="fixedExpenses.length" class="divide-y divide-stone-100">
+    <div v-if="fixedExpenses.length" class="grid gap-2">
       <div
         v-for="expense in fixedExpenses"
         :key="expense.transaction_id"
-        class="flex items-center justify-between gap-4 py-3"
+        class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3"
       >
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2 text-sm font-medium text-stone-900">
-            <span
-              class="inline-block size-3 shrink-0 rounded-full"
-              :style="{ backgroundColor: `#${getCategory(expense)?.color_code ?? '78716c'}` }"
-              aria-hidden="true"
-            />
-            <span class="truncate">{{ expense.name }}</span>
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 items-center gap-3 text-left"
+          @click="emit('edit', expense)"
+        >
+          <span
+            class="inline-block size-3 shrink-0 rounded-full"
+            :style="{ backgroundColor: `#${getCategory(expense)?.color_code ?? '78716c'}` }"
+            aria-hidden="true"
+          />
+          <div class="min-w-0">
+            <p class="truncate text-body-sm font-semibold text-text">{{ expense.name }}</p>
+            <p class="text-caption text-text-2">
+              {{ getFrequencyLabel(expense.recurring_frequency ?? 'monthly') }} ·
+              {{
+                getRecurringDayLabel(
+                  expense.recurring_frequency ?? 'monthly',
+                  expense.recurring_day ?? 1,
+                )
+              }}
+              <template v-if="getCategory(expense)"
+                >· {{ getCategory(expense)?.name_tc || getCategory(expense)?.name_en }}</template
+              >
+            </p>
           </div>
-          <p class="mt-1 text-xs text-stone-500">
-            {{ getFrequencyLabel(expense.recurring_frequency ?? 'monthly') }} ·
-            {{
-              getRecurringDayLabel(
-                expense.recurring_frequency ?? 'monthly',
-                expense.recurring_day ?? 1,
-              )
-            }}
-            <template v-if="getCategory(expense)">
-              · {{ getCategory(expense)?.name_tc || getCategory(expense)?.name_en }}
-            </template>
-          </p>
-        </div>
+        </button>
 
-        <div class="flex items-center gap-4">
-          <p class="text-right text-sm font-semibold text-stone-950">
+        <div class="flex items-center gap-1">
+          <p class="mr-2 text-right text-body-sm font-semibold text-text">
             {{ formatCurrency(expense.amount, currency) }}
           </p>
-          <div class="flex items-center gap-1">
-            <button
-              type="button"
-              class="rounded-md p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-700"
-              aria-label="修改固定開支"
-              title="修改"
-              @click="emit('edit', expense)"
-            >
-              <Pencil class="size-3.5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              class="rounded-md p-1.5 text-stone-500 transition hover:bg-red-50 hover:text-red-700"
-              aria-label="刪除固定開支"
-              title="刪除"
-              @click="confirmDelete(expense)"
-            >
-              <Trash2 class="size-3.5" aria-hidden="true" />
-            </button>
-          </div>
+          <button
+            type="button"
+            class="inline-flex size-10 items-center justify-center rounded-xl text-text-2 transition hover:bg-accent hover:text-text"
+            aria-label="修改固定開支"
+            @click="emit('edit', expense)"
+          >
+            <Pencil class="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            class="inline-flex size-10 items-center justify-center rounded-xl text-text-2 transition hover:bg-danger/5 hover:text-danger"
+            aria-label="刪除固定開支"
+            @click="confirmDelete(expense)"
+          >
+            <Trash2 class="size-4" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </div>
 
     <EmptyState
       v-else
+      class="mt-4"
+      :icon="Pencil"
       title="目前沒有固定開支"
       message="新增固定開支後，它們會顯示在這裡並自動計入本期預算。"
     />
-  </article>
+  </BaseCard>
 </template>

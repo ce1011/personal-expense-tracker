@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { Plus } from 'lucide-vue-next'
+import { Plus, Receipt } from 'lucide-vue-next'
 
-import MetricCard from '@/components/common/MetricCard.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import SkeletonCard from '@/components/base/SkeletonCard.vue'
+import SkeletonList from '@/components/base/SkeletonList.vue'
 import FixedExpenseForm from '@/components/fixedExpenses/FixedExpenseForm.vue'
 import FixedExpensesList from '@/components/fixedExpenses/FixedExpensesList.vue'
 import { useAppData } from '@/composables/useAppData'
@@ -59,48 +62,75 @@ async function deleteExpense(transactionId: string): Promise<void> {
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <section class="grid gap-4">
-      <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">資料維護</p>
-          <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">固定開支</h1>
-          <p class="mt-2 text-sm text-stone-600">管理會定期發生的支出，並查看本期預估總額。</p>
-        </div>
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900"
-          @click="openCreate"
-        >
-          <Plus class="size-4" aria-hidden="true" />
-          新增固定開支
-        </button>
+  <div class="grid gap-4">
+    <header class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">資料維護</p>
+        <h1 class="mt-1 text-h1 font-bold text-text">固定開支</h1>
+        <p class="mt-1 text-body-sm text-text-2">管理會定期發生的支出，並查看本期預估總額。</p>
       </div>
+      <BaseButton @click="openCreate">
+        <Plus class="size-4" aria-hidden="true" />
+        新增固定開支
+      </BaseButton>
+    </header>
 
-      <p v-if="appData.error.value" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-        {{ appData.error.value }}
-      </p>
+    <p v-if="appData.error.value" class="rounded-xl bg-danger/5 px-3 py-2 text-body-sm text-danger">
+      {{ appData.error.value }}
+    </p>
+
+    <section v-if="appData.loading.value" class="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
     </section>
 
-    <section class="grid gap-3 md:grid-cols-3">
-      <MetricCard
-        label="本期固定支出總額"
-        :value="formatCurrency(appData.cycleFixedExpensesTotal.value, appData.currency.value)"
-        detail="本期週期內預估固定支出"
-      />
-      <MetricCard
-        label="即將到期帳單"
-        :value="`${appData.upcomingBills.value.length} 筆`"
-        detail="未來 14 天內到期的固定開支"
-      />
-      <MetricCard
-        label="平均每筆固定開支"
-        :value="formatCurrency(averageAmount, appData.currency.value)"
-        :detail="`共 ${fixedExpenses.length} 筆固定開支`"
-      />
+    <section v-else class="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <BaseCard>
+        <div class="flex items-center gap-2">
+          <Receipt class="size-5 text-primary" aria-hidden="true" />
+          <div>
+            <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">
+              本期固定支出
+            </p>
+            <p class="mt-1 text-amount font-bold text-text">
+              {{ formatCurrency(appData.cycleFixedExpensesTotal.value, appData.currency.value) }}
+            </p>
+          </div>
+        </div>
+      </BaseCard>
+      <BaseCard>
+        <div class="flex items-center gap-2">
+          <Receipt class="size-5 text-warning" aria-hidden="true" />
+          <div>
+            <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">
+              即將到期帳單
+            </p>
+            <p class="mt-1 text-amount font-bold text-text">
+              {{ appData.upcomingBills.value.length }} 筆
+            </p>
+          </div>
+        </div>
+      </BaseCard>
+      <BaseCard>
+        <div class="flex items-center gap-2">
+          <Receipt class="size-5 text-text-2" aria-hidden="true" />
+          <div>
+            <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">
+              平均每筆固定開支
+            </p>
+            <p class="mt-1 text-amount font-bold text-text">
+              {{ formatCurrency(averageAmount, appData.currency.value) }}
+            </p>
+          </div>
+        </div>
+      </BaseCard>
     </section>
+
+    <SkeletonList v-if="appData.loading.value" :rows="4" />
 
     <FixedExpensesList
+      v-else
       :fixed-expenses="fixedExpenses"
       :expense-categories="appData.activeExpenseCategories.value"
       :currency="appData.currency.value"

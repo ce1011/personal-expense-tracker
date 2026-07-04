@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, shallowRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight } from 'lucide-vue-next'
 
 import BaseCard from '@/components/base/BaseCard.vue'
+import BaseToast from '@/components/base/BaseToast.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
+import SkeletonCard from '@/components/base/SkeletonCard.vue'
+import SkeletonList from '@/components/base/SkeletonList.vue'
 import HeroCard from '@/components/dashboard/HeroCard.vue'
 import KpiGrid from '@/components/dashboard/KpiGrid.vue'
 import CategoryAlertsList from '@/components/dailyFinance/CategoryAlertsList.vue'
@@ -43,36 +46,40 @@ function closeWeeklyReview(): void {
   isWeeklyReviewOpen.value = false
 }
 
-function showToast(message: string): void {
+async function showToast(message: string): Promise<void> {
+  clearTimeout(toastTimeout)
+  toastMessage.value = ''
+  await nextTick()
   toastMessage.value = message
-
-  if (toastTimeout) {
-    clearTimeout(toastTimeout)
-  }
 
   toastTimeout = setTimeout(() => {
     toastMessage.value = ''
-  }, 2400)
+  }, 2600)
+}
+
+function clearToast(): void {
+  toastMessage.value = ''
+  clearTimeout(toastTimeout)
 }
 
 async function addExpense(draft: ExpenseDraft): Promise<void> {
   await appData.addExpense(draft)
-  showToast('已新增支出')
+  await showToast('已新增支出')
 }
 
 async function addIncome(draft: IncomeDraft): Promise<void> {
   await appData.addIncome(draft)
-  showToast('已新增收入')
+  await showToast('已新增收入')
 }
 
 async function addSaving(draft: SavingDraft): Promise<void> {
   await appData.addSaving(draft)
-  showToast('已新增儲蓄')
+  await showToast('已新增儲蓄')
 }
 
 async function createSavingChallenge(name: string, target_amount: number): Promise<void> {
   await appData.addSavingChallenge(name, target_amount)
-  showToast('已新增儲蓄挑戰')
+  await showToast('已新增儲蓄挑戰')
 }
 
 async function updateSavingChallengeStatus(
@@ -96,6 +103,7 @@ async function updateSavingChallengeStatus(
 
 async function deleteSavingChallenge(challengeId: string): Promise<void> {
   await appData.deleteSavingChallenge(challengeId)
+  await showToast('已刪除儲蓄挑戰')
 }
 
 function goToTransactions(): void {
@@ -103,15 +111,22 @@ function goToTransactions(): void {
 }
 
 onBeforeUnmount(() => {
-  if (toastTimeout) {
-    clearTimeout(toastTimeout)
-  }
+  clearTimeout(toastTimeout)
 })
 </script>
 
 <template>
   <div class="grid gap-4">
-    <section v-if="!isTripMode" class="grid gap-4">
+    <section v-if="appData.loading.value" class="grid gap-4">
+      <SkeletonCard :lines="3" />
+      <div class="grid grid-cols-2 gap-3">
+        <SkeletonCard :lines="2" />
+        <SkeletonCard :lines="2" />
+      </div>
+      <SkeletonCard :lines="2" />
+    </section>
+
+    <section v-else-if="!isTripMode" class="grid gap-4">
       <HeroCard
         :remaining-budget="appData.remainingBudget.value"
         :income-total="appData.cycleIncomeTotal.value"
@@ -138,7 +153,13 @@ onBeforeUnmount(() => {
       {{ appData.error.value }}
     </section>
 
-    <section v-if="!isTripMode" class="grid gap-4">
+    <section v-if="appData.loading.value" class="grid gap-4">
+      <SkeletonCard :lines="2" />
+      <SkeletonCard :lines="2" />
+      <SkeletonList :rows="3" />
+    </section>
+
+    <section v-else-if="!isTripMode" class="grid gap-4">
       <QuickAddShortcuts
         :suggestions="appData.quickAddSuggestions.value"
         :expense-categories="appData.activeExpenseCategories.value"
@@ -196,7 +217,8 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <BaseCard v-if="visibleRecentTransactions.length" class="overflow-hidden p-0">
+      <SkeletonList v-if="appData.loading.value" :rows="5" />
+      <BaseCard v-else-if="visibleRecentTransactions.length" class="overflow-hidden p-0">
         <div class="divide-y divide-border">
           <TransactionListItem
             v-for="transaction in visibleRecentTransactions"
@@ -228,13 +250,6 @@ onBeforeUnmount(() => {
       @close="closeWeeklyReview"
     />
 
-    <div
-      v-if="toastMessage"
-      class="fixed bottom-24 right-4 z-50 rounded-xl border border-primary/20 bg-surface px-4 py-3 text-sm font-semibold text-primary shadow-lg max-sm:bottom-28 max-sm:right-1/2 max-sm:translate-x-1/2"
-      role="status"
-      aria-live="polite"
-    >
-      {{ toastMessage }}
-    </div>
+    <BaseToast v-if="toastMessage" :message="toastMessage" :duration="2400" @close="clearToast" />
   </div>
 </template>

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import BaseModal from '@/components/common/BaseModal.vue'
+import { TrendingDown, TrendingUp } from 'lucide-vue-next'
+
+import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import type { WeeklyReview } from '@/lib/dailyFinance/weeklyReview'
 
@@ -23,65 +26,80 @@ function deltaLabel(delta: number): string {
 
   return '持平'
 }
+
+function close(): void {
+  emit('close')
+}
 </script>
 
 <template>
-  <BaseModal
-    :show="true"
+  <BaseBottomSheet
     title="上週回顧"
     :subtitle="`${formatDate(review.weekStart)} – ${formatDate(review.weekEnd)}`"
-    @close="emit('close')"
+    show
+    @close="close"
   >
     <div class="grid grid-cols-2 gap-3">
-      <div class="rounded-md border border-stone-200 bg-white p-3">
-        <p class="text-xs text-stone-500">支出</p>
-        <p class="mt-1 text-lg font-semibold text-stone-950">
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">支出</p>
+        <p class="mt-2 text-amount font-bold text-danger">
           {{ formatCurrency(review.totalSpent, currency) }}
         </p>
-      </div>
-      <div class="rounded-md border border-stone-200 bg-white p-3">
-        <p class="text-xs text-stone-500">收入</p>
-        <p class="mt-1 text-lg font-semibold text-stone-950">
+      </BaseCard>
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">收入</p>
+        <p class="mt-2 text-amount font-bold text-primary">
           {{ formatCurrency(review.totalIncome, currency) }}
         </p>
-      </div>
-      <div class="rounded-md border border-stone-200 bg-white p-3">
-        <p class="text-xs text-stone-500">儲蓄</p>
-        <p class="mt-1 text-lg font-semibold text-stone-950">
+      </BaseCard>
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">儲蓄</p>
+        <p class="mt-2 text-amount font-bold text-primary">
           {{ formatCurrency(review.totalSavings, currency) }}
         </p>
-      </div>
-      <div class="rounded-md border border-stone-200 bg-white p-3">
-        <p class="text-xs text-stone-500">交易筆數</p>
-        <p class="mt-1 text-lg font-semibold text-stone-950">{{ review.transactionCount }}</p>
-      </div>
+      </BaseCard>
+      <BaseCard>
+        <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">交易筆數</p>
+        <p class="mt-2 text-amount font-bold text-text">{{ review.transactionCount }}</p>
+      </BaseCard>
     </div>
 
-    <div class="mt-4 rounded-md border border-stone-200 bg-white p-3">
-      <p class="text-xs text-stone-500">主要支出分類</p>
-      <p v-if="review.topCategory" class="mt-1 text-lg font-semibold text-stone-950">
+    <BaseCard class="mt-4">
+      <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">主要支出分類</p>
+      <p v-if="review.topCategory" class="mt-2 text-body-sm font-semibold text-text">
         {{ review.topCategory.name }} · {{ formatCurrency(review.topCategory.amount, currency) }}
       </p>
-      <p v-else class="mt-1 text-sm text-stone-500">上週沒有支出紀錄</p>
-    </div>
+      <p v-else class="mt-2 text-body-sm text-text-2">上週沒有支出紀錄</p>
+    </BaseCard>
 
-    <div class="mt-4 rounded-md border border-stone-200 bg-white p-3">
-      <p class="text-xs text-stone-500">與前一週相比</p>
-      <p v-if="review.vsPreviousWeek" class="mt-1 text-lg font-semibold text-stone-950">
+    <BaseCard class="mt-3">
+      <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">與前一週相比</p>
+      <div v-if="review.vsPreviousWeek" class="mt-2 flex items-center gap-2">
+        <TrendingUp
+          v-if="review.vsPreviousWeek.spentDelta > 0"
+          class="size-5 text-danger"
+          aria-hidden="true"
+        />
+        <TrendingDown
+          v-else-if="review.vsPreviousWeek.spentDelta < 0"
+          class="size-5 text-primary"
+          aria-hidden="true"
+        />
         <span
+          class="text-body-sm font-semibold"
           :class="{
-            'text-red-700': review.vsPreviousWeek.spentDelta > 0,
-            'text-emerald-700': review.vsPreviousWeek.spentDelta < 0,
-            'text-stone-600': review.vsPreviousWeek.spentDelta === 0,
+            'text-danger': review.vsPreviousWeek.spentDelta > 0,
+            'text-primary': review.vsPreviousWeek.spentDelta < 0,
+            'text-text-2': review.vsPreviousWeek.spentDelta === 0,
           }"
         >
           {{ deltaLabel(review.vsPreviousWeek.spentDelta) }}
         </span>
-        <span class="ml-2 text-sm font-normal text-stone-500"
-          >({{ Math.round(review.vsPreviousWeek.spentDeltaPercent) }}%)</span
-        >
-      </p>
-      <p v-else class="mt-1 text-sm text-stone-500">沒有前一週資料可比較</p>
-    </div>
-  </BaseModal>
+        <span class="text-caption text-text-2">
+          （{{ Math.round(review.vsPreviousWeek.spentDeltaPercent) }}%）
+        </span>
+      </div>
+      <p v-else class="mt-2 text-body-sm text-text-2">沒有前一週資料可比較</p>
+    </BaseCard>
+  </BaseBottomSheet>
 </template>

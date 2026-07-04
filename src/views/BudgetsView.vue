@@ -6,6 +6,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
+import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import TargetLimitEditor from '@/components/budgets/TargetLimitEditor.vue'
 import { useAppData } from '@/composables/useAppData'
 import { getCycleWindow } from '@/lib/budgetCycle'
@@ -82,89 +83,97 @@ function saveCycle(): void {
       </p>
     </header>
 
-    <BaseCard>
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <CalendarDays class="size-5 text-primary" aria-hidden="true" />
-          <h2 class="text-h3 font-semibold text-text">選擇週期</h2>
-        </div>
-        <BaseButton variant="ghost" aria-label="新增預算週期" @click="newCycle">
-          <Plus class="size-4" aria-hidden="true" />
-          新增
-        </BaseButton>
-      </div>
+    <div v-if="appData.loading.value" class="grid gap-4">
+      <SkeletonCard :lines="3" />
+      <SkeletonCard :lines="4" />
+      <SkeletonCard :lines="5" />
+    </div>
 
-      <div v-if="appData.data.value.cycles.length" class="mt-4 flex gap-2 overflow-x-auto pb-2">
-        <button
-          v-for="cycle in appData.data.value.cycles"
-          :key="cycle.cycle_id"
-          type="button"
-          class="shrink-0 rounded-xl border px-4 py-2.5 text-left transition"
-          :class="
-            cycle.cycle_id === selectedCycleId
-              ? 'border-primary bg-primary/5 text-text'
-              : 'border-border bg-surface text-text-2 hover:border-primary/50'
-          "
-          @click="selectedCycleId = cycle.cycle_id"
-        >
-          <span class="block text-sm font-semibold">{{ cycle.cycle_code }}</span>
-          <span class="block text-xs text-text-3">入糧日：每月 {{ cycle.income_day }} 號</span>
-        </button>
-      </div>
-      <EmptyState
-        v-else
-        class="mt-4"
-        :icon="CalendarDays"
-        title="尚未有週期"
-        message="先建立一個預算週期，總覽和分類預算才有計算基準。"
-      >
-        <template #action>
-          <BaseButton class="mt-5 w-full" @click="newCycle">
-            <Plus class="size-4" aria-hidden="true" />
-            新增週期
-          </BaseButton>
-        </template>
-      </EmptyState>
-    </BaseCard>
-
-    <BaseCard>
-      <div class="flex items-center gap-2">
-        <Info class="size-5 text-primary" aria-hidden="true" />
-        <h2 class="text-h3 font-semibold text-text">週期設定</h2>
-      </div>
-
-      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <BaseInput
-          v-model.trim="form.cycle_code"
-          label="週期代碼"
-          placeholder="202605"
-          inputmode="numeric"
-          autocomplete="off"
-        />
-        <BaseInput v-model.number="form.income_day" label="入糧日" type="number" min="1" max="31" />
-        <BaseInput v-model.number="form.income" label="固定收入" type="number" min="0" />
-        <BaseInput v-model.number="form.saving_target" label="儲蓄目標" type="number" min="0" />
-      </div>
-
-      <BaseCard variant="primary" class="mt-4">
-        <div class="flex items-start gap-2 text-body-sm text-text-2">
-          <Info class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-          <div>
-            <p v-if="selectedWindowLabel">這個週期會涵蓋：{{ selectedWindowLabel }}</p>
-            <p v-else>例如入糧日是 25 號，202605 代表 4 月 25 日到 5 月 24 日。</p>
+    <template v-else>
+      <BaseCard>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <CalendarDays class="size-5 text-primary" aria-hidden="true" />
+            <h2 class="text-h3 font-semibold text-text">選擇週期</h2>
           </div>
+          <BaseButton variant="ghost" aria-label="新增預算週期" @click="newCycle">
+            <Plus class="size-4" aria-hidden="true" />
+            新增
+          </BaseButton>
         </div>
+
+        <div v-if="appData.data.value.cycles.length" class="mt-4 flex gap-2 overflow-x-auto pb-2">
+          <button
+            v-for="cycle in appData.data.value.cycles"
+            :key="cycle.cycle_id"
+            type="button"
+            class="shrink-0 rounded-xl border px-4 py-2.5 text-left transition"
+            :class="
+              cycle.cycle_id === selectedCycleId
+                ? 'border-primary bg-primary/5 text-text'
+                : 'border-border bg-surface text-text-2 hover:border-primary/50'
+            "
+            @click="selectedCycleId = cycle.cycle_id"
+          >
+            <span class="block text-sm font-semibold">{{ cycle.cycle_code }}</span>
+            <span class="block text-xs text-text-3">入糧日：每月 {{ cycle.income_day }} 號</span>
+          </button>
+        </div>
+        <EmptyState
+          v-else
+          class="mt-4"
+          :icon="CalendarDays"
+          title="尚未有週期"
+          message="先建立一個預算週期，總覽和分類預算才有計算基準。"
+        >
+          <template #action>
+            <BaseButton class="mt-5 w-full" @click="newCycle">
+              <Plus class="size-4" aria-hidden="true" />
+              新增週期
+            </BaseButton>
+          </template>
+        </EmptyState>
       </BaseCard>
 
-      <BaseButton class="mt-4 w-full sm:w-auto" @click="saveCycle">儲存週期</BaseButton>
-    </BaseCard>
+      <BaseCard>
+        <div class="flex items-center gap-2">
+          <Info class="size-5 text-primary" aria-hidden="true" />
+          <h2 class="text-h3 font-semibold text-text">週期設定</h2>
+        </div>
 
-    <TargetLimitEditor
-      :cycle="selectedCycle"
-      :categories="appData.activeExpenseCategories.value"
-      :limits="cycleLimits"
-      :currency="appData.currency.value"
-      @save-limit="appData.saveTargetLimit"
-    />
+        <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <BaseInput
+            v-model.trim="form.cycle_code"
+            label="週期代碼"
+            placeholder="202605"
+            inputmode="numeric"
+            autocomplete="off"
+          />
+          <BaseInput v-model.number="form.income_day" label="入糧日" type="number" min="1" max="31" />
+          <BaseInput v-model.number="form.income" label="固定收入" type="number" min="0" />
+          <BaseInput v-model.number="form.saving_target" label="儲蓄目標" type="number" min="0" />
+        </div>
+
+        <BaseCard variant="primary" class="mt-4">
+          <div class="flex items-start gap-2 text-body-sm text-text-2">
+            <Info class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <p v-if="selectedWindowLabel">這個週期會涵蓋：{{ selectedWindowLabel }}</p>
+              <p v-else>例如入糧日是 25 號，202605 代表 4 月 25 日到 5 月 24 日。</p>
+            </div>
+          </div>
+        </BaseCard>
+
+        <BaseButton class="mt-4 w-full sm:w-auto" @click="saveCycle">儲存週期</BaseButton>
+      </BaseCard>
+
+      <TargetLimitEditor
+        :cycle="selectedCycle"
+        :categories="appData.activeExpenseCategories.value"
+        :limits="cycleLimits"
+        :currency="appData.currency.value"
+        @save-limit="appData.saveTargetLimit"
+      />
+    </template>
   </div>
 </template>

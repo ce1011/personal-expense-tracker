@@ -26,6 +26,8 @@ import type { Component } from 'vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
+import SkeletonCard from '@/components/base/SkeletonCard.vue'
+import SkeletonList from '@/components/base/SkeletonList.vue'
 import { useAppData } from '@/composables/useAppData'
 import { withHash } from '@/lib/formatters'
 import type { CategoryDraft } from '@/types/app-data'
@@ -169,125 +171,132 @@ function deleteCategory(categoryId: string): void {
       </button>
     </div>
 
-    <BaseCard>
-      <h2 class="text-h3 font-semibold text-text">
-        新增{{ activeTab === 'expense' ? '支出' : '收入' }}分類
-      </h2>
+    <div v-if="appData.loading.value" class="grid gap-4">
+      <SkeletonCard :lines="5" />
+      <SkeletonList :rows="4" />
+    </div>
 
-      <form class="mt-4 grid gap-4" @submit.prevent="submit">
-        <div class="grid gap-3 sm:grid-cols-2">
-          <BaseInput
-            v-model.trim="form.name_en"
-            label="英文名稱"
-            placeholder="例如：lunch"
-            autocomplete="off"
-          />
-          <BaseInput
-            v-model.trim="form.name_tc"
-            label="繁中名稱"
-            placeholder="例如：午餐"
-            autocomplete="off"
-          />
-        </div>
-
-        <div>
-          <label class="mb-1.5 block text-sm font-medium text-text-2">顏色</label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="color in colorPalette"
-              :key="color"
-              type="button"
-              class="size-10 rounded-full border-2 transition"
-              :class="form.color_code === color ? 'border-text' : 'border-transparent'"
-              :style="{ backgroundColor: withHash(color) }"
-              :aria-label="`選擇顏色 ${color}`"
-              @click="form.color_code = color"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label class="mb-1.5 block text-sm font-medium text-text-2">圖示</label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="name in iconNames"
-              :key="name"
-              type="button"
-              class="inline-flex size-11 items-center justify-center rounded-xl border transition"
-              :class="
-                form.icon_image_name === name
-                  ? 'border-primary bg-primary/5 text-primary'
-                  : 'border-border bg-surface text-text-2 hover:border-primary/50'
-              "
-              :aria-label="`選擇圖示 ${name}`"
-              @click="form.icon_image_name = name"
-            >
-              <component :is="iconMap[name]" class="size-5" aria-hidden="true" />
-            </button>
-          </div>
-          <BaseInput
-            v-model.trim="form.icon_image_name"
-            class="mt-3"
-            label="或輸入 lucide 圖示名稱"
-            placeholder="例如：utensils"
-            autocomplete="off"
-          />
-          <div class="mt-2 flex items-center gap-2 text-body-sm text-text-2">
-            <span>預覽：</span>
-            <component
-              :is="previewIcon"
-              v-if="previewIcon"
-              class="size-6"
-              :style="{ color: withHash(form.color_code) }"
-              aria-hidden="true"
-            />
-            <span v-else class="text-text-3">無法載入圖示「{{ form.icon_image_name }}」</span>
-          </div>
-        </div>
-
-        <BaseButton type="submit" class="w-full sm:w-auto">
+    <template v-else>
+      <BaseCard>
+        <h2 class="text-h3 font-semibold text-text">
           新增{{ activeTab === 'expense' ? '支出' : '收入' }}分類
-        </BaseButton>
-      </form>
-    </BaseCard>
+        </h2>
 
-    <BaseCard>
-      <h2 class="text-h3 font-semibold text-text">
-        現有{{ activeTab === 'expense' ? '支出' : '收入' }}分類
-      </h2>
-
-      <div v-if="categories.length" class="mt-4 grid gap-2">
-        <div
-          v-for="category in categories"
-          :key="category.category_id"
-          class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3"
-        >
-          <div class="flex items-center gap-3">
-            <span
-              class="size-3 rounded-full"
-              :style="{ backgroundColor: withHash(category.color_code) }"
+        <form class="mt-4 grid gap-4" @submit.prevent="submit">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <BaseInput
+              v-model.trim="form.name_en"
+              label="英文名稱"
+              placeholder="例如：lunch"
+              autocomplete="off"
             />
-            <div>
-              <p class="text-body-sm font-semibold text-text">
-                {{ category.name_tc || category.name_en }}
-              </p>
-              <p class="text-caption text-text-2">
-                {{ category.name_en }} · {{ category.icon_image_name }}
-              </p>
+            <BaseInput
+              v-model.trim="form.name_tc"
+              label="繁中名稱"
+              placeholder="例如：午餐"
+              autocomplete="off"
+            />
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-text-2">顏色</label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="color in colorPalette"
+                :key="color"
+                type="button"
+                class="size-10 rounded-full border-2 transition"
+                :class="form.color_code === color ? 'border-text' : 'border-transparent'"
+                :style="{ backgroundColor: withHash(color) }"
+                :aria-label="`選擇顏色 ${color}`"
+                @click="form.color_code = color"
+              />
             </div>
           </div>
-          <BaseButton
-            variant="danger"
-            aria-label="停用分類"
-            @click="deleteCategory(category.category_id)"
-          >
-            <Trash2 class="size-4" aria-hidden="true" />
-            停用
-          </BaseButton>
-        </div>
-      </div>
 
-      <p v-else class="mt-4 text-body-sm text-text-2">目前沒有自訂分類。</p>
-    </BaseCard>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-text-2">圖示</label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="name in iconNames"
+                :key="name"
+                type="button"
+                class="inline-flex size-11 items-center justify-center rounded-xl border transition"
+                :class="
+                  form.icon_image_name === name
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border bg-surface text-text-2 hover:border-primary/50'
+                "
+                :aria-label="`選擇圖示 ${name}`"
+                @click="form.icon_image_name = name"
+              >
+                <component :is="iconMap[name]" class="size-5" aria-hidden="true" />
+              </button>
+            </div>
+            <BaseInput
+              v-model.trim="form.icon_image_name"
+              class="mt-3"
+              label="或輸入 lucide 圖示名稱"
+              placeholder="例如：utensils"
+              autocomplete="off"
+            />
+            <div class="mt-2 flex items-center gap-2 text-body-sm text-text-2">
+              <span>預覽：</span>
+              <component
+                :is="previewIcon"
+                v-if="previewIcon"
+                class="size-6"
+                :style="{ color: withHash(form.color_code) }"
+                aria-hidden="true"
+              />
+              <span v-else class="text-text-3">無法載入圖示「{{ form.icon_image_name }}」</span>
+            </div>
+          </div>
+
+          <BaseButton type="submit" class="w-full sm:w-auto">
+            新增{{ activeTab === 'expense' ? '支出' : '收入' }}分類
+          </BaseButton>
+        </form>
+      </BaseCard>
+
+      <BaseCard>
+        <h2 class="text-h3 font-semibold text-text">
+          現有{{ activeTab === 'expense' ? '支出' : '收入' }}分類
+        </h2>
+
+        <div v-if="categories.length" class="mt-4 grid gap-2">
+          <div
+            v-for="category in categories"
+            :key="category.category_id"
+            class="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="size-3 rounded-full"
+                :style="{ backgroundColor: withHash(category.color_code) }"
+              />
+              <div>
+                <p class="text-body-sm font-semibold text-text">
+                  {{ category.name_tc || category.name_en }}
+                </p>
+                <p class="text-caption text-text-2">
+                  {{ category.name_en }} · {{ category.icon_image_name }}
+                </p>
+              </div>
+            </div>
+            <BaseButton
+              variant="danger"
+              aria-label="停用分類"
+              @click="deleteCategory(category.category_id)"
+            >
+              <Trash2 class="size-4" aria-hidden="true" />
+              停用
+            </BaseButton>
+          </div>
+        </div>
+
+        <p v-else class="mt-4 text-body-sm text-text-2">目前沒有自訂分類。</p>
+      </BaseCard>
+    </template>
   </div>
 </template>

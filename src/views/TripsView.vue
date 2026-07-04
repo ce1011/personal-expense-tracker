@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, reactive, shallowRef, watch } from 'vue'
-import { MapPinned, Plus, Route } from 'lucide-vue-next'
+import { CheckCircle2, ChevronDown, Globe, MapPinned, PenLine, Plus, Route } from 'lucide-vue-next'
 
-import EmptyState from '@/components/common/EmptyState.vue'
+import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import EmptyState from '@/components/base/EmptyState.vue'
+import SkeletonList from '@/components/base/SkeletonList.vue'
 import { useAppData } from '@/composables/useAppData'
 import { fromDateInputValue, toDateInputValue } from '@/lib/date'
 import { formatCurrency, formatDate } from '@/lib/formatters'
@@ -10,7 +16,9 @@ import type { SupportedCurrency, TripDraft, TripSession, TripStatus } from '@/ty
 
 const appData = useAppData()
 
+const isSheetOpen = shallowRef(false)
 const selectedTripId = shallowRef('')
+const isModeDropdownOpen = shallowRef(false)
 const form = reactive({
   name: '',
   destination: '',
@@ -25,6 +33,7 @@ const form = reactive({
 const selectedTrip = computed(() =>
   appData.trips.value.find((trip) => trip.trip_id === selectedTripId.value),
 )
+const isEditing = computed(() => Boolean(selectedTrip.value))
 
 const tripOptions = [
   { value: 'HKD', label: '港幣 HKD' },
@@ -33,22 +42,21 @@ const tripOptions = [
   { value: 'CNY', label: '人民幣 CNY' },
   { value: 'TWD', label: '台幣 TWD' },
   { value: 'THB', label: '泰銖 THB' },
-] as const
+]
 
-watch(
-  () => appData.trips.value,
-  (trips) => {
-    if (!selectedTripId.value && trips.length) {
-      selectedTripId.value = trips[0]?.trip_id ?? ''
-      return
-    }
+const statusOptions = [
+  { value: 'planned', label: '規劃中' },
+  { value: 'active', label: '進行中' },
+  { value: 'completed', label: '已完成' },
+]
 
-    if (selectedTripId.value && !trips.some((trip) => trip.trip_id === selectedTripId.value)) {
-      selectedTripId.value = trips[0]?.trip_id ?? ''
-    }
-  },
-  { immediate: true },
-)
+const modeOptions = computed(() => [
+  { value: '', label: '一般模式' },
+  ...appData.trips.value.map((trip) => ({
+    value: trip.trip_id,
+    label: `${trip.name} · ${trip.destination}`,
+  })),
+])
 
 watch(
   selectedTrip,
@@ -74,9 +82,9 @@ const tripCards = computed(() =>
   appData.trips.value.map((trip) => ({
     ...trip,
     isActive: appData.activeTripId.value === trip.trip_id,
-    summary: `${formatDate(trip.start_date)} - ${formatDate(trip.end_date)}`,
   })),
 )
+
 const canSaveTrip = computed(() => Boolean(toTripDraft()))
 
 function resetForm(status: TripStatus): void {
@@ -90,13 +98,19 @@ function resetForm(status: TripStatus): void {
   form.notes = ''
 }
 
-function startCreateTrip(): void {
+function openCreate(): void {
   selectedTripId.value = ''
   resetForm('planned')
+  isSheetOpen.value = true
 }
 
-function selectTrip(tripId: string): void {
+function openEdit(tripId: string): void {
   selectedTripId.value = tripId
+  isSheetOpen.value = true
+}
+
+function closeSheet(): void {
+  isSheetOpen.value = false
 }
 
 function toTripDraft(): TripDraft | undefined {
@@ -131,11 +145,11 @@ function saveTrip(): void {
   }
 
   if (selectedTrip.value) {
-    void appData.updateTrip(selectedTrip.value.trip_id, draft)
+    void appData.updateTrip(selectedTrip.value.trip_id, draft).then(closeSheet)
     return
   }
 
-  void appData.addTrip(draft)
+  void appData.addTrip(draft).then(closeSheet)
 }
 
 function setTripMode(tripId?: string): void {
@@ -159,7 +173,7 @@ function completeSelectedTrip(): void {
     return
   }
 
-  void appData.completeTrip(selectedTrip.value.trip_id)
+  void appData.completeTrip(selectedTrip.value.trip_id).then(closeSheet)
 }
 
 function getStatusLabel(status: TripStatus): string {
@@ -168,14 +182,14 @@ function getStatusLabel(status: TripStatus): string {
 
 function getStatusClasses(status: TripStatus): string {
   if (status === 'active') {
-    return 'bg-emerald-100 text-emerald-900'
+    return 'bg-primary/10 text-primary'
   }
 
   if (status === 'completed') {
-    return 'bg-stone-200 text-stone-700'
+    return 'bg-text-3/10 text-text-2'
   }
 
-  return 'bg-amber-100 text-amber-900'
+  return 'bg-warning/10 text-warning'
 }
 
 function statusHint(trip: TripSession): string {
@@ -189,259 +203,201 @@ function statusHint(trip: TripSession): string {
 
   return '可設為目前旅程，讓交易與總覽聚焦這次旅程。'
 }
+
+function spentInTrip(trip: TripSession): number {
+  return appData.data.value.expenses
+    .filter((expense) => expense.trip_id === trip.trip_id)
+    .reduce((sum, expense) => sum + expense.amount, 0)
+}
+
+function selectMode(tripId: string): void {
+  setTripMode(tripId || undefined)
+  isModeDropdownOpen.value = false
+}
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <section>
-      <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">旅程模式</p>
-      <h1 class="mt-1 text-3xl font-semibold tracking-tight text-stone-950">旅程管理</h1>
-      <p class="mt-2 max-w-3xl text-sm text-stone-600">
-        在這裡建立每次旅程的期間、預算和備註，之後就可以從側欄或手機頂部切換到指定旅程模式，集中查看相關收支。
-      </p>
-    </section>
-
-    <section class="grid gap-4 lg:grid-cols-[320px_1fr]">
-      <div class="grid gap-4">
-        <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-semibold text-stone-950">旅程清單</h2>
-              <p class="mt-1 text-sm text-stone-500">
-                已儲存 {{ appData.trips.value.length }} 個旅程
-              </p>
-            </div>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900"
-              @click="startCreateTrip"
-            >
-              <Plus class="size-4" aria-hidden="true" />
-              新增
-            </button>
-          </div>
-
-          <div v-if="tripCards.length" class="mt-4 grid gap-2">
-            <button
-              v-for="trip in tripCards"
-              :key="trip.trip_id"
-              type="button"
-              class="rounded-md border px-3 py-3 text-left transition"
-              :class="
-                trip.trip_id === selectedTripId
-                  ? 'border-emerald-700 bg-emerald-50'
-                  : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
-              "
-              @click="selectTrip(trip.trip_id)"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-semibold text-stone-950">{{ trip.name }}</p>
-                  <p class="mt-1 text-sm text-stone-600">{{ trip.destination }}</p>
-                </div>
-                <span
-                  class="rounded-full px-2 py-1 text-xs font-semibold"
-                  :class="getStatusClasses(trip.status)"
-                >
-                  {{ getStatusLabel(trip.status) }}
-                </span>
-              </div>
-              <p class="mt-3 text-xs text-stone-500">{{ trip.summary }}</p>
-              <p class="mt-1 text-xs text-stone-500">
-                {{ formatCurrency(trip.budget_amount, trip.budget_currency) }}
-              </p>
-              <p v-if="trip.isActive" class="mt-2 text-xs font-semibold text-emerald-800">
-                目前旅程模式
-              </p>
-            </button>
-          </div>
-
-          <EmptyState
-            v-else
-            class="mt-4"
-            title="尚未建立旅程"
-            message="新增第一個旅程後，就可以把交易綁定到指定旅程，並在 shell 快速切換模式。"
-          />
-        </section>
-
-        <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-semibold text-stone-950">目前模式</h2>
-              <p class="mt-1 text-sm text-stone-500">
-                {{
-                  appData.activeTrip.value
-                    ? `${appData.activeTrip.value.name} · ${appData.activeTrip.value.destination}`
-                    : '一般模式'
-                }}
-              </p>
-            </div>
-            <Route class="size-5 text-emerald-800" aria-hidden="true" />
-          </div>
-
-          <div class="mt-4 grid gap-2">
-            <button
-              type="button"
-              class="rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
-              @click="setTripMode()"
-            >
-              切換回一般模式
-            </button>
-            <button
-              v-if="selectedTrip"
-              type="button"
-              class="rounded-md bg-stone-900 px-3 py-2 text-sm font-semibold text-white"
-              @click="setTripMode(selectedTrip.trip_id)"
-            >
-              設為目前旅程
-            </button>
-          </div>
-        </section>
+  <div class="grid gap-4">
+    <header class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">旅程模式</p>
+        <h1 class="mt-1 text-h1 font-bold text-text">旅程管理</h1>
+        <p class="mt-1 max-w-3xl text-body-sm text-text-2">
+          建立每次旅程的期間、預算和備註，之後就可以從頂部切換到指定旅程模式，集中查看相關收支。
+        </p>
       </div>
 
-      <section class="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p class="text-sm font-semibold uppercase tracking-[0.14em] text-stone-500">
-              {{ selectedTrip ? '編輯旅程' : '新增旅程' }}
-            </p>
-            <h2 class="mt-1 text-2xl font-semibold text-stone-950">
-              {{ selectedTrip ? selectedTrip.name : '建立新的旅程 Session' }}
-            </h2>
-            <p class="mt-2 text-sm text-stone-500">
-              {{
-                selectedTrip
-                  ? statusHint(selectedTrip)
-                  : '建立後可再設為目前旅程，讓交易與總覽聚焦在這段行程。'
-              }}
-            </p>
+      <div class="relative">
+        <button
+          type="button"
+          class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-body-sm font-semibold text-text"
+          @click="isModeDropdownOpen = !isModeDropdownOpen"
+        >
+          <Route class="size-4 text-primary" aria-hidden="true" />
+          {{ appData.activeTrip.value?.name ?? '一般模式' }}
+          <ChevronDown
+            class="size-4 text-text-3 transition"
+            :class="isModeDropdownOpen ? 'rotate-180' : ''"
+            aria-hidden="true"
+          />
+        </button>
+
+        <div
+          v-if="isModeDropdownOpen"
+          class="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-border bg-surface p-1 shadow-xl"
+        >
+          <button
+            v-for="option in modeOptions"
+            :key="option.value"
+            type="button"
+            class="w-full rounded-lg px-3 py-2 text-left text-body-sm transition hover:bg-accent"
+            :class="
+              appData.activeTripId.value === option.value
+                ? 'bg-primary/5 text-primary'
+                : 'text-text'
+            "
+            @click="selectMode(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <BaseButton class="w-full sm:w-auto" @click="openCreate">
+      <Plus class="size-4" aria-hidden="true" />
+      新增旅程
+    </BaseButton>
+
+    <SkeletonList v-if="appData.loading.value" :rows="4" />
+
+    <BaseCard v-else-if="tripCards.length">
+      <h2 class="text-h3 font-semibold text-text">旅程列表</h2>
+      <p class="text-body-sm text-text-2">已儲存 {{ appData.trips.value.length }} 個旅程</p>
+
+      <div class="mt-4 grid gap-3">
+        <button
+          v-for="trip in tripCards"
+          :key="trip.trip_id"
+          type="button"
+          class="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface p-3 text-left transition hover:border-primary/50"
+          @click="openEdit(trip.trip_id)"
+        >
+          <div class="flex min-w-0 items-center gap-3">
+            <span
+              class="inline-flex size-10 shrink-0 items-center justify-center rounded-full"
+              :class="getStatusClasses(trip.status)"
+            >
+              <Globe class="size-5" aria-hidden="true" />
+            </span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="truncate text-body-sm font-semibold text-text">{{ trip.name }}</p>
+                <span
+                  v-if="trip.isActive"
+                  class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
+                >
+                  目前旅程
+                </span>
+              </div>
+              <p class="text-caption text-text-2">
+                {{ trip.destination }} · {{ formatDate(trip.start_date) }} -
+                {{ formatDate(trip.end_date) }}
+              </p>
+              <p class="text-caption text-text-2">
+                預算 {{ formatCurrency(trip.budget_amount, trip.budget_currency) }} · 已用
+                {{ formatCurrency(spentInTrip(trip), appData.currency.value) }}
+              </p>
+            </div>
           </div>
-          <MapPinned class="size-5 text-stone-700" aria-hidden="true" />
+
+          <span
+            class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+            :class="getStatusClasses(trip.status)"
+          >
+            {{ getStatusLabel(trip.status) }}
+          </span>
+        </button>
+      </div>
+    </BaseCard>
+
+    <EmptyState
+      v-else
+      :icon="MapPinned"
+      title="尚未建立旅程"
+      message="新增第一個旅程後，就可以把交易綁定到指定旅程，並在頂部快速切換模式。"
+    >
+      <template #action>
+        <BaseButton class="mt-5 w-full" @click="openCreate">
+          <Plus class="size-4" aria-hidden="true" />
+          新增旅程
+        </BaseButton>
+      </template>
+    </EmptyState>
+
+    <BaseBottomSheet
+      :show="isSheetOpen"
+      :title="isEditing ? '編輯旅程' : '新增旅程'"
+      :subtitle="
+        isEditing ? statusHint(selectedTrip!) : '建立後可設為目前旅程，讓交易與總覽聚焦在這段行程。'
+      "
+      @close="closeSheet"
+    >
+      <form class="grid gap-4" @submit.prevent="saveTrip">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <BaseInput v-model.trim="form.name" label="旅程名稱" placeholder="例如：東京賞櫻" />
+          <BaseInput v-model.trim="form.destination" label="目的地" placeholder="例如：東京" />
         </div>
 
-        <div class="mt-4 grid gap-3 md:grid-cols-2">
-          <label class="grid gap-1 text-sm font-medium text-stone-700">
-            旅程名稱
-            <input
-              v-model.trim="form.name"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-              placeholder="例如：東京賞櫻"
-            />
-          </label>
-
-          <label class="grid gap-1 text-sm font-medium text-stone-700">
-            目的地
-            <input
-              v-model.trim="form.destination"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-              placeholder="例如：東京"
-            />
-          </label>
-
-          <label class="grid gap-1 text-sm font-medium text-stone-700">
-            開始日期
-            <input
-              v-model="form.startDate"
-              type="date"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-            />
-          </label>
-
-          <label class="grid gap-1 text-sm font-medium text-stone-700">
-            結束日期
-            <input
-              v-model="form.endDate"
-              type="date"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-            />
-          </label>
-
-          <label class="grid gap-1 text-sm font-medium text-stone-700">
-            預算金額
-            <input
-              v-model.number="form.budgetAmount"
-              min="0"
-              type="number"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-            />
-          </label>
-
-          <label class="grid gap-1 text-sm font-medium text-stone-700">
-            預算幣別
-            <select
-              v-model="form.budgetCurrency"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-            >
-              <option v-for="option in tripOptions" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </option>
-            </select>
-          </label>
-
-          <label class="grid gap-1 text-sm font-medium text-stone-700 md:col-span-2">
-            狀態
-            <select
-              v-model="form.status"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-            >
-              <option value="planned">規劃中</option>
-              <option value="active">進行中</option>
-              <option value="completed">已完成</option>
-            </select>
-          </label>
-
-          <label class="grid gap-1 text-sm font-medium text-stone-700 md:col-span-2">
-            備註
-            <textarea
-              v-model.trim="form.notes"
-              rows="5"
-              class="rounded-md border border-stone-300 bg-white px-3 py-2"
-              placeholder="例如：機票已付款、住宿另算、記得保留現金預算"
-            />
-          </label>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <BaseInput v-model="form.startDate" label="開始日期" type="date" />
+          <BaseInput v-model="form.endDate" label="結束日期" type="date" />
         </div>
 
-        <div class="mt-4 rounded-md bg-stone-50 p-3 text-sm text-stone-600">
-          <p v-if="selectedTrip">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <BaseInput v-model.number="form.budgetAmount" label="預算金額" type="number" min="0" />
+          <BaseSelect v-model="form.budgetCurrency" label="預算幣別" :options="tripOptions" />
+        </div>
+
+        <BaseSelect v-model="form.status" label="狀態" :options="statusOptions" />
+
+        <label class="grid gap-1 text-sm font-medium text-text-2">
+          備註
+          <textarea
+            v-model.trim="form.notes"
+            rows="4"
+            class="w-full rounded-xl border border-border bg-surface px-3 py-2 text-base text-text placeholder:text-text-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            placeholder="例如：機票已付款、住宿另算、記得保留現金預算"
+          />
+        </label>
+
+        <BaseCard v-if="selectedTrip" variant="primary">
+          <p class="text-body-sm text-text-2">
             旅程期間：{{ formatDate(selectedTrip.start_date) }} -
             {{ formatDate(selectedTrip.end_date) }}
           </p>
-          <p v-else>建立後可從 app shell 切換成這個旅程模式，專注查看相關交易。</p>
-          <p class="mt-1 text-xs text-stone-500">
-            若結束日期早於開始日期，系統不會儲存這筆旅程設定。
-          </p>
-          <p v-if="!canSaveTrip" class="mt-1 text-xs text-amber-700">
-            請填妥名稱、目的地、日期，並確認結束日期不早於開始日期。
-          </p>
-        </div>
+        </BaseCard>
 
-        <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-          <button
+        <p v-if="!canSaveTrip" class="text-body-sm text-warning">
+          請填妥名稱、目的地、日期，並確認結束日期不早於開始日期。
+        </p>
+
+        <div class="flex flex-col gap-2 pt-2 sm:flex-row">
+          <BaseButton type="submit" :disabled="!canSaveTrip">
+            <PenLine class="size-4" aria-hidden="true" />
+            {{ isEditing ? '儲存旅程' : '建立旅程' }}
+          </BaseButton>
+          <BaseButton
+            v-if="isEditing"
+            variant="secondary"
             type="button"
-            class="rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-stone-300"
-            :disabled="!canSaveTrip"
-            @click="saveTrip"
-          >
-            {{ selectedTrip ? '儲存旅程' : '建立旅程' }}
-          </button>
-          <button
-            type="button"
-            class="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
-            @click="startCreateTrip"
-          >
-            清空表單
-          </button>
-          <button
-            v-if="selectedTrip"
-            type="button"
-            class="rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-100 disabled:text-stone-400"
-            :disabled="selectedTrip.status === 'completed'"
             @click="completeSelectedTrip"
           >
+            <CheckCircle2 class="size-4" aria-hidden="true" />
             標記為已完成
-          </button>
+          </BaseButton>
         </div>
-      </section>
-    </section>
+      </form>
+    </BaseBottomSheet>
   </div>
 </template>

@@ -4,6 +4,7 @@ import { computed, reactive, shallowRef, watch } from 'vue'
 
 import BaseInput from '@/components/base/BaseInput.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
+import SkeletonList from '@/components/base/SkeletonList.vue'
 import QuickAddSheet from '@/components/transactions/QuickAddSheet.vue'
 import TransactionDateGroup from '@/components/transactions/TransactionDateGroup.vue'
 import { useAppData } from '@/composables/useAppData'
@@ -488,7 +489,8 @@ function setCategoryFilter(categoryId: string): void {
     </section>
 
     <section class="grid gap-4">
-      <div v-if="groupedTransactions.length" class="space-y-4">
+      <SkeletonList v-if="appData.loading.value" :rows="6" />
+      <div v-else-if="groupedTransactions.length" class="space-y-4">
         <TransactionDateGroup
           v-for="group in groupedTransactions"
           :key="group.label"
