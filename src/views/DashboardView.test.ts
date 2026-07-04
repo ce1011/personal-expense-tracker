@@ -76,6 +76,44 @@ function createMockAppData(
     remainingBudget: computed(() => 5000),
     cycleIncomeTotal: computed(() => 15000),
     cycleExpenseTotal: computed(() => 10000),
+    overspendForecast: computed(() => ({
+      projectedOverspendAmount: 700,
+      projectedRemainingBudget: -700,
+      projectedSurplusAmount: 0,
+      isProjectedToOverspend: true,
+      averageDailySpend: 100,
+      remainingDays: 10,
+    })),
+    spendingStreak: computed(() => ({
+      currentNoSpendDays: 3,
+      longestNoSpendDays: 5,
+      currentLowSpendDays: 6,
+      longestLowSpendDays: 6,
+      lowSpendThreshold: 80,
+    })),
+    unusualExpenseAlerts: computed(() => [
+      {
+        transactionId: 'expense-overspend',
+        merchantName: 'Central Cafe',
+        categoryId: 'food',
+        amount: 68,
+        baselineAmount: 42,
+        multiplier: 1.62,
+        message: '你最近 30 日 Central Cafe 平均約 $42，今次 $68。',
+      },
+    ]),
+    detectedRecurringExpenses: computed(() => [
+      {
+        name: 'Netflix',
+        averageAmount: 100,
+        confidence: 1,
+        frequency: 'monthly' as const,
+        recurringDay: 5,
+        nextDueTimestamp: new Date(2026, 6, 5).getTime(),
+        sampleCount: 3,
+      },
+    ]),
+    weeklyCashflowBrief: computed(() => ['本週淨現金流為 +$550。']),
     dailySafeToSpend: computed(() => ({
       safeToSpendToday: 200,
       projectedSurplus: 100,
@@ -101,11 +139,22 @@ function createMockAppData(
       weekStart: new Date(2026, 5, 28).getTime(),
       weekEnd: new Date(2026, 6, 4).getTime(),
       totalSpent: 1000,
-      topCategory: null,
+      totalIncome: 1600,
+      totalSavings: 50,
+      netCashflow: 550,
       transactionCount: 5,
-      averageTransaction: 200,
-      daysComparedToLastWeek: 0,
-      lastWeekTotal: 1000,
+      topCategory: null,
+      largestExpense: null,
+      vsPreviousWeek: null,
+      brief: ['本週淨現金流為 +$550。'],
+    })),
+    tripBudgetHelper: computed(() => ({
+      daysRemaining: 2,
+      dailyAllowance: 455,
+      projectedTripBalance: 745,
+      remainingBudget: 910,
+      spentTotal: 170,
+      isOffPace: false,
     })),
     addExpense: vi.fn(),
     addIncome: vi.fn(),
@@ -134,6 +183,10 @@ function mountDashboard(overrides: Parameters<typeof createMockAppData>[0] = {})
           template: '<div data-testid="recurring">Recurring</div>',
         },
         CategoryAlertsList: { template: '<div data-testid="alerts">Alerts</div>' },
+        OverspendForecastCard: { template: '<div data-testid="overspend">Overspend</div>' },
+        SpendingStreakCard: { template: '<div data-testid="streak">Streak</div>' },
+        WeeklyCashflowCard: { template: '<div data-testid="weekly-brief">WeeklyBrief</div>' },
+        UnusualExpenseAlertsList: { template: '<div data-testid="unusual">Unusual</div>' },
         WeeklyReviewModal: true,
         BaseToast: true,
       },
@@ -152,6 +205,10 @@ describe('DashboardView', () => {
     const wrapper = mountDashboard()
     expect(wrapper.find('[data-testid="hero-card"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="kpi-grid"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="overspend"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="streak"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="weekly-brief"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="unusual"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="quick-add"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="challenges"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="recurring"]').exists()).toBe(true)

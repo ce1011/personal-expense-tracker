@@ -3,18 +3,26 @@ import { computed, readonly, shallowRef } from 'vue'
 import { getCycleWindow, isInCycleWindow } from '@/lib/budgetCycle'
 import { getDaysUntilNextIncomeDay, startOfLocalDay } from '@/lib/date'
 import { getCategoryAlerts } from '@/lib/dailyFinance/categoryAlerts'
-import { getCycleFixedExpensesTotal, getUpcomingBills } from '@/lib/dailyFinance/recurringExpenses'
-import { getSafeToSpend } from '@/lib/dailyFinance/safeToSpend'
 import {
-  filterTransactionsByTrip,
-  getTripDailyBreakdown,
-  getTripRemainingBudget,
-  getTripSpentTotal,
-} from '@/lib/trips'
+  getCycleFixedExpensesTotal,
+  getUpcomingBills,
+} from '@/lib/dailyFinance/recurringExpenses'
+import { getSafeToSpend } from '@/lib/dailyFinance/safeToSpend'
 import { getActiveChallenges } from '@/lib/dailyFinance/savingChallenges'
 import { getWeeklyReview } from '@/lib/dailyFinance/weeklyReview'
 import { getFrequentTransactions } from '@/lib/dailyFinance/quickAdd'
 import { getMonthlySnapshot } from '@/lib/dailyFinance/monthlySnapshot'
+import { getOverspendForecast } from '@/lib/dailyFinance/overspendForecast'
+import { getSpendingStreak } from '@/lib/dailyFinance/spendingStreak'
+import { getUnusualExpenseAlerts } from '@/lib/dailyFinance/unusualExpenses'
+import { getDetectedRecurringExpenses } from '@/lib/dailyFinance/recurringExpenseDetection'
+import {
+  filterTransactionsByTrip,
+  getTripBudgetHelper,
+  getTripDailyBreakdown,
+  getTripRemainingBudget,
+  getTripSpentTotal,
+} from '@/lib/trips'
 import {
   createExpense,
   createIncome,
@@ -24,9 +32,12 @@ import {
   deleteIncome,
   deleteSaving,
   deleteSavingChallenge,
+  getRecoverySnapshotSummaries,
+  getRestorePreview,
   importTransactions,
   loadAppData,
-  replaceAllData,
+  replaceAllDataWithSnapshot,
+  restoreFromSnapshot,
   saveCycle,
   saveExpenseCategory,
   saveIncomeCategory,
@@ -75,6 +86,9 @@ const emptyPayload: AppDataPayload = {
 const data = shallowRef<AppDataPayload>(emptyPayload)
 const loading = shallowRef(false)
 const error = shallowRef('')
+const recoverySnapshots = shallowRef<
+  Array<{ snapshotId: string; createdAt: number; reason: string }>
+>([])
 
 export function useAppData() {
   const currentCycle = computed(() => data.value.cycles[0])
@@ -161,6 +175,37 @@ export function useAppData() {
       Date.now(),
     ),
   )
+  const overspendForecast = computed(() => {
+    if (!currentWindow.value || !currentCycle.value) {
+      return undefined
+    }
+
+    return getOverspendForecast({
+      cycleWindow: currentWindow.value,
+      remainingBudget: remainingBudget.value,
+      cycleExpenseTotal: cycleExpenseTotal.value,
+      fixedExpensesTotal: cycleFixedExpensesTotal.value,
+      now: Date.now(),
+    })
+  })
+  const spendingStreak = computed(() =>
+    getSpendingStreak(combinedTransactions.value, {
+      now: Date.now(),
+      lowSpendThreshold: Math.max(20, Math.round(averageDailyBudgetUntilIncome.value * 0.35)),
+      lookbackDays: 14,
+    }),
+  )
+  const unusualExpenseAlerts = computed(() =>
+    getUnusualExpenseAlerts(combinedTransactions.value, {
+      now: Date.now(),
+      lookbackDays: 30,
+      recentDays: 7,
+      minHistoryCount: 3,
+      multiplierThreshold: 1.5,
+    }),
+  )
+  const detectedRecurringExpenses = computed(() => getDetectedRecurringExpenses(data.value.expenses))
+  const weeklyCashflowBrief = computed(() => weeklyReview.value.brief)
   const averageDailyBudgetUntilIncome = computed(
     () => remainingBudget.value / Math.max(1, daysUntilNextIncome.value),
   )
@@ -227,6 +272,9 @@ export function useAppData() {
   const tripDailyBreakdown = computed(() =>
     activeTrip.value ? getTripDailyBreakdown(activeTrip.value, tripTransactions.value) : [],
   )
+  const tripBudgetHelper = computed(() =>
+    activeTrip.value ? getTripBudgetHelper(activeTrip.value, tripTransactions.value, Date.now()) : undefined,
+  )
 
   async function refresh(): Promise<void> {
     loading.value = true
@@ -236,6 +284,7 @@ export function useAppData() {
       const loaded = await loadAppData()
 
       data.value = await normalizeActiveTripSetting(loaded)
+      recoverySnapshots.value = await getRecoverySnapshotSummaries()
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Unable to load app data'
     } finally {
@@ -307,6 +356,11 @@ export function useAppData() {
     weeklyReview,
     quickAddSuggestions,
     monthlySnapshot,
+    overspendForecast,
+    spendingStreak,
+    unusualExpenseAlerts,
+    detectedRecurringExpenses,
+    weeklyCashflowBrief,
     averageDailyBudgetUntilIncome,
     todaySpent,
     dailySafeToSpend,
@@ -323,6 +377,8 @@ export function useAppData() {
     tripSpentTotal,
     tripRemainingBudget,
     tripDailyBreakdown,
+    tripBudgetHelper,
+    recoverySnapshots: readonly(recoverySnapshots),
     refresh,
     addExpense: (draft: ExpenseDraft) => withRefresh(() => createExpense(draft)),
     addIncome: (draft: IncomeDraft) => withRefresh(() => createIncome(draft)),
@@ -393,7 +449,9 @@ export function useAppData() {
       withRefresh(() => softDeleteExpenseCategory(categoryId)),
     deleteIncomeCategory: (categoryId: string) =>
       withRefresh(() => softDeleteIncomeCategory(categoryId)),
-    restorePayload: (payload: AppDataPayload) => withRefresh(() => replaceAllData(payload)),
+    restorePayload: (payload: AppDataPayload) => withRefresh(() => replaceAllDataWithSnapshot(payload)),
+    getRestorePreview,
+    restoreSnapshot: (snapshotId: string) => withRefresh(() => restoreFromSnapshot(snapshotId)),
   }
 }
 

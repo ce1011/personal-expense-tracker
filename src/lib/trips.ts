@@ -10,6 +10,15 @@ export interface TripDailyBreakdown<TTransaction> extends TripDayBucket<TTransac
   count: number
 }
 
+export interface TripBudgetHelper {
+  daysRemaining: number
+  dailyAllowance: number
+  projectedTripBalance: number
+  remainingBudget: number
+  spentTotal: number
+  isOffPace: boolean
+}
+
 export function filterTransactionsByTrip<
   TTransaction extends {
     trip_id?: string
@@ -92,6 +101,32 @@ export function getTripDailyBreakdown<TTransaction extends CombinedTransaction>(
     total: getTripSpentTotal(bucket.transactions),
     count: bucket.transactions.length,
   }))
+}
+
+export function getTripBudgetHelper(
+  trip: Pick<TripSession, 'budget_amount' | 'start_date' | 'end_date'>,
+  transactions: readonly CombinedTransaction[],
+  now: number | Date = new Date(),
+): TripBudgetHelper {
+  const nowTimestamp = now instanceof Date ? now.getTime() : now
+  const remainingBudget = getTripRemainingBudget(trip.budget_amount, transactions)
+  const spentTotal = getTripSpentTotal(transactions)
+  const today = toUtcDayStart(nowTimestamp)
+  const endDay = toUtcDayStart(trip.end_date)
+  const daysRemaining = Math.max(1, Math.floor((endDay - today) / DAY_IN_MS) + 1)
+  const dailyAllowance = remainingBudget / daysRemaining
+  const totalTripDays = Math.max(1, Math.floor((endDay - toUtcDayStart(trip.start_date)) / DAY_IN_MS) + 1)
+  const elapsedDays = Math.min(totalTripDays, Math.max(1, totalTripDays - daysRemaining + 1))
+  const projectedTripBalance = trip.budget_amount - (spentTotal / elapsedDays) * totalTripDays
+
+  return {
+    daysRemaining,
+    dailyAllowance,
+    projectedTripBalance,
+    remainingBudget,
+    spentTotal,
+    isOffPace: projectedTripBalance < 0,
+  }
 }
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000

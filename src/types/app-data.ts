@@ -129,6 +129,13 @@ export interface AppSetting {
   parameter: string
 }
 
+export interface AppSnapshot {
+  snapshot_id: string
+  created_at: number
+  reason: string
+  payload_json: string
+}
+
 export type SupportedCurrency = 'HKD' | 'USD' | 'CNY' | 'JPY' | 'TWD' | 'THB'
 
 export interface FxRateRecord {

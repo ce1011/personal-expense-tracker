@@ -11,12 +11,13 @@ import {
   Upload,
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
-import { shallowRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import RecoveryHistoryCard from '@/components/settings/RecoveryHistoryCard.vue'
+import RestoreImpactCard from '@/components/settings/RestoreImpactCard.vue'
 import { useAppData } from '@/composables/useAppData'
-import { parseBackupJson } from '@/lib/backup'
 
 const appData = useAppData()
 const router = useRouter()
@@ -43,6 +44,22 @@ const menuItems = [
 const restoreText = shallowRef('')
 const restoreErrors = shallowRef<string[]>([])
 const restoreStatus = shallowRef('')
+const restoreImpact = shallowRef<{
+  cycles: number
+  expenseCategories: number
+  incomeCategories: number
+  expenses: number
+  incomes: number
+  targetExpenses: number
+  savings: number
+  settings: number
+  trips: number
+  fxRates: number
+  savingChallenges: number
+}>()
+const isPreviewingRestore = shallowRef(false)
+const isRestoringSnapshotId = shallowRef('')
+const restoreIntegrityErrors = computed(() => restoreErrors.value)
 
 function exportBackup(): void {
   const json = JSON.stringify(appData.data.value, null, 2)
@@ -68,20 +85,51 @@ async function readFile(event: Event): Promise<void> {
 
 async function restoreBackup(): Promise<void> {
   restoreStatus.value = ''
-  const parsed = parseBackupJson(restoreText.value)
-  restoreErrors.value = parsed.errors
+  restoreImpact.value = undefined
+  isPreviewingRestore.value = true
 
-  if (!parsed.payload) {
-    return
+  try {
+    const preview = await appData.getRestorePreview(restoreText.value)
+    restoreErrors.value = preview.errors
+    restoreImpact.value = preview.impact
+
+    if (!preview.payload || preview.errors.length > 0) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `將覆蓋 ${preview.impact?.expenses ?? 0} 筆支出、${preview.impact?.expenseCategories ?? 0} 個支出分類、${preview.impact?.cycles ?? 0} 個預算週期。確定繼續？`,
+    )
+
+    if (!confirmed) {
+      restoreStatus.value = '已取消還原。'
+      return
+    }
+
+    await appData.restorePayload(preview.payload)
+    restoreText.value = ''
+    restoreStatus.value = '還原完成，並已先保存一份可回復快照。'
+  } finally {
+    isPreviewingRestore.value = false
   }
+}
 
-  if (!window.confirm('確定要用這份備份完整覆蓋本機收支資料嗎？')) {
-    return
+async function restoreSnapshot(snapshotId: string): Promise<void> {
+  restoreStatus.value = ''
+  isRestoringSnapshotId.value = snapshotId
+
+  try {
+    const confirmed = window.confirm('還原此版本前，系統會先保存目前資料作保護快照。確定繼續？')
+
+    if (!confirmed) {
+      return
+    }
+
+    await appData.restoreSnapshot(snapshotId)
+    restoreStatus.value = '已還原指定版本，並已保存目前版本作回復保護。'
+  } finally {
+    isRestoringSnapshotId.value = ''
   }
-
-  await appData.restorePayload(parsed.payload)
-  restoreText.value = ''
-  restoreStatus.value = '還原完成。'
 }
 
 function refreshAppVersion(): void {
@@ -204,6 +252,13 @@ function refreshAppVersion(): void {
           </ul>
         </div>
 
+        <RestoreImpactCard
+          v-if="restoreImpact"
+          class="mt-4"
+          :impact="restoreImpact"
+          :integrity-errors="restoreIntegrityErrors"
+        />
+
         <p
           v-if="restoreStatus"
           class="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-body-sm text-primary"
@@ -211,10 +266,16 @@ function refreshAppVersion(): void {
           {{ restoreStatus }}
         </p>
 
-        <BaseButton class="mt-4" :disabled="!restoreText.trim()" @click="restoreBackup">
-          驗證並覆蓋本機資料
+        <BaseButton class="mt-4" :disabled="!restoreText.trim() || isPreviewingRestore" @click="restoreBackup">
+          {{ isPreviewingRestore ? '驗證中...' : '驗證並覆蓋本機資料' }}
         </BaseButton>
       </BaseCard>
     </div>
+
+    <RecoveryHistoryCard
+      :snapshots="appData.recoverySnapshots.value"
+      :restoring-snapshot-id="isRestoringSnapshotId"
+      @restore="restoreSnapshot"
+    />
   </div>
 </template>

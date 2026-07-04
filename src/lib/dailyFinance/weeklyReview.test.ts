@@ -23,6 +23,15 @@ describe('getWeeklyReview', () => {
       custom: false,
       deleted: false,
     },
+    {
+      category_id: 'entertainment',
+      name_en: 'Entertainment',
+      name_tc: '娛樂',
+      color_code: '7f4ab8',
+      icon_image_name: 'gamepad-2',
+      custom: false,
+      deleted: false,
+    },
   ]
 
   test('returns zeros and null comparison when there are no transactions', () => {
@@ -36,6 +45,7 @@ describe('getWeeklyReview', () => {
     expect(review.transactionCount).toBe(0)
     expect(review.topCategory).toBeNull()
     expect(review.vsPreviousWeek).toBeNull()
+    expect(review.brief).toEqual([])
   })
 
   test('summarises the most recently completed week', () => {
@@ -75,8 +85,17 @@ describe('getWeeklyReview', () => {
     expect(review.totalSpent).toBe(250)
     expect(review.totalIncome).toBe(1000)
     expect(review.totalSavings).toBe(200)
+    expect(review.netCashflow).toBe(550)
     expect(review.transactionCount).toBe(5)
     expect(review.topCategory).toEqual({ category_id: 'food', name: '餐飲', amount: 200 })
+    expect(review.largestExpense).toEqual({ category_id: 'food', name: 'Test', amount: 120 })
+    expect(review.brief).toEqual([
+      '本週淨現金流為 +$550。',
+      '最大支出來自餐飲，共 $200。',
+      '最大單筆支出是 Test，金額 $120。',
+      '比上週少使了 $749。',
+      '本週共記錄 5 筆交易。',
+    ])
   })
 
   test('handles a week that spans two months', () => {
@@ -127,6 +146,7 @@ describe('getWeeklyReview', () => {
       spentDelta: -100,
       spentDeltaPercent: -50,
     })
+    expect(review.brief).toContain('比上週少使了 $100。')
   })
 })
 

@@ -9,6 +9,7 @@ import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonList from '@/components/base/SkeletonList.vue'
+import TripBudgetHelperCard from '@/components/trips/TripBudgetHelperCard.vue'
 import { useAppData } from '@/composables/useAppData'
 import { fromDateInputValue, toDateInputValue } from '@/lib/date'
 import { formatCurrency, formatDate } from '@/lib/formatters'
@@ -268,6 +269,12 @@ function selectMode(tripId: string): void {
       <Plus class="size-4" aria-hidden="true" />
       新增旅程
     </BaseButton>
+
+    <TripBudgetHelperCard
+      v-if="appData.activeTrip.value"
+      :helper="appData.tripBudgetHelper.value"
+      :currency="appData.currency.value"
+    />
 
     <SkeletonList v-if="appData.loading.value" :rows="4" />
 

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import type { CombinedTransaction, TripSession } from '@/types/app-data'
 import {
   filterTransactionsByTrip,
+  getTripBudgetHelper,
   getTripDailyBreakdown,
   getTripDayBuckets,
   getTripRemainingBudget,
@@ -187,5 +188,24 @@ describe('getTripDailyBreakdown', () => {
         transactions: [tripTransactions[1], tripTransactions[2]],
       },
     ])
+  })
+})
+
+describe('getTripBudgetHelper', () => {
+  test('calculates remaining trip allowance and flags off-pace spending', () => {
+    const helper = getTripBudgetHelper(
+      trip,
+      filterTransactionsByTrip(tripTransactions, trip.trip_id),
+      Date.UTC(2026, 5, 11, 8, 0, 0, 0),
+    )
+
+    expect(helper).toEqual({
+      daysRemaining: 2,
+      dailyAllowance: 455,
+      projectedTripBalance: 745,
+      remainingBudget: 910,
+      spentTotal: 170,
+      isOffPace: false,
+    })
   })
 })

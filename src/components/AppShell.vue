@@ -19,10 +19,10 @@ function handleQuickAdd(): void {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col bg-bg text-text">
+  <div class="safe-top safe-bottom flex min-h-screen flex-col bg-bg text-text">
     <AppHeader :current-cycle="currentCycle" :loading="loading" />
 
-    <main class="flex-1 px-4 pb-28 pt-4 sm:px-6 lg:px-8">
+    <main class="flex-1 px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8">
       <div class="mx-auto max-w-6xl">
         <slot />
       </div>

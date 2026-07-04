@@ -11,9 +11,13 @@ import SkeletonList from '@/components/base/SkeletonList.vue'
 import HeroCard from '@/components/dashboard/HeroCard.vue'
 import KpiGrid from '@/components/dashboard/KpiGrid.vue'
 import CategoryAlertsList from '@/components/dailyFinance/CategoryAlertsList.vue'
+import OverspendForecastCard from '@/components/dailyFinance/OverspendForecastCard.vue'
 import RecurringExpensesSummary from '@/components/dailyFinance/RecurringExpensesSummary.vue'
 import SavingChallengesList from '@/components/dailyFinance/SavingChallengesList.vue'
 import QuickAddShortcuts from '@/components/dailyFinance/QuickAddShortcuts.vue'
+import SpendingStreakCard from '@/components/dailyFinance/SpendingStreakCard.vue'
+import UnusualExpenseAlertsList from '@/components/dailyFinance/UnusualExpenseAlertsList.vue'
+import WeeklyCashflowCard from '@/components/dailyFinance/WeeklyCashflowCard.vue'
 import WeeklyReviewModal from '@/components/dailyFinance/WeeklyReviewModal.vue'
 import TransactionListItem from '@/components/transactions/TransactionListItem.vue'
 import { useAppData } from '@/composables/useAppData'
@@ -136,6 +140,11 @@ onBeforeUnmount(() => {
         @weekly-review="openWeeklyReview"
       />
 
+      <OverspendForecastCard
+        :forecast="appData.overspendForecast.value"
+        :currency="appData.currency.value"
+      />
+
       <KpiGrid
         :today-available="appData.dailySafeToSpend.value.safeToSpendToday"
         :today-spent="appData.todaySpent.value"
@@ -144,6 +153,11 @@ onBeforeUnmount(() => {
         :currency="appData.currency.value"
         :is-over-today="appData.dailySafeToSpend.value.isOverToday"
       />
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <SpendingStreakCard :streak="appData.spendingStreak.value" />
+        <WeeklyCashflowCard :brief="appData.weeklyCashflowBrief.value" />
+      </div>
     </section>
 
     <section
@@ -182,6 +196,7 @@ onBeforeUnmount(() => {
         :upcoming-bills="appData.upcomingBills.value"
         :currency="appData.currency.value"
       />
+      <UnusualExpenseAlertsList :alerts="appData.unusualExpenseAlerts.value" />
       <CategoryAlertsList
         :alerts="appData.categoryAlerts.value"
         :currency="appData.currency.value"

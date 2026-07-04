@@ -4,6 +4,7 @@ import { getCurrentCycleCode } from '@/lib/date'
 import type {
   AppDataPayload,
   AppSetting,
+  AppSnapshot,
   BudgetCycle,
   ExpenseCategory,
   ExpenseTransaction,
@@ -28,6 +29,7 @@ export class ExpenseTrackerDatabase extends Dexie {
   fxRates!: Table<FxRateRecord, string>
   trips!: Table<TripSession, string>
   savingChallenges!: Table<SavingChallenge, string>
+  snapshots!: Table<AppSnapshot, string>
 
   constructor() {
     super('personal-expense-tracker')
@@ -44,6 +46,21 @@ export class ExpenseTrackerDatabase extends Dexie {
       fxRates: 'rate_id, currency_code, source_date, fetched_at',
       trips: 'trip_id, status, start_date, end_date, updated_at',
       savingChallenges: 'challenge_id, status, updated_at',
+    })
+
+    this.version(5).stores({
+      cycles: 'cycle_id, cycle_code',
+      expenseCategories: 'category_id, name_en, deleted',
+      incomeCategories: 'category_id, name_en, deleted',
+      expenses: 'transaction_id, category_id, date, trip_id',
+      incomes: 'transaction_id, category_id, date, trip_id',
+      targetExpenses: 'target_expense_id, cycle_id, category_id, [cycle_id+category_id]',
+      savings: 'saving_id, date, trip_id',
+      settings: 'setting_id, name',
+      fxRates: 'rate_id, currency_code, source_date, fetched_at',
+      trips: 'trip_id, status, start_date, end_date, updated_at',
+      savingChallenges: 'challenge_id, status, updated_at',
+      snapshots: 'snapshot_id, created_at',
     })
   }
 }

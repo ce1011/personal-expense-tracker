@@ -13,7 +13,7 @@ function handleClick(): void {
 <template>
   <button
     type="button"
-    class="fixed bottom-20 right-4 z-30 inline-flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition hover:bg-primary-2 focus-visible:ring-offset-2"
+    class="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-4 z-30 inline-flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition hover:bg-primary-2 focus-visible:ring-offset-2"
     aria-label="快速新增交易"
     @click="handleClick"
   >

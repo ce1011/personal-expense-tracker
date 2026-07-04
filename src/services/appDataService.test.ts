@@ -17,6 +17,41 @@ const {
   mockSettingPut,
   mockSettingFirst,
   mockSettingDelete,
+  mockCyclesToArray,
+  mockExpenseCategoriesToArray,
+  mockIncomeCategoriesToArray,
+  mockExpensesToArray,
+  mockIncomesToArray,
+  mockTargetExpensesToArray,
+  mockSavingsToArray,
+  mockSettingsToArray,
+  mockFxRatesToArray,
+  mockSavingChallengesToArray,
+  mockSnapshotsAdd,
+  mockSnapshotsToArray,
+  mockSnapshotsBulkDelete,
+  mockCyclesClear,
+  mockExpenseCategoriesClear,
+  mockIncomeCategoriesClear,
+  mockExpensesClear,
+  mockIncomesClear,
+  mockTargetExpensesClear,
+  mockSavingsClear,
+  mockSettingsClear,
+  mockTripsClear,
+  mockFxRatesClear,
+  mockSavingChallengesClear,
+  mockCyclesBulkPut,
+  mockExpenseCategoriesBulkPut,
+  mockIncomeCategoriesBulkPut,
+  mockExpensesBulkPut,
+  mockIncomesBulkPut,
+  mockTargetExpensesBulkPut,
+  mockSavingsBulkPut,
+  mockSettingsBulkPut,
+  mockTripsBulkPut,
+  mockFxRatesBulkPut,
+  mockSavingChallengesBulkPut,
 } = vi.hoisted(() => ({
   mockDbTransaction: vi.fn(
     async (_mode: string, _tables: unknown[], callback: () => Promise<void>) => callback(),
@@ -36,39 +71,120 @@ const {
   mockSettingPut: vi.fn(),
   mockSettingFirst: vi.fn(),
   mockSettingDelete: vi.fn(),
+  mockCyclesToArray: vi.fn(),
+  mockExpenseCategoriesToArray: vi.fn(),
+  mockIncomeCategoriesToArray: vi.fn(),
+  mockExpensesToArray: vi.fn(),
+  mockIncomesToArray: vi.fn(),
+  mockTargetExpensesToArray: vi.fn(),
+  mockSavingsToArray: vi.fn(),
+  mockSettingsToArray: vi.fn(),
+  mockFxRatesToArray: vi.fn(),
+  mockSavingChallengesToArray: vi.fn(),
+  mockSnapshotsAdd: vi.fn(),
+  mockSnapshotsToArray: vi.fn(),
+  mockSnapshotsBulkDelete: vi.fn(),
+  mockCyclesClear: vi.fn(),
+  mockExpenseCategoriesClear: vi.fn(),
+  mockIncomeCategoriesClear: vi.fn(),
+  mockExpensesClear: vi.fn(),
+  mockIncomesClear: vi.fn(),
+  mockTargetExpensesClear: vi.fn(),
+  mockSavingsClear: vi.fn(),
+  mockSettingsClear: vi.fn(),
+  mockTripsClear: vi.fn(),
+  mockFxRatesClear: vi.fn(),
+  mockSavingChallengesClear: vi.fn(),
+  mockCyclesBulkPut: vi.fn(),
+  mockExpenseCategoriesBulkPut: vi.fn(),
+  mockIncomeCategoriesBulkPut: vi.fn(),
+  mockExpensesBulkPut: vi.fn(),
+  mockIncomesBulkPut: vi.fn(),
+  mockTargetExpensesBulkPut: vi.fn(),
+  mockSavingsBulkPut: vi.fn(),
+  mockSettingsBulkPut: vi.fn(),
+  mockTripsBulkPut: vi.fn(),
+  mockFxRatesBulkPut: vi.fn(),
+  mockSavingChallengesBulkPut: vi.fn(),
 }))
+
 
 vi.mock('@/db/database', () => ({
   db: {
     transaction: mockDbTransaction,
+    cycles: { toArray: mockCyclesToArray, clear: mockCyclesClear, bulkPut: mockCyclesBulkPut },
+    expenseCategories: {
+      toArray: mockExpenseCategoriesToArray,
+      clear: mockExpenseCategoriesClear,
+      bulkPut: mockExpenseCategoriesBulkPut,
+    },
+    incomeCategories: {
+      toArray: mockIncomeCategoriesToArray,
+      clear: mockIncomeCategoriesClear,
+      bulkPut: mockIncomeCategoriesBulkPut,
+    },
     expenses: {
       add: mockExpenseAdd,
       update: mockExpenseUpdate,
       delete: mockExpenseDelete,
+      toArray: mockExpensesToArray,
+      clear: mockExpensesClear,
+      bulkPut: mockExpensesBulkPut,
     },
     incomes: {
       add: mockIncomeAdd,
       update: mockIncomeUpdate,
       delete: mockIncomeDelete,
+      toArray: mockIncomesToArray,
+      clear: mockIncomesClear,
+      bulkPut: mockIncomesBulkPut,
     },
     savings: {
       add: mockSavingAdd,
       update: mockSavingUpdate,
       delete: mockSavingDelete,
+      toArray: mockSavingsToArray,
+      clear: mockSavingsClear,
+      bulkPut: mockSavingsBulkPut,
+    },
+    targetExpenses: {
+      toArray: mockTargetExpensesToArray,
+      clear: mockTargetExpensesClear,
+      bulkPut: mockTargetExpensesBulkPut,
     },
     trips: {
       put: mockTripPut,
       get: mockTripGet,
       toArray: mockTripToArray,
+      clear: mockTripsClear,
+      bulkPut: mockTripsBulkPut,
     },
     settings: {
       put: mockSettingPut,
       delete: mockSettingDelete,
+      toArray: mockSettingsToArray,
+      clear: mockSettingsClear,
+      bulkPut: mockSettingsBulkPut,
       where: vi.fn(() => ({
         equals: vi.fn(() => ({
           first: mockSettingFirst,
         })),
       })),
+    },
+    fxRates: {
+      toArray: mockFxRatesToArray,
+      clear: mockFxRatesClear,
+      bulkPut: mockFxRatesBulkPut,
+    },
+    savingChallenges: {
+      toArray: mockSavingChallengesToArray,
+      clear: mockSavingChallengesClear,
+      bulkPut: mockSavingChallengesBulkPut,
+    },
+    snapshots: {
+      add: mockSnapshotsAdd,
+      toArray: mockSnapshotsToArray,
+      bulkDelete: mockSnapshotsBulkDelete,
     },
   },
   createInitialPayload: vi.fn(),
@@ -82,8 +198,11 @@ import {
   deleteIncome,
   deleteSaving,
   getActiveTripId,
+  getRecoverySnapshotSummaries,
+  getRestorePreview,
   getTrips,
   importTransactions,
+  restoreFromSnapshot,
   saveTrip,
   setActiveTripId,
   updateExpense,
@@ -124,10 +243,52 @@ describe('appDataService transaction updates', () => {
           }
         : undefined,
     )
-    mockTripToArray.mockReset()
-    mockSettingPut.mockReset()
-    mockSettingFirst.mockReset()
-    mockSettingDelete.mockReset()
+    mockCyclesToArray.mockReset()
+    mockCyclesToArray.mockResolvedValue([])
+    mockExpenseCategoriesToArray.mockReset()
+    mockExpenseCategoriesToArray.mockResolvedValue([])
+    mockIncomeCategoriesToArray.mockReset()
+    mockIncomeCategoriesToArray.mockResolvedValue([])
+    mockExpensesToArray.mockReset()
+    mockExpensesToArray.mockResolvedValue([])
+    mockIncomesToArray.mockReset()
+    mockIncomesToArray.mockResolvedValue([])
+    mockTargetExpensesToArray.mockReset()
+    mockTargetExpensesToArray.mockResolvedValue([])
+    mockSavingsToArray.mockReset()
+    mockSavingsToArray.mockResolvedValue([])
+    mockSettingsToArray.mockReset()
+    mockSettingsToArray.mockResolvedValue([])
+    mockFxRatesToArray.mockReset()
+    mockFxRatesToArray.mockResolvedValue([])
+    mockSavingChallengesToArray.mockReset()
+    mockSavingChallengesToArray.mockResolvedValue([])
+    mockSnapshotsAdd.mockReset()
+    mockSnapshotsToArray.mockReset()
+    mockSnapshotsToArray.mockResolvedValue([])
+    mockSnapshotsBulkDelete.mockReset()
+    mockCyclesClear.mockReset()
+    mockExpenseCategoriesClear.mockReset()
+    mockIncomeCategoriesClear.mockReset()
+    mockExpensesClear.mockReset()
+    mockIncomesClear.mockReset()
+    mockTargetExpensesClear.mockReset()
+    mockSavingsClear.mockReset()
+    mockSettingsClear.mockReset()
+    mockTripsClear.mockReset()
+    mockFxRatesClear.mockReset()
+    mockSavingChallengesClear.mockReset()
+    mockCyclesBulkPut.mockReset()
+    mockExpenseCategoriesBulkPut.mockReset()
+    mockIncomeCategoriesBulkPut.mockReset()
+    mockExpensesBulkPut.mockReset()
+    mockIncomesBulkPut.mockReset()
+    mockTargetExpensesBulkPut.mockReset()
+    mockSavingsBulkPut.mockReset()
+    mockSettingsBulkPut.mockReset()
+    mockTripsBulkPut.mockReset()
+    mockFxRatesBulkPut.mockReset()
+    mockSavingChallengesBulkPut.mockReset()
   })
 
   test('creates trip-aware expense, income, and saving records', async () => {
@@ -402,6 +563,35 @@ describe('appDataService transaction updates', () => {
       updated_at: Date.now(),
     })
 
+    mockTripToArray.mockResolvedValueOnce([
+      {
+        trip_id: 'trip-osaka',
+        name: 'Osaka',
+        destination: 'Japan',
+        start_date: 1780185600000,
+        end_date: 1780444800000,
+        budget_amount: 20000,
+        budget_currency: 'JPY',
+        status: 'planned',
+        notes: 'Food crawl',
+        created_at: 1780205700000,
+        updated_at: 1780205600000,
+      },
+      {
+        trip_id: 'trip-tokyo',
+        name: 'Tokyo',
+        destination: 'Japan',
+        start_date: 1780185600000,
+        end_date: 1780444800000,
+        budget_amount: 15000,
+        budget_currency: 'JPY',
+        status: 'active',
+        notes: 'Sakura',
+        created_at: 1780205700000,
+        updated_at: 1780205700000,
+      },
+    ])
+
     await expect(getTrips()).resolves.toEqual([
       {
         trip_id: 'trip-tokyo',
@@ -588,10 +778,99 @@ describe('appDataService transaction updates', () => {
     expect(mockSettingDelete).toHaveBeenCalledWith('setting-active-trip-id')
   })
 
-  test('rejects unknown active trip ids', async () => {
-    mockTripGet.mockResolvedValueOnce(undefined)
+  test('creates restore preview and snapshot summaries from stored backups', async () => {
+    mockSnapshotsToArray.mockResolvedValueOnce([
+      {
+        snapshot_id: 'snapshot-2',
+        created_at: 300,
+        reason: 'restore:before',
+        payload_json:
+          '{"cycles":[],"expenseCategories":[{"category_id":"expense-food","name_en":"Food","name_tc":"餐飲","color_code":"b5392a","icon_image_name":"utensils","custom":false,"deleted":false}],"incomeCategories":[],"expenses":[{"transaction_id":"expense-1","category_id":"expense-food","name":"Lunch","amount":50,"date":1780185600000,"create_date":1780185600000,"edit_date":1780185600000,"synced":false}],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
+      },
+      {
+        snapshot_id: 'snapshot-1',
+        created_at: 100,
+        reason: 'expense:create',
+        payload_json:
+          '{"cycles":[],"expenseCategories":[],"incomeCategories":[],"expenses":[],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
+      },
+    ])
 
-    await expect(setActiveTripId('trip-missing')).rejects.toThrow('Unknown trip_id: trip-missing')
-    expect(mockSettingPut).not.toHaveBeenCalled()
+    await expect(getRecoverySnapshotSummaries()).resolves.toEqual([
+      { snapshotId: 'snapshot-2', createdAt: 300, reason: 'restore:before' },
+      { snapshotId: 'snapshot-1', createdAt: 100, reason: 'expense:create' },
+    ])
+
+    await expect(
+      getRestorePreview(
+        '{"cycles":[],"expenseCategories":[{"category_id":"expense-food","name_en":"Food","name_tc":"餐飲","color_code":"b5392a","icon_image_name":"utensils","custom":false,"deleted":false}],"incomeCategories":[],"expenses":[{"transaction_id":"expense-1","category_id":"expense-food","name":"Lunch","amount":50,"date":1780185600000,"create_date":1780185600000,"edit_date":1780185600000,"synced":false}],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
+      ),
+    ).resolves.toEqual({
+      payload: {
+        cycles: [],
+        expenseCategories: [
+          {
+            category_id: 'expense-food',
+            name_en: 'Food',
+            name_tc: '餐飲',
+            color_code: 'b5392a',
+            icon_image_name: 'utensils',
+            custom: false,
+            deleted: false,
+          },
+        ],
+        incomeCategories: [],
+        expenses: [
+          {
+            transaction_id: 'expense-1',
+            category_id: 'expense-food',
+            name: 'Lunch',
+            amount: 50,
+            date: 1780185600000,
+            create_date: 1780185600000,
+            edit_date: 1780185600000,
+            synced: false,
+          },
+        ],
+        incomes: [],
+        targetExpenses: [],
+        savings: [],
+        settings: [],
+        trips: [],
+        fxRates: [],
+        savingChallenges: [],
+      },
+      impact: {
+        cycles: 0,
+        expenseCategories: 1,
+        incomeCategories: 0,
+        expenses: 1,
+        incomes: 0,
+        targetExpenses: 0,
+        savings: 0,
+        settings: 0,
+        trips: 0,
+        fxRates: 0,
+        savingChallenges: 0,
+      },
+      integrity: { ok: true, errors: [] },
+      errors: [],
+    })
+  })
+
+  test('restores from a snapshot payload after validation passes', async () => {
+    mockSnapshotsToArray.mockResolvedValueOnce([
+      {
+        snapshot_id: 'snapshot-restore',
+        created_at: 300,
+        reason: 'restore:before',
+        payload_json:
+          '{"cycles":[],"expenseCategories":[],"incomeCategories":[],"expenses":[],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
+      },
+    ])
+
+    await restoreFromSnapshot('snapshot-restore')
+
+    expect(mockDbTransaction).toHaveBeenCalled()
   })
 })

@@ -6,12 +6,15 @@ export interface WeeklyReview {
   totalSpent: number
   totalIncome: number
   totalSavings: number
+  netCashflow: number
   transactionCount: number
   topCategory: { category_id: string; name: string; amount: number } | null
+  largestExpense: { category_id: string; name: string; amount: number } | null
   vsPreviousWeek: {
     spentDelta: number
     spentDeltaPercent: number
   } | null
+  brief: string[]
 }
 
 const DAY_MS = 86_400_000
@@ -41,7 +44,11 @@ export function getWeeklyReview(
   const totalSpent = sumByKind(lastWeekTransactions, 'expense')
   const totalIncome = sumByKind(lastWeekTransactions, 'income')
   const totalSavings = sumByKind(lastWeekTransactions, 'saving')
+  const netCashflow = totalIncome - totalSpent - totalSavings
   const transactionCount = lastWeekTransactions.length
+  const topCategory = findTopCategory(lastWeekTransactions, categories)
+  const largestExpense = findLargestExpense(lastWeekTransactions)
+  const vsPreviousWeek = compareSpending(totalSpent, previousWeekTransactions)
 
   return {
     weekStart: lastMonday,
@@ -49,9 +56,18 @@ export function getWeeklyReview(
     totalSpent,
     totalIncome,
     totalSavings,
+    netCashflow,
     transactionCount,
-    topCategory: findTopCategory(lastWeekTransactions, categories),
-    vsPreviousWeek: compareSpending(totalSpent, previousWeekTransactions),
+    topCategory,
+    largestExpense,
+    vsPreviousWeek,
+    brief: buildBrief({
+      netCashflow,
+      topCategory,
+      largestExpense,
+      transactionCount,
+      vsPreviousWeek,
+    }),
   }
 }
 
@@ -95,6 +111,24 @@ function findTopCategory(
   }
 }
 
+function findLargestExpense(
+  transactions: CombinedTransaction[],
+): { category_id: string; name: string; amount: number } | null {
+  const largestExpense = transactions
+    .filter((transaction) => transaction.kind === 'expense')
+    .sort((left, right) => right.amount - left.amount)[0]
+
+  if (!largestExpense) {
+    return null
+  }
+
+  return {
+    category_id: largestExpense.category_id,
+    name: largestExpense.name,
+    amount: largestExpense.amount,
+  }
+}
+
 function compareSpending(
   lastWeekSpent: number,
   previousWeekTransactions: CombinedTransaction[],
@@ -108,4 +142,55 @@ function compareSpending(
   const spentDeltaPercent = previousWeekSpent > 0 ? (spentDelta / previousWeekSpent) * 100 : 0
 
   return { spentDelta, spentDeltaPercent }
+}
+
+function buildBrief(input: {
+  netCashflow: number
+  topCategory: { category_id: string; name: string; amount: number } | null
+  largestExpense: { category_id: string; name: string; amount: number } | null
+  transactionCount: number
+  vsPreviousWeek: { spentDelta: number; spentDeltaPercent: number } | null
+}): string[] {
+  if (input.transactionCount === 0) {
+    return []
+  }
+
+  const brief = [`本週淨現金流為 ${formatSignedAmount(input.netCashflow)}。`]
+
+  if (input.topCategory) {
+    brief.push(`最大支出來自${input.topCategory.name}，共 ${formatAmount(input.topCategory.amount)}。`)
+  }
+
+  if (input.largestExpense) {
+    brief.push(
+      `最大單筆支出是 ${input.largestExpense.name}，金額 ${formatAmount(input.largestExpense.amount)}。`,
+    )
+  }
+
+  if (input.vsPreviousWeek) {
+    const direction = input.vsPreviousWeek.spentDelta <= 0 ? '少使了' : '多使了'
+    brief.push(
+      `比上週${direction} ${formatAmount(Math.abs(input.vsPreviousWeek.spentDelta))}。`,
+    )
+  }
+
+  brief.push(`本週共記錄 ${input.transactionCount} 筆交易。`)
+
+  return brief.slice(0, 5)
+}
+
+function formatAmount(amount: number): string {
+  return `$${Math.round(amount)}`
+}
+
+function formatSignedAmount(amount: number): string {
+  if (amount > 0) {
+    return `+$${Math.round(amount)}`
+  }
+
+  if (amount < 0) {
+    return `-$${Math.round(Math.abs(amount))}`
+  }
+
+  return '$0'
 }

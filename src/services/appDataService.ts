@@ -1,5 +1,12 @@
 import { db, createInitialPayload } from '@/db/database'
-import { validateAppDataPayload } from '@/lib/backup'
+import { parseBackupJson } from '@/lib/backup'
+import {
+  createSnapshotRecord,
+  summarizeRestoreImpact,
+  summarizeSnapshots,
+  trimSnapshots,
+  validateSnapshotPayload,
+} from '@/lib/recovery'
 import {
   convertToHkd,
   getFxRefreshDateKey,
@@ -34,6 +41,7 @@ const FX_API_URL =
   'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/hkd.json'
 const ACTIVE_TRIP_SETTING_ID = 'setting-active-trip-id'
 const ACTIVE_TRIP_SETTING_NAME = 'active_trip_id'
+const SNAPSHOT_KEEP_COUNT = 20
 type ImportTransactionRecordWithTrip = ImportTransactionRecord & { trip_id?: string }
 type TripSaveMetadata = {
   trip_id: string
@@ -102,7 +110,7 @@ export async function loadAppData(): Promise<AppDataPayload> {
 }
 
 export async function replaceAllData(payload: AppDataPayload): Promise<void> {
-  const validation = validateAppDataPayload(payload)
+  const validation = validateSnapshotPayload(payload)
 
   if (!validation.ok) {
     throw new Error(validation.errors.join('\n'))
@@ -155,6 +163,58 @@ export async function replaceAllData(payload: AppDataPayload): Promise<void> {
   )
 }
 
+export async function replaceAllDataWithSnapshot(
+  payload: AppDataPayload,
+  reason = 'restore:before',
+): Promise<void> {
+  await saveSnapshot(reason)
+  await replaceAllData(payload)
+}
+
+export async function getRecoverySnapshotSummaries() {
+  const snapshots = await db.snapshots.toArray()
+  return summarizeSnapshots(snapshots)
+}
+
+export async function getRestorePreview(json: string): Promise<{
+  payload?: AppDataPayload
+  impact?: ReturnType<typeof summarizeRestoreImpact>
+  integrity?: ReturnType<typeof validateSnapshotPayload>
+  errors: string[]
+}> {
+  const parsed = parseBackupJson(json)
+
+  if (!parsed.payload) {
+    return { errors: parsed.errors }
+  }
+
+  const integrity = validateSnapshotPayload(parsed.payload)
+
+  return {
+    payload: parsed.payload,
+    impact: summarizeRestoreImpact(parsed.payload),
+    integrity,
+    errors: integrity.ok ? [] : integrity.errors,
+  }
+}
+
+export async function restoreFromSnapshot(snapshotId: string): Promise<void> {
+  const snapshots = await db.snapshots.toArray()
+  const snapshot = snapshots.find((entry) => entry.snapshot_id === snapshotId)
+
+  if (!snapshot) {
+    throw new Error(`Unknown snapshot_id: ${snapshotId}`)
+  }
+
+  const parsed = parseBackupJson(snapshot.payload_json)
+
+  if (!parsed.payload) {
+    throw new Error(parsed.errors.join('\n'))
+  }
+
+  await replaceAllDataWithSnapshot(parsed.payload)
+}
+
 export async function createExpense(draft: ExpenseDraft): Promise<void> {
   const now = Date.now()
   const persistedFields = await buildTripLinkedPersistenceFields(draft)
@@ -172,6 +232,7 @@ export async function createExpense(draft: ExpenseDraft): Promise<void> {
   }
 
   await db.expenses.add(transaction)
+  await saveSnapshot('expense:create')
 }
 
 export async function createIncome(draft: IncomeDraft): Promise<void> {
@@ -188,6 +249,7 @@ export async function createIncome(draft: IncomeDraft): Promise<void> {
   }
 
   await db.incomes.add(transaction)
+  await saveSnapshot('income:create')
 }
 
 export async function createSaving(draft: SavingDraft): Promise<void> {
@@ -205,6 +267,7 @@ export async function createSaving(draft: SavingDraft): Promise<void> {
   }
 
   await db.savings.add(record)
+  await saveSnapshot('saving:create')
 }
 
 export async function importTransactions(
@@ -253,6 +316,8 @@ export async function importTransactions(
       })
     }
   })
+
+  await saveSnapshot('transactions:import')
 }
 
 export async function updateExpense(transactionId: string, draft: ExpenseDraft): Promise<void> {
@@ -268,6 +333,8 @@ export async function updateExpense(transactionId: string, draft: ExpenseDraft):
     recurring_day: draft.recurring_day,
     ...persistedFields,
   })
+
+  await saveSnapshot('expense:update')
 }
 
 export async function updateIncome(transactionId: string, draft: IncomeDraft): Promise<void> {
@@ -280,6 +347,8 @@ export async function updateIncome(transactionId: string, draft: IncomeDraft): P
     edit_date: Date.now(),
     ...persistedFields,
   })
+
+  await saveSnapshot('income:update')
 }
 
 export async function updateSaving(transactionId: string, draft: SavingDraft): Promise<void> {
@@ -293,18 +362,23 @@ export async function updateSaving(transactionId: string, draft: SavingDraft): P
     edit_date: Date.now(),
     ...persistedFields,
   })
+
+  await saveSnapshot('saving:update')
 }
 
 export async function deleteExpense(transactionId: string): Promise<void> {
   await db.expenses.delete(transactionId)
+  await saveSnapshot('expense:delete')
 }
 
 export async function deleteIncome(transactionId: string): Promise<void> {
   await db.incomes.delete(transactionId)
+  await saveSnapshot('income:delete')
 }
 
 export async function deleteSaving(transactionId: string): Promise<void> {
   await db.savings.delete(transactionId)
+  await saveSnapshot('saving:delete')
 }
 
 export async function createSavingChallenge(name: string, target_amount: number): Promise<void> {
@@ -312,6 +386,7 @@ export async function createSavingChallenge(name: string, target_amount: number)
   const challenge: SavingChallenge = createChallenge(name, target_amount, now)
 
   await db.savingChallenges.add(challenge)
+  await saveSnapshot('challenge:create')
 }
 
 export async function updateSavingChallenge(
@@ -324,10 +399,13 @@ export async function updateSavingChallenge(
     status: draft.status,
     updated_at: Date.now(),
   })
+
+  await saveSnapshot('challenge:update')
 }
 
 export async function deleteSavingChallenge(challengeId: string): Promise<void> {
   await db.savingChallenges.delete(challengeId)
+  await saveSnapshot('challenge:delete')
 }
 
 export async function getTrips(): Promise<TripSession[]> {
@@ -357,6 +435,7 @@ export async function saveTrip(
   }
 
   await db.trips.put(trip)
+  await saveSnapshot(existing?.trip_id ? 'trip:update' : 'trip:create')
 }
 
 export async function getActiveTripId(): Promise<string | undefined> {
@@ -371,6 +450,7 @@ export async function setActiveTripId(tripId?: string): Promise<void> {
 
   if (!tripId) {
     await db.settings.delete(existing?.setting_id ?? ACTIVE_TRIP_SETTING_ID)
+    await saveSnapshot('trip-mode:clear')
     return
   }
 
@@ -381,6 +461,7 @@ export async function setActiveTripId(tripId?: string): Promise<void> {
   }
 
   await db.settings.put(setting)
+  await saveSnapshot('trip-mode:set')
 }
 
 export async function saveCycle(draft: CycleDraft, cycleId?: string): Promise<void> {
@@ -393,6 +474,7 @@ export async function saveCycle(draft: CycleDraft, cycleId?: string): Promise<vo
   }
 
   await db.cycles.put(cycle)
+  await saveSnapshot(cycleId ? 'cycle:update' : 'cycle:create')
 }
 
 export async function saveTargetLimit(
@@ -412,6 +494,7 @@ export async function saveTargetLimit(
   }
 
   await db.targetExpenses.put(target)
+  await saveSnapshot(existing ? 'target:update' : 'target:create')
 }
 
 export async function saveExpenseCategory(
@@ -421,18 +504,22 @@ export async function saveExpenseCategory(
   await db.expenseCategories.put(
     toCategory(draft, categoryId, 'expense-category') as ExpenseCategory,
   )
+  await saveSnapshot(categoryId ? 'expense-category:update' : 'expense-category:create')
 }
 
 export async function saveIncomeCategory(draft: CategoryDraft, categoryId?: string): Promise<void> {
   await db.incomeCategories.put(toCategory(draft, categoryId, 'income-category') as IncomeCategory)
+  await saveSnapshot(categoryId ? 'income-category:update' : 'income-category:create')
 }
 
 export async function softDeleteExpenseCategory(categoryId: string): Promise<void> {
   await db.expenseCategories.update(categoryId, { deleted: true })
+  await saveSnapshot('expense-category:delete')
 }
 
 export async function softDeleteIncomeCategory(categoryId: string): Promise<void> {
   await db.incomeCategories.update(categoryId, { deleted: true })
+  await saveSnapshot('income-category:delete')
 }
 
 export async function syncFxRatesIfNeeded(now = new Date()): Promise<void> {
@@ -531,5 +618,61 @@ async function assertTripExists(tripId?: string): Promise<void> {
 
   if (!trip) {
     throw new Error(`Unknown trip_id: ${tripId}`)
+  }
+}
+
+async function saveSnapshot(reason: string): Promise<void> {
+  const payload = await loadAppDataSnapshotPayload()
+  const now = Date.now()
+  const snapshot = createSnapshotRecord(payload, reason, now)
+  const snapshots = await db.snapshots.toArray()
+  const trimmed = trimSnapshots([...snapshots, snapshot], SNAPSHOT_KEEP_COUNT)
+
+  await db.snapshots.add(snapshot)
+
+  if (trimmed.remove.length > 0) {
+    await db.snapshots.bulkDelete(trimmed.remove.map((entry) => entry.snapshot_id))
+  }
+}
+
+async function loadAppDataSnapshotPayload(): Promise<AppDataPayload> {
+  const [
+    cycles,
+    expenseCategories,
+    incomeCategories,
+    expenses,
+    incomes,
+    targetExpenses,
+    savings,
+    settings,
+    trips,
+    fxRates,
+    savingChallenges,
+  ] = await Promise.all([
+    db.cycles.toArray(),
+    db.expenseCategories.toArray(),
+    db.incomeCategories.toArray(),
+    db.expenses.toArray(),
+    db.incomes.toArray(),
+    db.targetExpenses.toArray(),
+    db.savings.toArray(),
+    db.settings.toArray(),
+    db.trips.toArray(),
+    db.fxRates.toArray(),
+    db.savingChallenges.toArray(),
+  ])
+
+  return {
+    cycles,
+    expenseCategories,
+    incomeCategories,
+    expenses,
+    incomes,
+    targetExpenses,
+    savings,
+    settings,
+    trips,
+    fxRates,
+    savingChallenges,
   }
 }
