@@ -18,7 +18,9 @@ export function buildCategoryBudgetInsights(
 ): CategoryBudgetInsights {
   const totalTarget = rows.reduce((sum, row) => sum + row.target, 0)
   const totalSpent = rows.reduce((sum, row) => sum + row.spent, 0)
-  const totalRemaining = rows.reduce((sum, row) => sum + row.remaining, 0)
+  // Category rows clamp negative balances to zero for display, but the aggregate
+  // balance must still account for spending above a category's limit.
+  const totalRemaining = totalTarget - totalSpent
   const overBudgetCount = rows.filter((row) => row.spent > row.target && row.target > 0).length
   const nearLimitCount = rows.filter(
     (row) => row.target > 0 && row.ratio >= 0.8 && row.ratio < 1,

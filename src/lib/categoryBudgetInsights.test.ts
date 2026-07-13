@@ -57,7 +57,7 @@ describe('buildCategoryBudgetInsights', () => {
 
     expect(insights.totalTarget).toBe(180)
     expect(insights.totalSpent).toBe(204)
-    expect(insights.totalRemaining).toBe(16)
+    expect(insights.totalRemaining).toBe(-24)
     expect(insights.utilizationRate).toBe(1)
     expect(insights.overBudgetCount).toBe(1)
     expect(insights.nearLimitCount).toBe(1)
