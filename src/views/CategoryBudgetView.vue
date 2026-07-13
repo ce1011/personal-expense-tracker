@@ -7,7 +7,10 @@ import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import CategoryProgressItem from '@/components/categoryBudget/CategoryProgressItem.vue'
 import { useAppData } from '@/composables/useAppData'
-import { buildCategoryBudgetInsights } from '@/lib/categoryBudgetInsights'
+import {
+  buildCategoryBudgetInsights,
+  getDailyRemainingBudget,
+} from '@/lib/categoryBudgetInsights'
 import { buildCategoryProgressRows } from '@/lib/categoryProgress'
 import { getRemainingCycleDays } from '@/lib/budgetCycle'
 import { startOfLocalDay } from '@/lib/date'
@@ -34,6 +37,23 @@ const remainingCycleDays = computed(() => {
   return getRemainingCycleDays(window)
 })
 
+const futureCycleDays = computed(() => Math.max(1, remainingCycleDays.value - 1))
+
+const cycleProgressRows = computed(() =>
+  buildCategoryProgressRows(
+    appData.activeExpenseCategories.value,
+    appData.cycleExpenses.value,
+    appData.data.value.targetExpenses,
+    appData.currentCycle.value?.cycle_id,
+  ),
+)
+
+const cycleInsights = computed(() => buildCategoryBudgetInsights(cycleProgressRows.value))
+
+const dailyRemainingBudget = computed(() =>
+  getDailyRemainingBudget(cycleInsights.value.totalRemaining, futureCycleDays.value),
+)
+
 const progressRows = computed(() => {
   const expenses =
     budgetProgressMode.value === 'today' ? todayExpenses.value : appData.cycleExpenses.value
@@ -50,7 +70,29 @@ const progressRows = computed(() => {
   )
 })
 
-const insights = computed(() => buildCategoryBudgetInsights(progressRows.value))
+const insights = computed(() => {
+  const rowInsights = buildCategoryBudgetInsights(progressRows.value)
+
+  if (budgetProgressMode.value === 'cycle') {
+    return rowInsights
+  }
+
+  const dailyTarget = Math.max(0, dailyRemainingBudget.value)
+
+  return {
+    ...rowInsights,
+    totalTarget: dailyTarget,
+    totalRemaining: dailyTarget - rowInsights.totalSpent,
+    utilizationRate:
+      dailyTarget > 0 ? Math.min(1, rowInsights.totalSpent / dailyTarget) : 0,
+  }
+})
+
+const budgetTargetDescription = computed(() =>
+  budgetProgressMode.value === 'today'
+    ? `本期餘額平均分配至未來 ${futureCycleDays.value} 日`
+    : '所有分類上限合計',
+)
 
 const rankedRows = computed(() => [...progressRows.value].sort((a, b) => b.spent - a.spent))
 
@@ -146,7 +188,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
           {{ formatCurrency(insights.totalTarget, appData.currency.value) }}
         </p>
         <p class="mt-1 text-caption text-text-2">
-          {{ budgetProgressMode === 'today' ? '以每日剩餘預算上限計算' : '所有分類上限合計' }}
+          {{ budgetTargetDescription }}
         </p>
       </BaseCard>
       <BaseCard>

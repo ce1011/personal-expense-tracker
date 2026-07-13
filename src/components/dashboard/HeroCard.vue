@@ -10,6 +10,7 @@ const props = defineProps<{
   remainingBudget: number
   incomeTotal: number
   expenseTotal: number
+  savingTotal: number
   currency: string
   cycleLabel?: string
 }>()
@@ -45,6 +46,9 @@ const isOverBudget = computed(() => props.remainingBudget < 0)
     <p class="mt-1 text-sm text-text-2">
       收入 {{ formatCurrency(incomeTotal, currency) }} − 支出
       {{ formatCurrency(expenseTotal, currency) }}
+    </p>
+    <p v-if="savingTotal > 0" class="mt-1 text-sm text-text-2">
+      − 儲蓄 {{ formatCurrency(savingTotal, currency) }}
     </p>
     <p v-if="cycleLabel" class="mt-1 text-xs text-text-3">{{ cycleLabel }}</p>
 

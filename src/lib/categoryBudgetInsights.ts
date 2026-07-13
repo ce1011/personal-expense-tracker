@@ -13,6 +13,10 @@ export interface CategoryBudgetInsights {
   topRemainingRow?: CategoryProgressRow
 }
 
+export function getDailyRemainingBudget(totalRemaining: number, remainingDays: number): number {
+  return totalRemaining / Math.max(1, remainingDays)
+}
+
 export function buildCategoryBudgetInsights(
   rows: readonly CategoryProgressRow[],
 ): CategoryBudgetInsights {

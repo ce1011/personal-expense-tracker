@@ -49,7 +49,7 @@ export function getMonthlySnapshot(
   )
 
   const expenseTotal = sumAmounts(currentExpenses)
-  const incomeTotal = sumAmounts(currentIncomes)
+  const incomeTotal = currentCycle.income + sumAmounts(currentIncomes)
   const savingTotal = sumAmounts(currentSavings)
   const remainingBudget = incomeTotal - expenseTotal - savingTotal
   const daysElapsed = Math.max(

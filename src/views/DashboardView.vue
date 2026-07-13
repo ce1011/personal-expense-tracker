@@ -135,6 +135,7 @@ onBeforeUnmount(() => {
         :remaining-budget="appData.remainingBudget.value"
         :income-total="appData.cycleIncomeTotal.value"
         :expense-total="appData.cycleExpenseTotal.value"
+        :saving-total="appData.cycleSavingTotal.value"
         :currency="appData.currency.value"
         :cycle-label="cycleLabel"
         @weekly-review="openWeeklyReview"

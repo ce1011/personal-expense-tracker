@@ -18,10 +18,12 @@ export function getCategoryAlerts(
   targetLimits: TargetExpenseLimit[],
   categories: ExpenseCategory[],
   cycleWindow: CycleWindow,
+  cycleId: string,
 ): CategoryAlert[] {
   const cycleExpenses = expenses.filter((expense) => isInCycleWindow(expense.date, cycleWindow))
 
   return targetLimits
+    .filter((target) => target.cycle_id === cycleId)
     .map((target) => {
       const category = categories.find((c) => c.category_id === target.category_id)
       const spent = cycleExpenses
@@ -30,7 +32,7 @@ export function getCategoryAlerts(
       const percentage = target.amount > 0 ? (spent / target.amount) * 100 : 0
       let severity: CategoryAlert['severity'] = 'ok'
 
-      if (percentage >= 100) {
+      if (percentage > 100) {
         severity = 'danger'
       } else if (percentage >= 80) {
         severity = 'warning'

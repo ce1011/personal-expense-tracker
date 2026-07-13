@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import type { CategoryProgressRow } from './categoryProgress'
-import { buildCategoryBudgetInsights } from './categoryBudgetInsights'
+import { buildCategoryBudgetInsights, getDailyRemainingBudget } from './categoryBudgetInsights'
 
 const rows: CategoryProgressRow[] = [
   {
@@ -65,5 +65,10 @@ describe('buildCategoryBudgetInsights', () => {
     expect(insights.activeCategories).toBe(3)
     expect(insights.topSpentRow?.category.category_id).toBe('food')
     expect(insights.topRemainingRow?.category.category_id).toBe('transport')
+  })
+
+  test('distributes cycle remaining budget across future days', () => {
+    expect(getDailyRemainingBudget(3042.85, 14)).toBeCloseTo(217.35, 2)
+    expect(getDailyRemainingBudget(3042.85, 0)).toBe(3042.85)
   })
 })

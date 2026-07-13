@@ -119,12 +119,13 @@ export function useAppData() {
       : []
   })
   const categoryAlerts = computed(() =>
-    currentWindow.value
+    currentWindow.value && currentCycle.value
       ? getCategoryAlerts(
           data.value.expenses,
           data.value.targetExpenses,
           activeExpenseCategories.value,
           currentWindow.value,
+          currentCycle.value.cycle_id,
         )
       : [],
   )
@@ -132,14 +133,15 @@ export function useAppData() {
     const window = currentWindow.value
     return window ? data.value.incomes.filter((income) => isInCycleWindow(income.date, window)) : []
   })
-  const cycleExpenseTotal = computed(
-    () =>
-      cycleExpenses.value.reduce((sum, expense) => sum + expense.amount, 0) +
-      data.value.savings
-        .filter((saving) =>
-          currentWindow.value ? isInCycleWindow(saving.date, currentWindow.value) : false,
-        )
-        .reduce((sum, saving) => sum + saving.amount, 0),
+  const cycleExpenseTotal = computed(() =>
+    cycleExpenses.value.reduce((sum, expense) => sum + expense.amount, 0),
+  )
+  const cycleSavingTotal = computed(() =>
+    data.value.savings
+      .filter((saving) =>
+        currentWindow.value ? isInCycleWindow(saving.date, currentWindow.value) : false,
+      )
+      .reduce((sum, saving) => sum + saving.amount, 0),
   )
   const cycleIncomeTotal = computed(() =>
     cycleIncomes.value.reduce(
@@ -147,7 +149,9 @@ export function useAppData() {
       currentCycle.value?.income ?? 0,
     ),
   )
-  const remainingBudget = computed(() => cycleIncomeTotal.value - cycleExpenseTotal.value)
+  const remainingBudget = computed(
+    () => cycleIncomeTotal.value - cycleExpenseTotal.value - cycleSavingTotal.value,
+  )
   const daysUntilNextIncome = computed(() =>
     currentCycle.value ? getDaysUntilNextIncomeDay(currentCycle.value.income_day) : 1,
   )
@@ -346,6 +350,7 @@ export function useAppData() {
     categoryAlerts,
     cycleIncomes,
     cycleExpenseTotal,
+    cycleSavingTotal,
     cycleIncomeTotal,
     remainingBudget,
     daysUntilNextIncome,

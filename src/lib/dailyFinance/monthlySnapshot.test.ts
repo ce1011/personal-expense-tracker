@@ -50,9 +50,7 @@ describe('getMonthlySnapshot', () => {
     const windowStart = new Date(2026, 5, 25).getTime() // 25 Jun
     const windowEnd = new Date(2026, 6, 25).getTime() // 25 Jul
 
-    const incomes: CombinedTransaction[] = [
-      makeTransaction({ kind: 'income', category_id: 'salary', amount: 50000, date: windowStart }),
-    ]
+    const incomes: CombinedTransaction[] = []
     const expenses: CombinedTransaction[] = [
       makeTransaction({
         kind: 'expense',
@@ -171,6 +169,27 @@ describe('getMonthlySnapshot', () => {
     expect(result.vsLastCycle).toBeNull()
   })
 
+  test('adds current-cycle income transactions on top of the cycle income', () => {
+    const currentCycle: BudgetCycle = {
+      cycle_id: 'cycle-202607',
+      cycle_code: '202607',
+      income_day: 25,
+      income: 50000,
+      saving_target: 10000,
+    }
+    const windowStart = new Date(2026, 5, 25).getTime()
+    const result = getMonthlySnapshot(
+      [currentCycle],
+      [],
+      [makeTransaction({ kind: 'income', category_id: 'bonus', amount: 2000, date: windowStart })],
+      [],
+      categories,
+      new Date(2026, 6, 15).getTime(),
+    )
+
+    expect(result.incomeTotal).toBe(52000)
+  })
+
   test('handles zero expenses without division errors', () => {
     const now = new Date(2026, 6, 15).getTime()
     const currentCycle: BudgetCycle = {
@@ -184,14 +203,7 @@ describe('getMonthlySnapshot', () => {
     const result = getMonthlySnapshot(
       [currentCycle],
       [],
-      [
-        makeTransaction({
-          kind: 'income',
-          category_id: 'salary',
-          amount: 50000,
-          date: new Date(2026, 5, 25).getTime(),
-        }),
-      ],
+      [],
       [],
       categories,
       now,

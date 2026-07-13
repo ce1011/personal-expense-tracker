@@ -76,6 +76,7 @@ function createMockAppData(
     remainingBudget: computed(() => 5000),
     cycleIncomeTotal: computed(() => 15000),
     cycleExpenseTotal: computed(() => 10000),
+    cycleSavingTotal: computed(() => 2000),
     overspendForecast: computed(() => ({
       projectedOverspendAmount: 700,
       projectedRemainingBudget: -700,
