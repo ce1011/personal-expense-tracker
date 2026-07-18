@@ -1,193 +1,150 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
+import type { AppDataPayload } from '@/types/app-data'
+
 const {
-  mockDbTransaction,
-  mockExpenseAdd,
-  mockIncomeAdd,
-  mockSavingAdd,
+  mockDataExport,
+  mockDataImport,
+  mockSnapshotsList,
+  mockSnapshotsRestore,
+  mockExpenseCreate,
   mockExpenseUpdate,
+  mockExpenseRemove,
+  mockIncomeCreate,
   mockIncomeUpdate,
+  mockIncomeRemove,
+  mockSavingCreate,
   mockSavingUpdate,
-  mockExpenseDelete,
-  mockIncomeDelete,
-  mockSavingDelete,
-  mockTripPut,
-  mockTripGet,
-  mockTripToArray,
-  mockSettingPut,
-  mockSettingFirst,
-  mockSettingDelete,
-  mockCyclesToArray,
-  mockExpenseCategoriesToArray,
-  mockIncomeCategoriesToArray,
-  mockExpensesToArray,
-  mockIncomesToArray,
-  mockTargetExpensesToArray,
-  mockSavingsToArray,
-  mockSettingsToArray,
-  mockFxRatesToArray,
-  mockSavingChallengesToArray,
-  mockSnapshotsAdd,
-  mockSnapshotsToArray,
-  mockSnapshotsBulkDelete,
-  mockCyclesClear,
-  mockExpenseCategoriesClear,
-  mockIncomeCategoriesClear,
-  mockExpensesClear,
-  mockIncomesClear,
-  mockTargetExpensesClear,
-  mockSavingsClear,
-  mockSettingsClear,
-  mockTripsClear,
-  mockFxRatesClear,
-  mockSavingChallengesClear,
-  mockCyclesBulkPut,
-  mockExpenseCategoriesBulkPut,
-  mockIncomeCategoriesBulkPut,
-  mockExpensesBulkPut,
-  mockIncomesBulkPut,
-  mockTargetExpensesBulkPut,
-  mockSavingsBulkPut,
-  mockSettingsBulkPut,
-  mockTripsBulkPut,
-  mockFxRatesBulkPut,
-  mockSavingChallengesBulkPut,
+  mockSavingRemove,
+  mockTransactionsImport,
+  mockChallengeCreate,
+  mockChallengeUpdate,
+  mockChallengeRemove,
+  mockTripsList,
+  mockTripCreate,
+  mockTripUpdate,
+  mockSettingsList,
+  mockSettingsSet,
+  mockSettingsRemove,
+  mockCyclesList,
+  mockCycleCreate,
+  mockCycleUpdate,
+  mockTargetUpsert,
+  mockExpenseCategoryCreate,
+  mockExpenseCategoryUpdate,
+  mockExpenseCategoryRemove,
+  mockIncomeCategoryCreate,
+  mockIncomeCategoryUpdate,
+  mockIncomeCategoryRemove,
 } = vi.hoisted(() => ({
-  mockDbTransaction: vi.fn(
-    async (_mode: string, _tables: unknown[], callback: () => Promise<void>) => callback(),
-  ),
-  mockExpenseAdd: vi.fn(),
-  mockIncomeAdd: vi.fn(),
-  mockSavingAdd: vi.fn(),
+  mockDataExport: vi.fn(),
+  mockDataImport: vi.fn(),
+  mockSnapshotsList: vi.fn(),
+  mockSnapshotsRestore: vi.fn(),
+  mockExpenseCreate: vi.fn(),
   mockExpenseUpdate: vi.fn(),
+  mockExpenseRemove: vi.fn(),
+  mockIncomeCreate: vi.fn(),
   mockIncomeUpdate: vi.fn(),
+  mockIncomeRemove: vi.fn(),
+  mockSavingCreate: vi.fn(),
   mockSavingUpdate: vi.fn(),
-  mockExpenseDelete: vi.fn(),
-  mockIncomeDelete: vi.fn(),
-  mockSavingDelete: vi.fn(),
-  mockTripPut: vi.fn(),
-  mockTripGet: vi.fn(),
-  mockTripToArray: vi.fn(),
-  mockSettingPut: vi.fn(),
-  mockSettingFirst: vi.fn(),
-  mockSettingDelete: vi.fn(),
-  mockCyclesToArray: vi.fn(),
-  mockExpenseCategoriesToArray: vi.fn(),
-  mockIncomeCategoriesToArray: vi.fn(),
-  mockExpensesToArray: vi.fn(),
-  mockIncomesToArray: vi.fn(),
-  mockTargetExpensesToArray: vi.fn(),
-  mockSavingsToArray: vi.fn(),
-  mockSettingsToArray: vi.fn(),
-  mockFxRatesToArray: vi.fn(),
-  mockSavingChallengesToArray: vi.fn(),
-  mockSnapshotsAdd: vi.fn(),
-  mockSnapshotsToArray: vi.fn(),
-  mockSnapshotsBulkDelete: vi.fn(),
-  mockCyclesClear: vi.fn(),
-  mockExpenseCategoriesClear: vi.fn(),
-  mockIncomeCategoriesClear: vi.fn(),
-  mockExpensesClear: vi.fn(),
-  mockIncomesClear: vi.fn(),
-  mockTargetExpensesClear: vi.fn(),
-  mockSavingsClear: vi.fn(),
-  mockSettingsClear: vi.fn(),
-  mockTripsClear: vi.fn(),
-  mockFxRatesClear: vi.fn(),
-  mockSavingChallengesClear: vi.fn(),
-  mockCyclesBulkPut: vi.fn(),
-  mockExpenseCategoriesBulkPut: vi.fn(),
-  mockIncomeCategoriesBulkPut: vi.fn(),
-  mockExpensesBulkPut: vi.fn(),
-  mockIncomesBulkPut: vi.fn(),
-  mockTargetExpensesBulkPut: vi.fn(),
-  mockSavingsBulkPut: vi.fn(),
-  mockSettingsBulkPut: vi.fn(),
-  mockTripsBulkPut: vi.fn(),
-  mockFxRatesBulkPut: vi.fn(),
-  mockSavingChallengesBulkPut: vi.fn(),
+  mockSavingRemove: vi.fn(),
+  mockTransactionsImport: vi.fn(),
+  mockChallengeCreate: vi.fn(),
+  mockChallengeUpdate: vi.fn(),
+  mockChallengeRemove: vi.fn(),
+  mockTripsList: vi.fn(),
+  mockTripCreate: vi.fn(),
+  mockTripUpdate: vi.fn(),
+  mockSettingsList: vi.fn(),
+  mockSettingsSet: vi.fn(),
+  mockSettingsRemove: vi.fn(),
+  mockCyclesList: vi.fn(),
+  mockCycleCreate: vi.fn(),
+  mockCycleUpdate: vi.fn(),
+  mockTargetUpsert: vi.fn(),
+  mockExpenseCategoryCreate: vi.fn(),
+  mockExpenseCategoryUpdate: vi.fn(),
+  mockExpenseCategoryRemove: vi.fn(),
+  mockIncomeCategoryCreate: vi.fn(),
+  mockIncomeCategoryUpdate: vi.fn(),
+  mockIncomeCategoryRemove: vi.fn(),
 }))
 
-
-vi.mock('@/db/database', () => ({
-  db: {
-    transaction: mockDbTransaction,
-    cycles: { toArray: mockCyclesToArray, clear: mockCyclesClear, bulkPut: mockCyclesBulkPut },
-    expenseCategories: {
-      toArray: mockExpenseCategoriesToArray,
-      clear: mockExpenseCategoriesClear,
-      bulkPut: mockExpenseCategoriesBulkPut,
+vi.mock('@/api/client', () => ({
+  api: {
+    data: {
+      export: mockDataExport,
+      import: mockDataImport,
+      snapshots: {
+        list: mockSnapshotsList,
+        restore: mockSnapshotsRestore,
+      },
     },
-    incomeCategories: {
-      toArray: mockIncomeCategoriesToArray,
-      clear: mockIncomeCategoriesClear,
-      bulkPut: mockIncomeCategoriesBulkPut,
-    },
-    expenses: {
-      add: mockExpenseAdd,
-      update: mockExpenseUpdate,
-      delete: mockExpenseDelete,
-      toArray: mockExpensesToArray,
-      clear: mockExpensesClear,
-      bulkPut: mockExpensesBulkPut,
-    },
-    incomes: {
-      add: mockIncomeAdd,
-      update: mockIncomeUpdate,
-      delete: mockIncomeDelete,
-      toArray: mockIncomesToArray,
-      clear: mockIncomesClear,
-      bulkPut: mockIncomesBulkPut,
-    },
-    savings: {
-      add: mockSavingAdd,
-      update: mockSavingUpdate,
-      delete: mockSavingDelete,
-      toArray: mockSavingsToArray,
-      clear: mockSavingsClear,
-      bulkPut: mockSavingsBulkPut,
-    },
-    targetExpenses: {
-      toArray: mockTargetExpensesToArray,
-      clear: mockTargetExpensesClear,
-      bulkPut: mockTargetExpensesBulkPut,
-    },
-    trips: {
-      put: mockTripPut,
-      get: mockTripGet,
-      toArray: mockTripToArray,
-      clear: mockTripsClear,
-      bulkPut: mockTripsBulkPut,
-    },
-    settings: {
-      put: mockSettingPut,
-      delete: mockSettingDelete,
-      toArray: mockSettingsToArray,
-      clear: mockSettingsClear,
-      bulkPut: mockSettingsBulkPut,
-      where: vi.fn(() => ({
-        equals: vi.fn(() => ({
-          first: mockSettingFirst,
-        })),
-      })),
-    },
-    fxRates: {
-      toArray: mockFxRatesToArray,
-      clear: mockFxRatesClear,
-      bulkPut: mockFxRatesBulkPut,
+    transactions: {
+      expenses: {
+        create: mockExpenseCreate,
+        update: mockExpenseUpdate,
+        remove: mockExpenseRemove,
+      },
+      incomes: {
+        create: mockIncomeCreate,
+        update: mockIncomeUpdate,
+        remove: mockIncomeRemove,
+      },
+      savings: {
+        create: mockSavingCreate,
+        update: mockSavingUpdate,
+        remove: mockSavingRemove,
+      },
+      import: mockTransactionsImport,
     },
     savingChallenges: {
-      toArray: mockSavingChallengesToArray,
-      clear: mockSavingChallengesClear,
-      bulkPut: mockSavingChallengesBulkPut,
+      create: mockChallengeCreate,
+      update: mockChallengeUpdate,
+      remove: mockChallengeRemove,
     },
-    snapshots: {
-      add: mockSnapshotsAdd,
-      toArray: mockSnapshotsToArray,
-      bulkDelete: mockSnapshotsBulkDelete,
+    trips: {
+      list: mockTripsList,
+      create: mockTripCreate,
+      update: mockTripUpdate,
+    },
+    settings: {
+      list: mockSettingsList,
+      set: mockSettingsSet,
+      remove: mockSettingsRemove,
+    },
+    cycles: {
+      list: mockCyclesList,
+      create: mockCycleCreate,
+      update: mockCycleUpdate,
+    },
+    targetExpenses: {
+      upsert: mockTargetUpsert,
+    },
+    categories: {
+      expenses: {
+        create: mockExpenseCategoryCreate,
+        update: mockExpenseCategoryUpdate,
+        remove: mockExpenseCategoryRemove,
+      },
+      incomes: {
+        create: mockIncomeCategoryCreate,
+        update: mockIncomeCategoryUpdate,
+        remove: mockIncomeCategoryRemove,
+      },
     },
   },
-  createInitialPayload: vi.fn(),
+  ApiError: class ApiError extends Error {
+    constructor(
+      public readonly status: number,
+      public readonly value: unknown,
+    ) {
+      super(`status ${status}`)
+      this.name = 'ApiError'
+    }
+  },
 }))
 
 import {
@@ -199,678 +156,413 @@ import {
   deleteSaving,
   getActiveTripId,
   getRecoverySnapshotSummaries,
-  getRestorePreview,
-  getTrips,
   importTransactions,
+  loadAppData,
+  replaceAllDataWithSnapshot,
   restoreFromSnapshot,
+  saveCycle,
+  saveExpenseCategory,
+  saveIncomeCategory,
+  saveTargetLimit,
   saveTrip,
   setActiveTripId,
+  softDeleteExpenseCategory,
+  softDeleteIncomeCategory,
   updateExpense,
   updateIncome,
   updateSaving,
 } from './appDataService'
 
-describe('appDataService transaction updates', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-05-31T08:15:00.000Z'))
-    mockDbTransaction.mockClear()
-    mockExpenseAdd.mockReset()
-    mockIncomeAdd.mockReset()
-    mockSavingAdd.mockReset()
-    mockExpenseUpdate.mockReset()
-    mockIncomeUpdate.mockReset()
-    mockSavingUpdate.mockReset()
-    mockExpenseDelete.mockReset()
-    mockIncomeDelete.mockReset()
-    mockSavingDelete.mockReset()
-    mockTripPut.mockReset()
-    mockTripGet.mockReset()
-    mockTripGet.mockImplementation(async (tripId?: string) =>
-      tripId
-        ? {
-            trip_id: tripId,
-            name: 'Known Trip',
-            destination: 'Japan',
-            start_date: 1780185600000,
-            end_date: 1780444800000,
-            budget_amount: 15000,
-            budget_currency: 'JPY',
-            status: 'active',
-            notes: 'Known trip',
-            created_at: 1780205700000,
-            updated_at: 1780205700000,
-          }
-        : undefined,
-    )
-    mockCyclesToArray.mockReset()
-    mockCyclesToArray.mockResolvedValue([])
-    mockExpenseCategoriesToArray.mockReset()
-    mockExpenseCategoriesToArray.mockResolvedValue([])
-    mockIncomeCategoriesToArray.mockReset()
-    mockIncomeCategoriesToArray.mockResolvedValue([])
-    mockExpensesToArray.mockReset()
-    mockExpensesToArray.mockResolvedValue([])
-    mockIncomesToArray.mockReset()
-    mockIncomesToArray.mockResolvedValue([])
-    mockTargetExpensesToArray.mockReset()
-    mockTargetExpensesToArray.mockResolvedValue([])
-    mockSavingsToArray.mockReset()
-    mockSavingsToArray.mockResolvedValue([])
-    mockSettingsToArray.mockReset()
-    mockSettingsToArray.mockResolvedValue([])
-    mockFxRatesToArray.mockReset()
-    mockFxRatesToArray.mockResolvedValue([])
-    mockSavingChallengesToArray.mockReset()
-    mockSavingChallengesToArray.mockResolvedValue([])
-    mockSnapshotsAdd.mockReset()
-    mockSnapshotsToArray.mockReset()
-    mockSnapshotsToArray.mockResolvedValue([])
-    mockSnapshotsBulkDelete.mockReset()
-    mockCyclesClear.mockReset()
-    mockExpenseCategoriesClear.mockReset()
-    mockIncomeCategoriesClear.mockReset()
-    mockExpensesClear.mockReset()
-    mockIncomesClear.mockReset()
-    mockTargetExpensesClear.mockReset()
-    mockSavingsClear.mockReset()
-    mockSettingsClear.mockReset()
-    mockTripsClear.mockReset()
-    mockFxRatesClear.mockReset()
-    mockSavingChallengesClear.mockReset()
-    mockCyclesBulkPut.mockReset()
-    mockExpenseCategoriesBulkPut.mockReset()
-    mockIncomeCategoriesBulkPut.mockReset()
-    mockExpensesBulkPut.mockReset()
-    mockIncomesBulkPut.mockReset()
-    mockTargetExpensesBulkPut.mockReset()
-    mockSavingsBulkPut.mockReset()
-    mockSettingsBulkPut.mockReset()
-    mockTripsBulkPut.mockReset()
-    mockFxRatesBulkPut.mockReset()
-    mockSavingChallengesBulkPut.mockReset()
-  })
+const emptyPayload: AppDataPayload = {
+  cycles: [],
+  expenseCategories: [],
+  incomeCategories: [],
+  expenses: [],
+  incomes: [],
+  targetExpenses: [],
+  savings: [],
+  settings: [],
+  trips: [],
+  fxRates: [],
+  savingChallenges: [],
+}
 
-  test('creates trip-aware expense, income, and saving records', async () => {
+const validPayload: AppDataPayload = {
+  cycles: [
+    {
+      cycle_id: 'cycle-1',
+      cycle_code: '2026-07',
+      income_day: 1,
+      income: 20000,
+      saving_target: 5000,
+    },
+  ],
+  expenseCategories: [
+    {
+      category_id: 'food',
+      name_en: 'Food',
+      name_tc: '飲食',
+      color_code: 'ff0000',
+      icon_image_name: 'food',
+      custom: true,
+      deleted: false,
+    },
+  ],
+  incomeCategories: [],
+  expenses: [
+    {
+      transaction_id: 'expense-1',
+      category_id: 'food',
+      name: 'Lunch',
+      amount: 50,
+      date: Date.now(),
+      create_date: Date.now(),
+      edit_date: Date.now(),
+      synced: false,
+    },
+  ],
+  incomes: [],
+  targetExpenses: [],
+  savings: [],
+  settings: [],
+  trips: [],
+  fxRates: [],
+  savingChallenges: [],
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
+describe('loadAppData', () => {
+  test('sorts the exported payload for the UI', async () => {
+    mockDataExport.mockResolvedValue({
+      ...emptyPayload,
+      cycles: [
+        { cycle_id: 'a', cycle_code: '2026-06', income_day: 1, income: 1, saving_target: 0 },
+        { cycle_id: 'b', cycle_code: '2026-07', income_day: 1, income: 1, saving_target: 0 },
+      ],
+      expenses: [
+        {
+          transaction_id: 'old',
+          category_id: 'food',
+          name: 'old',
+          amount: 1,
+          date: 100,
+          create_date: 1,
+          edit_date: 1,
+          synced: false,
+        },
+        {
+          transaction_id: 'new',
+          category_id: 'food',
+          name: 'new',
+          amount: 1,
+          date: 200,
+          create_date: 1,
+          edit_date: 1,
+          synced: false,
+        },
+      ],
+    })
+
+    const payload = await loadAppData()
+
+    expect(payload.cycles.map((cycle) => cycle.cycle_code)).toEqual(['2026-07', '2026-06'])
+    expect(payload.expenses.map((expense) => expense.transaction_id)).toEqual(['new', 'old'])
+  })
+})
+
+describe('transactions', () => {
+  test('maps an expense draft to the API body', async () => {
     await createExpense({
-      category_id: 'expense-food',
-      name: ' Lunch ',
-      amount: 12,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      currency_code: 'USD',
-      exchange_rate_hkd: 7.8,
+      category_id: 'food',
+      name: '  Lunch  ',
+      amount: 50,
+      date: 123,
+      currency_code: 'HKD',
+      exchange_rate_hkd: 1,
+      recurring: true,
+      recurring_frequency: 'monthly',
+      recurring_day: 5,
     })
-    await createIncome({
-      category_id: 'income-salary',
-      name: ' Bonus ',
-      amount: 1000,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      currency_code: 'CNY',
-      exchange_rate_hkd: 1.08,
+
+    expect(mockExpenseCreate).toHaveBeenCalledWith({
+      category_id: 'food',
+      name: 'Lunch',
+      amount: 50,
+      date: 123,
+      trip_id: undefined,
+      currency_code: 'HKD',
+      exchange_rate_hkd: 1,
+      recurring: true,
+      recurring_frequency: 'monthly',
+      recurring_day: 5,
     })
+  })
+
+  test('maps a saving draft name to the API description field', async () => {
     await createSaving({
-      category_id: 'saving-stocks',
-      name: ' VOO ',
-      amount: 200,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      currency_code: 'USD',
-      exchange_rate_hkd: 7.8,
-    })
-
-    expect(mockExpenseAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        category_id: 'expense-food',
-        name: 'Lunch',
-        amount: 93.6,
-        trip_id: 'trip-tokyo',
-        original_currency: 'USD',
-        original_amount: 12,
-      }),
-    )
-    expect(mockIncomeAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        category_id: 'income-salary',
-        name: 'Bonus',
-        amount: 1080,
-        trip_id: 'trip-tokyo',
-        original_currency: 'CNY',
-        original_amount: 1000,
-      }),
-    )
-    expect(mockSavingAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        category_id: 'saving-stocks',
-        description: 'VOO',
-        amount: 1560,
-        trip_id: 'trip-tokyo',
-        original_currency: 'USD',
-        original_amount: 200,
-      }),
-    )
-  })
-
-  test('updates an expense in HKD while preserving original currency reference fields', async () => {
-    await updateExpense('expense-1', {
-      category_id: 'expense-food',
-      name: '午餐',
-      amount: 12,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      currency_code: 'USD',
-      exchange_rate_hkd: 7.8,
-    })
-
-    expect(mockExpenseUpdate).toHaveBeenCalledWith('expense-1', {
-      category_id: 'expense-food',
-      name: '午餐',
-      amount: 93.6,
-      date: 1780185600000,
-      edit_date: Date.now(),
-      synced: false,
-      trip_id: 'trip-tokyo',
-      original_currency: 'USD',
-      original_amount: 12,
-      exchange_rate_hkd: 7.8,
-    })
-  })
-
-  test('updates an income in HKD while preserving original currency reference fields', async () => {
-    await updateIncome('income-1', {
-      category_id: 'income-salary',
-      name: '薪金',
+      category_id: 'saving-cash',
+      name: 'Emergency fund',
       amount: 1000,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      currency_code: 'CNY',
-      exchange_rate_hkd: 1.08,
+      date: 99,
+      currency_code: 'HKD',
+      exchange_rate_hkd: 1,
+      challenge_id: 'challenge-1',
     })
 
-    expect(mockIncomeUpdate).toHaveBeenCalledWith('income-1', {
-      category_id: 'income-salary',
-      name: '薪金',
-      amount: 1080,
-      date: 1780185600000,
-      edit_date: Date.now(),
-      synced: false,
-      trip_id: 'trip-tokyo',
-      original_currency: 'CNY',
-      original_amount: 1000,
-      exchange_rate_hkd: 1.08,
-    })
+    expect(mockSavingCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'Emergency fund', challenge_id: 'challenge-1' }),
+    )
   })
 
-  test('deletes expense and income transactions by id', async () => {
+  test('updates and deletes transactions by id', async () => {
+    await updateExpense('expense-1', {
+      category_id: 'food',
+      name: 'Dinner',
+      amount: 80,
+      date: 5,
+      currency_code: 'HKD',
+      exchange_rate_hkd: 1,
+    })
+    await updateIncome('income-1', {
+      category_id: 'salary',
+      name: 'Salary',
+      amount: 10000,
+      date: 6,
+      currency_code: 'HKD',
+      exchange_rate_hkd: 1,
+    })
+    await updateSaving('saving-1', {
+      category_id: 'saving-cash',
+      name: 'Top up',
+      amount: 500,
+      date: 7,
+      currency_code: 'HKD',
+      exchange_rate_hkd: 1,
+    })
     await deleteExpense('expense-1')
     await deleteIncome('income-1')
     await deleteSaving('saving-1')
 
-    expect(mockExpenseDelete).toHaveBeenCalledWith('expense-1')
-    expect(mockIncomeDelete).toHaveBeenCalledWith('income-1')
-    expect(mockSavingDelete).toHaveBeenCalledWith('saving-1')
+    expect(mockExpenseUpdate).toHaveBeenCalledWith('expense-1', expect.objectContaining({ name: 'Dinner' }))
+    expect(mockIncomeUpdate).toHaveBeenCalledWith('income-1', expect.objectContaining({ name: 'Salary' }))
+    expect(mockSavingUpdate).toHaveBeenCalledWith(
+      'saving-1',
+      expect.objectContaining({ description: 'Top up' }),
+    )
+    expect(mockExpenseRemove).toHaveBeenCalledWith('expense-1')
+    expect(mockIncomeRemove).toHaveBeenCalledWith('income-1')
+    expect(mockSavingRemove).toHaveBeenCalledWith('saving-1')
   })
 
-  test('imports mixed transaction types in one db transaction', async () => {
+  test('creates an income draft via the API', async () => {
+    await createIncome({
+      category_id: 'salary',
+      name: 'Salary',
+      amount: 10000,
+      date: 1,
+      currency_code: 'HKD',
+      exchange_rate_hkd: 1,
+    })
+
+    expect(mockIncomeCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ category_id: 'salary', amount: 10000 }),
+    )
+  })
+})
+
+describe('importTransactions', () => {
+  test('sends all records to the import endpoint', async () => {
     await importTransactions([
       {
         type: 'expense',
-        category_id: 'expense-food',
-        name: '午餐',
+        category_id: 'food',
+        name: 'Lunch',
         amount: 50,
-        date: 1780185600000,
-        trip_id: 'trip-tokyo',
+        date: 1,
         currency_code: 'HKD',
         exchange_rate_hkd: 1,
       },
       {
-        type: 'income',
-        category_id: 'income-salary',
-        name: '薪金',
-        amount: 1000,
-        date: 1780185600000,
-        trip_id: 'trip-tokyo',
-        currency_code: 'CNY',
-        exchange_rate_hkd: 1.08,
-      },
-      {
         type: 'saving',
-        category_id: 'saving-stocks',
-        name: 'VOO',
-        amount: 200,
-        date: 1780185600000,
-        trip_id: 'trip-tokyo',
-        currency_code: 'USD',
-        exchange_rate_hkd: 7.8,
+        category_id: 'saving-cash',
+        name: 'Save',
+        amount: 100,
+        date: 2,
+        currency_code: 'HKD',
+        exchange_rate_hkd: 1,
       },
     ])
 
-    expect(mockDbTransaction).toHaveBeenCalledTimes(1)
-    expect(mockExpenseAdd).toHaveBeenCalledTimes(1)
-    expect(mockIncomeAdd).toHaveBeenCalledTimes(1)
-    expect(mockSavingAdd).toHaveBeenCalledTimes(1)
-    expect(mockExpenseAdd.mock.calls[0]?.[0]).toMatchObject({
-      category_id: 'expense-food',
-      name: '午餐',
-      amount: 50,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      original_currency: 'HKD',
-      original_amount: 50,
-      exchange_rate_hkd: 1,
-    })
-    expect(mockIncomeAdd.mock.calls[0]?.[0]).toMatchObject({
-      category_id: 'income-salary',
-      name: '薪金',
-      amount: 1080,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      original_currency: 'CNY',
-      original_amount: 1000,
-      exchange_rate_hkd: 1.08,
-    })
-    expect(mockSavingAdd.mock.calls[0]?.[0]).toMatchObject({
-      category_id: 'saving-stocks',
-      description: 'VOO',
-      amount: 1560,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      original_currency: 'USD',
-      original_amount: 200,
-      exchange_rate_hkd: 7.8,
+    expect(mockTransactionsImport).toHaveBeenCalledWith({
+      records: [
+        expect.objectContaining({ type: 'expense', name: 'Lunch' }),
+        expect.objectContaining({ type: 'saving', name: 'Save' }),
+      ],
     })
   })
+})
 
-  test('updates a saving in HKD while preserving original currency reference fields', async () => {
-    await updateSaving('saving-1', {
-      category_id: 'saving-stocks',
-      name: 'VOO',
-      amount: 200,
-      date: 1780185600000,
-      trip_id: 'trip-tokyo',
-      currency_code: 'USD',
-      exchange_rate_hkd: 7.8,
-    })
+describe('cycles', () => {
+  test('updates via PUT when an explicit cycleId is provided', async () => {
+    await saveCycle({ cycle_code: '2026-07', income_day: 1, income: 20000, saving_target: 5000 }, 'cycle-9')
 
-    expect(mockSavingUpdate).toHaveBeenCalledWith('saving-1', {
-      category_id: 'saving-stocks',
-      description: 'VOO',
-      amount: 1560,
-      date: 1780185600000,
-      edit_date: Date.now(),
-      synced: false,
-      trip_id: 'trip-tokyo',
-      original_currency: 'USD',
-      original_amount: 200,
-      exchange_rate_hkd: 7.8,
-    })
-  })
-
-  test('saves and lists trips ordered by latest update first', async () => {
-    mockTripGet.mockResolvedValueOnce(undefined)
-    mockTripToArray.mockResolvedValueOnce([
-      {
-        trip_id: 'trip-osaka',
-        name: 'Osaka',
-        destination: 'Japan',
-        start_date: 1780185600000,
-        end_date: 1780444800000,
-        budget_amount: 20000,
-        budget_currency: 'JPY',
-        status: 'planned',
-        notes: 'Food crawl',
-        created_at: 1780205700000,
-        updated_at: 1780205600000,
-      },
-      {
-        trip_id: 'trip-tokyo',
-        name: 'Tokyo',
-        destination: 'Japan',
-        start_date: 1780185600000,
-        end_date: 1780444800000,
-        budget_amount: 15000,
-        budget_currency: 'JPY',
-        status: 'active',
-        notes: 'Sakura',
-        created_at: 1780205700000,
-        updated_at: 1780205700000,
-      },
-    ])
-
-    await saveTrip({
-      name: 'Tokyo',
-      destination: 'Japan',
-      start_date: 1780185600000,
-      end_date: 1780444800000,
-      budget_amount: 15000,
-      budget_currency: 'JPY',
-      status: 'active',
-      notes: ' Sakura ',
-    })
-
-    expect(mockTripPut).toHaveBeenCalledWith({
-      trip_id: expect.stringMatching(/^trip-/),
-      name: 'Tokyo',
-      destination: 'Japan',
-      start_date: 1780185600000,
-      end_date: 1780444800000,
-      budget_amount: 15000,
-      budget_currency: 'JPY',
-      status: 'active',
-      notes: 'Sakura',
-      created_at: Date.now(),
-      updated_at: Date.now(),
-    })
-
-    mockTripToArray.mockResolvedValueOnce([
-      {
-        trip_id: 'trip-osaka',
-        name: 'Osaka',
-        destination: 'Japan',
-        start_date: 1780185600000,
-        end_date: 1780444800000,
-        budget_amount: 20000,
-        budget_currency: 'JPY',
-        status: 'planned',
-        notes: 'Food crawl',
-        created_at: 1780205700000,
-        updated_at: 1780205600000,
-      },
-      {
-        trip_id: 'trip-tokyo',
-        name: 'Tokyo',
-        destination: 'Japan',
-        start_date: 1780185600000,
-        end_date: 1780444800000,
-        budget_amount: 15000,
-        budget_currency: 'JPY',
-        status: 'active',
-        notes: 'Sakura',
-        created_at: 1780205700000,
-        updated_at: 1780205700000,
-      },
-    ])
-
-    await expect(getTrips()).resolves.toEqual([
-      {
-        trip_id: 'trip-tokyo',
-        name: 'Tokyo',
-        destination: 'Japan',
-        start_date: 1780185600000,
-        end_date: 1780444800000,
-        budget_amount: 15000,
-        budget_currency: 'JPY',
-        status: 'active',
-        notes: 'Sakura',
-        created_at: 1780205700000,
-        updated_at: 1780205700000,
-      },
-      {
-        trip_id: 'trip-osaka',
-        name: 'Osaka',
-        destination: 'Japan',
-        start_date: 1780185600000,
-        end_date: 1780444800000,
-        budget_amount: 20000,
-        budget_currency: 'JPY',
-        status: 'planned',
-        notes: 'Food crawl',
-        created_at: 1780205700000,
-        updated_at: 1780205600000,
-      },
-    ])
-  })
-
-  test('updates trip lifecycle fields while preserving original creation timestamp from the database', async () => {
-    mockTripGet.mockResolvedValueOnce({
-      trip_id: 'trip-kyoto',
-      name: 'Kyoto',
-      destination: 'Japan',
-      start_date: 1780100000000,
-      end_date: 1780444800000,
-      budget_amount: 12000,
-      budget_currency: 'JPY',
-      status: 'planned',
-      notes: 'Initial plan',
-      created_at: 1780100000000,
-      updated_at: 1780150000000,
-    })
-
-    await saveTrip(
-      {
-        name: 'Kyoto',
-        destination: 'Japan',
-        start_date: 1780185600000,
-        end_date: 1780444800000,
-        budget_amount: 18000,
-        budget_currency: 'JPY',
-        status: 'completed',
-        notes: ' Temples ',
-      },
-      {
-        trip_id: 'trip-kyoto',
-      },
+    expect(mockCycleUpdate).toHaveBeenCalledWith(
+      'cycle-9',
+      expect.objectContaining({ cycle_code: '2026-07' }),
     )
+    expect(mockCycleCreate).not.toHaveBeenCalled()
+  })
 
-    expect(mockTripPut).toHaveBeenCalledWith({
-      trip_id: 'trip-kyoto',
-      name: 'Kyoto',
-      destination: 'Japan',
-      start_date: 1780185600000,
-      end_date: 1780444800000,
-      budget_amount: 18000,
-      budget_currency: 'JPY',
-      status: 'completed',
-      notes: 'Temples',
-      created_at: 1780100000000,
-      updated_at: Date.now(),
+  test('updates the existing cycle matched by cycle_code when no id is given', async () => {
+    mockCyclesList.mockResolvedValue([
+      { cycle_id: 'cycle-1', cycle_code: '2026-07', income_day: 1, income: 1, saving_target: 0 },
+    ])
+
+    await saveCycle({ cycle_code: '2026-07', income_day: 2, income: 30000, saving_target: 8000 })
+
+    expect(mockCycleUpdate).toHaveBeenCalledWith(
+      'cycle-1',
+      expect.objectContaining({ income: 30000 }),
+    )
+    expect(mockCycleCreate).not.toHaveBeenCalled()
+  })
+
+  test('creates a new cycle when cycle_code is not found', async () => {
+    mockCyclesList.mockResolvedValue([])
+
+    await saveCycle({ cycle_code: '2026-08', income_day: 1, income: 1000, saving_target: 100 })
+
+    expect(mockCycleCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ cycle_code: '2026-08' }),
+    )
+    expect(mockCycleUpdate).not.toHaveBeenCalled()
+  })
+})
+
+describe('categories and targets', () => {
+  test('creates and soft-deletes categories', async () => {
+    const draft = {
+      name_en: 'Coffee',
+      name_tc: '咖啡',
+      color_code: '#aabbcc',
+      icon_image_name: 'coffee',
+    }
+
+    await saveExpenseCategory(draft)
+    await saveIncomeCategory(draft)
+    await saveExpenseCategory(draft, 'cat-1')
+    await softDeleteExpenseCategory('cat-1')
+    await softDeleteIncomeCategory('cat-2')
+
+    expect(mockExpenseCategoryCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name_en: 'Coffee', color_code: 'aabbcc' }),
+    )
+    expect(mockIncomeCategoryCreate).toHaveBeenCalled()
+    expect(mockExpenseCategoryUpdate).toHaveBeenCalledWith('cat-1', expect.anything())
+    expect(mockExpenseCategoryRemove).toHaveBeenCalledWith('cat-1')
+    expect(mockIncomeCategoryRemove).toHaveBeenCalledWith('cat-2')
+  })
+
+  test('upserts a target expense limit', async () => {
+    await saveTargetLimit('cycle-1', 'food', 3000)
+
+    expect(mockTargetUpsert).toHaveBeenCalledWith({
+      cycle_id: 'cycle-1',
+      category_id: 'food',
+      amount: 3000,
     })
   })
+})
 
-  test('rejects unknown trip ids when persisting trip-linked transactions', async () => {
-    mockTripGet.mockResolvedValue(undefined)
-
-    await expect(
-      createExpense({
-        category_id: 'expense-food',
-        name: 'Lunch',
-        amount: 12,
-        date: 1780185600000,
-        trip_id: 'trip-missing',
-        currency_code: 'USD',
-        exchange_rate_hkd: 7.8,
-      }),
-    ).rejects.toThrow('Unknown trip_id: trip-missing')
-
-    await expect(
-      createIncome({
-        category_id: 'income-salary',
-        name: 'Bonus',
-        amount: 1000,
-        date: 1780185600000,
-        trip_id: 'trip-missing',
-        currency_code: 'CNY',
-        exchange_rate_hkd: 1.08,
-      }),
-    ).rejects.toThrow('Unknown trip_id: trip-missing')
-
-    await expect(
-      createSaving({
-        category_id: 'saving-stocks',
-        name: 'VOO',
-        amount: 200,
-        date: 1780185600000,
-        trip_id: 'trip-missing',
-        currency_code: 'USD',
-        exchange_rate_hkd: 7.8,
-      }),
-    ).rejects.toThrow('Unknown trip_id: trip-missing')
-  })
-
-  test('rejects unknown trip ids during trip-linked updates and imports', async () => {
-    mockTripGet.mockResolvedValue(undefined)
-
-    await expect(
-      updateExpense('expense-1', {
-        category_id: 'expense-food',
-        name: 'Lunch',
-        amount: 12,
-        date: 1780185600000,
-        trip_id: 'trip-missing',
-        currency_code: 'USD',
-        exchange_rate_hkd: 7.8,
-      }),
-    ).rejects.toThrow('Unknown trip_id: trip-missing')
-
-    await expect(
-      importTransactions([
-        {
-          type: 'saving',
-          category_id: 'saving-stocks',
-          name: 'VOO',
-          amount: 200,
-          date: 1780185600000,
-          trip_id: 'trip-missing',
-          currency_code: 'USD',
-          exchange_rate_hkd: 7.8,
-        },
-      ]),
-    ).rejects.toThrow('Unknown trip_id: trip-missing')
-  })
-
-  test('persists active trip id in settings and can clear it', async () => {
-    mockSettingFirst.mockResolvedValueOnce({
-      setting_id: 'setting-active-trip-id',
-      name: 'active_trip_id',
-      parameter: 'trip-tokyo',
-    })
-    mockTripGet.mockResolvedValueOnce({
-      trip_id: 'trip-tokyo',
+describe('trips and active trip setting', () => {
+  test('creates and updates trips', async () => {
+    const draft = {
       name: 'Tokyo',
       destination: 'Japan',
-      start_date: 1780185600000,
-      end_date: 1780444800000,
-      budget_amount: 15000,
-      budget_currency: 'JPY',
-      status: 'active',
-      notes: 'Sakura',
-      created_at: 1780205700000,
-      updated_at: 1780205700000,
-    })
-    mockSettingFirst.mockResolvedValueOnce({
-      setting_id: 'setting-active-trip-id',
-      name: 'active_trip_id',
-      parameter: 'trip-tokyo',
-    })
-    mockSettingFirst.mockResolvedValueOnce(undefined)
+      start_date: 1,
+      end_date: 2,
+      budget_amount: 10000,
+      budget_currency: 'JPY' as const,
+      status: 'planned' as const,
+      notes: 'Trip',
+    }
 
-    await setActiveTripId('trip-tokyo')
-    await expect(getActiveTripId()).resolves.toBe('trip-tokyo')
-    await setActiveTripId(undefined)
-    await expect(getActiveTripId()).resolves.toBeUndefined()
+    await saveTrip(draft)
+    await saveTrip(draft, { trip_id: 'trip-1', created_at: 5 })
 
-    expect(mockSettingPut).toHaveBeenCalledWith({
-      setting_id: 'setting-active-trip-id',
-      name: 'active_trip_id',
-      parameter: 'trip-tokyo',
-    })
-    expect(mockSettingDelete).toHaveBeenCalledWith('setting-active-trip-id')
+    expect(mockTripCreate).toHaveBeenCalledWith(expect.objectContaining({ name: 'Tokyo' }))
+    expect(mockTripUpdate).toHaveBeenCalledWith('trip-1', expect.objectContaining({ name: 'Tokyo' }))
   })
 
-  test('creates restore preview and snapshot summaries from stored backups', async () => {
-    mockSnapshotsToArray.mockResolvedValueOnce([
+  test('reads and sets the active trip id setting', async () => {
+    mockSettingsList.mockResolvedValue([
+      { setting_id: 's1', name: 'active_trip_id', parameter: 'trip-1' },
+    ])
+    await expect(getActiveTripId()).resolves.toBe('trip-1')
+
+    mockTripsList.mockResolvedValue([
       {
-        snapshot_id: 'snapshot-2',
-        created_at: 300,
-        reason: 'restore:before',
-        payload_json:
-          '{"cycles":[],"expenseCategories":[{"category_id":"expense-food","name_en":"Food","name_tc":"餐飲","color_code":"b5392a","icon_image_name":"utensils","custom":false,"deleted":false}],"incomeCategories":[],"expenses":[{"transaction_id":"expense-1","category_id":"expense-food","name":"Lunch","amount":50,"date":1780185600000,"create_date":1780185600000,"edit_date":1780185600000,"synced":false}],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
+        trip_id: 'trip-1',
+        name: 'Tokyo',
+        destination: 'Japan',
+        start_date: 1,
+        end_date: 2,
+        budget_amount: 1,
+        budget_currency: 'JPY',
+        status: 'active',
+        notes: '',
+        created_at: 1,
+        updated_at: 1,
       },
-      {
-        snapshot_id: 'snapshot-1',
-        created_at: 100,
-        reason: 'expense:create',
-        payload_json:
-          '{"cycles":[],"expenseCategories":[],"incomeCategories":[],"expenses":[],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
-      },
+    ])
+    await setActiveTripId('trip-1')
+    expect(mockSettingsSet).toHaveBeenCalledWith('active_trip_id', { parameter: 'trip-1' })
+
+    await setActiveTripId()
+    expect(mockSettingsRemove).toHaveBeenCalledWith('active_trip_id')
+  })
+
+  test('rejects an unknown trip id when setting the active trip', async () => {
+    mockTripsList.mockResolvedValue([])
+
+    await expect(setActiveTripId('missing-trip')).rejects.toThrow('Unknown trip_id')
+    expect(mockSettingsSet).not.toHaveBeenCalled()
+  })
+})
+
+describe('recovery', () => {
+  test('returns snapshot summaries sorted newest first', async () => {
+    mockSnapshotsList.mockResolvedValue([
+      { snapshot_id: 's1', created_at: 100, reason: 'expense:create' },
+      { snapshot_id: 's2', created_at: 300, reason: 'restore:before' },
     ])
 
     await expect(getRecoverySnapshotSummaries()).resolves.toEqual([
-      { snapshotId: 'snapshot-2', createdAt: 300, reason: 'restore:before' },
-      { snapshotId: 'snapshot-1', createdAt: 100, reason: 'expense:create' },
+      { snapshotId: 's2', createdAt: 300, reason: 'restore:before' },
+      { snapshotId: 's1', createdAt: 100, reason: 'expense:create' },
     ])
-
-    await expect(
-      getRestorePreview(
-        '{"cycles":[],"expenseCategories":[{"category_id":"expense-food","name_en":"Food","name_tc":"餐飲","color_code":"b5392a","icon_image_name":"utensils","custom":false,"deleted":false}],"incomeCategories":[],"expenses":[{"transaction_id":"expense-1","category_id":"expense-food","name":"Lunch","amount":50,"date":1780185600000,"create_date":1780185600000,"edit_date":1780185600000,"synced":false}],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
-      ),
-    ).resolves.toEqual({
-      payload: {
-        cycles: [],
-        expenseCategories: [
-          {
-            category_id: 'expense-food',
-            name_en: 'Food',
-            name_tc: '餐飲',
-            color_code: 'b5392a',
-            icon_image_name: 'utensils',
-            custom: false,
-            deleted: false,
-          },
-        ],
-        incomeCategories: [],
-        expenses: [
-          {
-            transaction_id: 'expense-1',
-            category_id: 'expense-food',
-            name: 'Lunch',
-            amount: 50,
-            date: 1780185600000,
-            create_date: 1780185600000,
-            edit_date: 1780185600000,
-            synced: false,
-          },
-        ],
-        incomes: [],
-        targetExpenses: [],
-        savings: [],
-        settings: [],
-        trips: [],
-        fxRates: [],
-        savingChallenges: [],
-      },
-      impact: {
-        cycles: 0,
-        expenseCategories: 1,
-        incomeCategories: 0,
-        expenses: 1,
-        incomes: 0,
-        targetExpenses: 0,
-        savings: 0,
-        settings: 0,
-        trips: 0,
-        fxRates: 0,
-        savingChallenges: 0,
-      },
-      integrity: { ok: true, errors: [] },
-      errors: [],
-    })
   })
 
-  test('restores from a snapshot payload after validation passes', async () => {
-    mockSnapshotsToArray.mockResolvedValueOnce([
-      {
-        snapshot_id: 'snapshot-restore',
-        created_at: 300,
-        reason: 'restore:before',
-        payload_json:
-          '{"cycles":[],"expenseCategories":[],"incomeCategories":[],"expenses":[],"incomes":[],"targetExpenses":[],"savings":[],"settings":[],"trips":[],"fxRates":[],"savingChallenges":[]}',
-      },
-    ])
+  test('restores a snapshot by id', async () => {
+    await restoreFromSnapshot('snapshot-1')
+    expect(mockSnapshotsRestore).toHaveBeenCalledWith('snapshot-1')
+  })
 
-    await restoreFromSnapshot('snapshot-restore')
+  test('replaces all data after validating the payload', async () => {
+    await replaceAllDataWithSnapshot(validPayload)
+    expect(mockDataImport).toHaveBeenCalledWith(validPayload)
+  })
 
-    expect(mockDbTransaction).toHaveBeenCalled()
+  test('rejects an invalid payload without calling the API', async () => {
+    const invalid = {
+      ...validPayload,
+      expenses: [{ transaction_id: 'broken' } as never],
+    }
+
+    await expect(replaceAllDataWithSnapshot(invalid)).rejects.toThrow()
+    expect(mockDataImport).not.toHaveBeenCalled()
   })
 })

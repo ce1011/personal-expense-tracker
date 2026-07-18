@@ -7,6 +7,27 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Backend API path prefixes. The frontend calls these same-origin; in dev we
+// proxy them to the Elysia server so no CORS config or absolute URL is needed.
+const apiPrefixes = [
+  '/auth',
+  '/categories',
+  '/transactions',
+  '/cycles',
+  '/target-expenses',
+  '/saving-challenges',
+  '/trips',
+  '/settings',
+  '/data',
+  '/fx-rates',
+]
+
+const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000'
+
+const apiProxy = Object.fromEntries(
+  apiPrefixes.map((prefix) => [prefix, { target: apiTarget, changeOrigin: true }]),
+)
+
 // https://vite.dev/config/
 export default defineConfig({
   base: '/personal-expense-tracker/',
@@ -54,6 +75,9 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  server: {
+    proxy: apiProxy,
   },
   test: {
     environment: 'jsdom',

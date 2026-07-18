@@ -12,8 +12,9 @@ This project uses **Bun** as its package manager and runtime.
 | `bun dev` | Start the Vite dev server with hot reload. |
 | `bun run build` | Type-check with `vue-tsc` and build for production to `dist/`. |
 | `bun preview` | Preview the production build locally. |
-| `bun test:unit` | Run all Vitest unit tests. |
+| `bun test:unit` | Run all Vitest unit tests (jsdom environment, configured in `vite.config.ts`). |
 | `bun test:unit src/lib/date.test.ts` | Run a single test file. |
+| `bun test:unit run` | Run tests once without watch mode. |
 | `bun lint` | Run all linters (`oxlint --fix` then `eslint --fix --cache`). |
 | `bun run lint:oxlint` | Run only Oxlint. |
 | `bun run lint:eslint` | Run only ESLint. |

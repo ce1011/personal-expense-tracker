@@ -16,6 +16,7 @@
     "format": "oxfmt src/"
   },
   "dependencies": {
+    "@elysiajs/eden": "^1.4.9",
     "@tailwindcss/vite": "^4.3.0",
     "dexie": "^4.4.3",
     "lucide-vue-next": "^1.0.0",

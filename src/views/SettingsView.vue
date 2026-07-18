@@ -5,6 +5,7 @@ import {
   FileText,
   Globe,
   LayoutGrid,
+  LogOut,
   Receipt,
   RefreshCw,
   Tag,
@@ -18,8 +19,10 @@ import BaseCard from '@/components/base/BaseCard.vue'
 import RecoveryHistoryCard from '@/components/settings/RecoveryHistoryCard.vue'
 import RestoreImpactCard from '@/components/settings/RestoreImpactCard.vue'
 import { useAppData } from '@/composables/useAppData'
+import { useAuthStore } from '@/stores/auth'
 
 const appData = useAppData()
+const auth = useAuthStore()
 const router = useRouter()
 
 const menuItems = [
@@ -136,6 +139,11 @@ function refreshAppVersion(): void {
   const url = new URL(window.location.href)
   url.searchParams.set('refresh', String(Date.now()))
   window.location.replace(url.toString())
+}
+
+async function logout(): Promise<void> {
+  await auth.logout()
+  await router.replace({ name: 'login' })
 }
 </script>
 
@@ -277,5 +285,23 @@ function refreshAppVersion(): void {
       :restoring-snapshot-id="isRestoringSnapshotId"
       @restore="restoreSnapshot"
     />
+
+    <BaseCard>
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <LogOut class="size-5 text-danger" aria-hidden="true" />
+          <div>
+            <h2 class="text-h3 font-semibold text-text">帳戶</h2>
+            <p class="text-body-sm text-text-2">
+              {{ auth.user?.email ? `目前已登入：${auth.user.email}` : '管理你的登入狀態。' }}
+            </p>
+          </div>
+        </div>
+      </div>
+      <BaseButton class="mt-4" variant="secondary" @click="logout">
+        <LogOut class="size-4" aria-hidden="true" />
+        登出
+      </BaseButton>
+    </BaseCard>
   </div>
 </template>
