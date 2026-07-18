@@ -38,18 +38,21 @@ import type { AppSetting, FxRateRecord } from '@/types/app-data'
  * call picks it up automatically.
  *
  * Base URL resolution:
- * - `VITE_API_URL` (absolute origin) when set — e.g. a deployed API.
- * - The app's own origin by default (same-origin). Eden prepends `https://` to
- *   any domain string without a scheme, so a bare/empty value would wrongly
- *   become `https://auth/login`; using `window.location.origin` keeps requests
- *   on the current origin. In dev, `vite.config.ts` proxies the API prefixes
- *   below to `http://localhost:3000`, so the SPA calls the backend without CORS.
+ * - `VITE_API_URL` (absolute origin) when set — e.g. a deployed API. The URL is
+ *   used as-is, so backend routes are reached at `<origin>/auth`, ...
+ * - The app's own origin by default (same-origin). In dev, `vite.config.ts`
+ *   proxies `/api/*` to `http://localhost:3000/*` with the `/api` prefix removed,
+ *   so the SPA calls the backend without CORS by prefixing every route below
+ *   with `/api`. Eden prepends `https://` to any domain string without a scheme,
+ *   so `window.location.origin` is used to keep requests on the current origin.
  */
 const baseUrl =
   (import.meta.env.VITE_API_URL as string | undefined) ??
-  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+  (typeof window !== 'undefined'
+    ? `${window.location.origin}/api`
+    : 'http://localhost:3000/api')
 
-/** API path prefixes that the dev server proxies to the backend. */
+/** API path prefixes used by the backend. */
 export const API_PREFIXES = [
   '/auth',
   '/categories',
