@@ -255,7 +255,7 @@ export const api = {
   },
   transactionsQuery: {
     list: (params: TransactionsQueryParams = {}) =>
-      request<TransactionsQueryResult>(http.transactions.get(undefined, { query: params })),
+      request<TransactionsQueryResult>(http.transactions.get({ query: params })),
   },
   budgets: {
     summary: () => request<BudgetsSummary>(http.budgets.summary.get()),

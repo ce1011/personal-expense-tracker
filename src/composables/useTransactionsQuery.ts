@@ -3,15 +3,19 @@ import { computed, reactive, readonly, shallowRef, watch } from 'vue'
 import { api } from '@/api/client'
 import type { TransactionsQueryParams } from '@/api/types'
 import { useAppData } from '@/composables/useAppData'
+import { fromDateInputValue, startOfLocalDay } from '@/lib/date'
 
 export interface TransactionsFilterState {
   tripId: string
   kind: 'all' | 'expense' | 'income' | 'saving'
   categoryId: string
-  datePreset: 'all' | 'today' | 'cycle' | 'future'
+  datePreset: 'all' | 'today' | 'cycle' | 'previous' | 'future' | 'custom'
+  fromDate: string
+  toDate: string
   search: string
 }
 
+const DAY_MS = 86_400_000
 const DEBOUNCE_MS = 250
 
 /**
@@ -30,6 +34,8 @@ export function useTransactionsQuery() {
     kind: 'all',
     categoryId: 'all',
     datePreset: 'all',
+    fromDate: '',
+    toDate: '',
     search: '',
   })
 
@@ -40,6 +46,7 @@ export function useTransactionsQuery() {
   const error = shallowRef('')
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
+  let requestVersion = 0
 
   const groups = computed(() => result.value?.groups ?? [])
   const options = computed(() => result.value?.options)
@@ -54,26 +61,56 @@ export function useTransactionsQuery() {
   const fxRateMap = computed(() => appData.fxRateMap.value)
   const latestFxDate = computed(() => result.value?.latestFxDate ?? appData.latestFxDate.value)
 
+  function todayWindow(): { start: number; end: number } {
+    const now = new Date()
+    const start = startOfLocalDay(now)
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime()
+    return { start, end }
+  }
+
   function toQuery(): TransactionsQueryParams {
-    return {
+    const params: TransactionsQueryParams = {
       q: filters.search.trim() || undefined,
       kind: filters.kind,
       category_id: filters.categoryId,
       trip_id: filters.tripId,
       date_preset: filters.datePreset,
     }
+
+    if (filters.datePreset === 'today') {
+      const window = todayWindow()
+      params.from_date = String(window.start)
+      params.to_date = String(window.end)
+    } else if (filters.datePreset === 'future') {
+      params.from_date = String(todayWindow().end)
+    } else if (filters.datePreset === 'custom') {
+      params.from_date = filters.fromDate ? String(fromDateInputValue(filters.fromDate)) : undefined
+      params.to_date = filters.toDate
+        ? String(fromDateInputValue(filters.toDate) + DAY_MS)
+        : undefined
+    }
+
+    return params
   }
 
   async function refresh(): Promise<void> {
+    const version = ++requestVersion
     loading.value = true
     error.value = ''
 
     try {
-      result.value = await api.transactionsQuery.list(toQuery())
+      const nextResult = await api.transactionsQuery.list(toQuery())
+      if (version === requestVersion) {
+        result.value = nextResult
+      }
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : 'Unable to load transactions'
+      if (version === requestVersion) {
+        error.value = caught instanceof Error ? caught.message : 'Unable to load transactions'
+      }
     } finally {
-      loading.value = false
+      if (version === requestVersion) {
+        loading.value = false
+      }
     }
   }
 
@@ -87,7 +124,15 @@ export function useTransactionsQuery() {
   // Re-query on any filter change (search is debounced; selects feel instant
   // enough through the same short debounce).
   watch(
-    () => [filters.tripId, filters.kind, filters.categoryId, filters.datePreset, filters.search],
+    () => [
+      filters.tripId,
+      filters.kind,
+      filters.categoryId,
+      filters.datePreset,
+      filters.fromDate,
+      filters.toDate,
+      filters.search,
+    ],
     scheduleRefresh,
     { immediate: true },
   )
@@ -123,10 +168,30 @@ export function useTransactionsQuery() {
     },
   )
 
+  // A manually entered range is a date filter in its own right.
+  watch(
+    () => [filters.fromDate, filters.toDate],
+    ([fromDate, toDate]) => {
+      if (fromDate || toDate) {
+        filters.datePreset = 'custom'
+      } else if (filters.datePreset === 'custom') {
+        filters.datePreset = 'all'
+      }
+    },
+  )
+
+  function setDatePreset(value: TransactionsFilterState['datePreset']): void {
+    filters.fromDate = ''
+    filters.toDate = ''
+    filters.datePreset = value
+  }
+
   function resetFilters(): void {
     filters.tripId = appData.activeTripId.value || 'all'
     filters.kind = 'all'
     filters.categoryId = 'all'
+    filters.fromDate = ''
+    filters.toDate = ''
     filters.datePreset = 'all'
     filters.search = ''
   }
@@ -149,5 +214,6 @@ export function useTransactionsQuery() {
     error: readonly(error),
     refresh,
     resetFilters,
+    setDatePreset,
   }
 }

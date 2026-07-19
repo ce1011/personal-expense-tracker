@@ -29,7 +29,9 @@ const datePresetOptions: { value: typeof filters.datePreset; label: string }[] =
   { value: 'all', label: '全部' },
   { value: 'today', label: '今天' },
   { value: 'cycle', label: '本期' },
+  { value: 'previous', label: '上期' },
   { value: 'future', label: '未來' },
+  { value: 'custom', label: '自訂' },
 ]
 
 const availableCategories = computed(() => {
@@ -165,7 +167,7 @@ function setKind(value: typeof filters.kind): void {
 }
 
 function setDatePreset(value: typeof filters.datePreset): void {
-  filters.datePreset = value
+  query.setDatePreset(value)
 }
 
 function setTripFilter(tripId: string): void {
@@ -235,6 +237,17 @@ function setCategoryFilter(categoryId: string): void {
           >
             {{ option.label }}
           </button>
+        </div>
+
+        <div v-if="filters.datePreset === 'custom'" class="grid gap-3 sm:grid-cols-2">
+          <label class="grid gap-1.5 text-xs font-medium text-text-2">
+            開始日期
+            <BaseInput v-model="filters.fromDate" type="date" />
+          </label>
+          <label class="grid gap-1.5 text-xs font-medium text-text-2">
+            結束日期
+            <BaseInput v-model="filters.toDate" type="date" />
+          </label>
         </div>
 
         <div v-if="query.trips.value.length" class="grid gap-1.5">

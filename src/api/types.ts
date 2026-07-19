@@ -326,7 +326,9 @@ export interface TransactionsQueryParams {
   kind?: 'all' | 'expense' | 'income' | 'saving'
   category_id?: string
   trip_id?: string
-  date_preset?: 'all' | 'today' | 'cycle' | 'future'
+  date_preset?: 'all' | 'today' | 'cycle' | 'previous' | 'future' | 'custom'
+  from_date?: string
+  to_date?: string
 }
 
 export interface TransactionGroup {
