@@ -5,7 +5,9 @@ import { usePageData } from '@/composables/usePageData'
 
 /** Fixed-expenses page: recurring expenses, cycle fixed total, and upcoming bills. */
 export function useFixedExpensesData() {
-  const { data, loading, error, refresh } = usePageData(() => api.fixedExpenses.summary())
+  const { data, loading, error, refresh } = usePageData(() => api.fixedExpenses.summary(), {
+    scope: 'fixedExpenses',
+  })
 
   const fixedExpenses = computed(() => data.value?.fixedExpenses ?? [])
   const cycleFixedExpensesTotal = computed(() => data.value?.cycleFixedExpensesTotal ?? 0)

@@ -1,6 +1,6 @@
 import { treaty } from '@elysiajs/eden'
 
-import { getToken } from './tokenStore'
+import { getToken, notifyUnauthorized } from './tokenStore'
 import type {
   AppDataPayload,
   AuthResponse,
@@ -102,6 +102,7 @@ async function request<T>(promise: Promise<TreatyResult<T>>): Promise<T> {
   const { data, error, status } = await promise
 
   if (error || status < 200 || status >= 300) {
+    if (status === 401) notifyUnauthorized()
     throw new ApiError(status, error?.value ?? data)
   }
 

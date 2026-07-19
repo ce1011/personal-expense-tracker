@@ -1,6 +1,7 @@
 const TOKEN_STORAGE_KEY = 'expense-tracker.access-token'
 
 let memoryToken: string | null = null
+const unauthorizedListeners = new Set<() => void>()
 
 function storageAvailable(): boolean {
   try {
@@ -39,4 +40,17 @@ export function clearToken(): void {
   if (storageAvailable()) {
     globalThis.localStorage.removeItem(TOKEN_STORAGE_KEY)
   }
+}
+
+/** Subscribe to runtime authentication failures from the API client. */
+export function onUnauthorized(listener: () => void): () => void {
+  unauthorizedListeners.add(listener)
+  return () => unauthorizedListeners.delete(listener)
+}
+
+/** Clear credentials and notify auth-scoped state owners exactly once per session. */
+export function notifyUnauthorized(): void {
+  if (getToken() === null) return
+  clearToken()
+  for (const listener of unauthorizedListeners) listener()
 }

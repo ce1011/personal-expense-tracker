@@ -84,7 +84,7 @@ export interface AppContext {
   savingChallenges: SavingChallenge[]
 }
 
-const context = shallowRef<AppContext>({
+const EMPTY_CONTEXT: AppContext = {
   expenseCategories: [],
   incomeCategories: [],
   activeExpenseCategories: [],
@@ -96,31 +96,60 @@ const context = shallowRef<AppContext>({
   fxRateMap: new Map<SupportedCurrency, number>([['HKD', 1]]),
   latestFxDate: '',
   savingChallenges: [],
-})
+}
+
+const context = shallowRef<AppContext>(EMPTY_CONTEXT)
 
 const loading = shallowRef(false)
 const error = shallowRef('')
-/** Bumped on every successful mutation; pages watch this to re-fetch. */
+/** Bumped on every successful mutation; pages watch their relevant scope. */
 const contextVersion = shallowRef(0)
+const mutationVersions = {
+  dashboard: shallowRef(0),
+  transactions: shallowRef(0),
+  budgets: shallowRef(0),
+  categoryBudget: shallowRef(0),
+  fixedExpenses: shallowRef(0),
+  trips: shallowRef(0),
+  monthlySnapshot: shallowRef(0),
+}
+
+export type AppDataScope = keyof typeof mutationVersions
 const recoverySnapshots = shallowRef<
   Array<{ snapshotId: string; createdAt: number; reason: string }>
 >([])
 
-export function useAppData() {
-  const expenseCategories = computed(() => context.value.expenseCategories)
-  const incomeCategories = computed(() => context.value.incomeCategories)
-  const activeExpenseCategories = computed(() => context.value.activeExpenseCategories)
-  const activeIncomeCategories = computed(() => context.value.activeIncomeCategories)
-  const trips = computed(() => context.value.trips)
-  const activeTripId = computed(() => context.value.activeTripId)
-  const activeTrip = computed(() => context.value.activeTrip)
-  const currency = computed(() => context.value.currency)
-  const fxRateMap = computed(() => context.value.fxRateMap)
-  const latestFxDate = computed(() => context.value.latestFxDate)
-  const savingChallenges = computed(() => context.value.savingChallenges)
+// Context requests belong to an authenticated session. A generation prevents a
+// response for the previous account from replacing the current account's data.
+let contextGeneration = 0
+let contextRefreshPromise: Promise<void> | null = null
 
-  /** Load the small shared context (called once on app boot). */
-  async function refreshContext(): Promise<void> {
+async function resolveActiveTrip(): Promise<string> {
+  return (await getActiveTripId()) ?? ''
+}
+
+/** Clear all auth-scoped data before logout, 401 teardown, or account switch. */
+export function clearAppContext(): void {
+  contextGeneration += 1
+  contextRefreshPromise = null
+  context.value = EMPTY_CONTEXT
+  recoverySnapshots.value = []
+  loading.value = false
+  error.value = ''
+}
+
+/** Initialize the shared context for the current authenticated account. */
+export function initializeAppContext(): Promise<void> {
+  return refreshAppContext()
+}
+
+async function refreshAppContext(): Promise<void> {
+  if (contextRefreshPromise) {
+    return contextRefreshPromise
+  }
+
+  const generation = contextGeneration
+  const refreshPromise = (async () => {
     loading.value = true
     error.value = ''
 
@@ -135,6 +164,11 @@ export function useAppData() {
           getFxContext(),
           resolveActiveTrip(),
         ])
+
+      // The account may have changed while the requests were in flight.
+      if (generation !== contextGeneration) {
+        return
+      }
 
       const activeTripIdValue = tripList.some((trip) => trip.trip_id === activeId) ? activeId : ''
 
@@ -152,10 +186,42 @@ export function useAppData() {
         savingChallenges: challengeList,
       }
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : 'Unable to load app data'
+      if (generation === contextGeneration) {
+        error.value = caught instanceof Error ? caught.message : 'Unable to load app data'
+      }
     } finally {
-      loading.value = false
+      if (generation === contextGeneration) {
+        loading.value = false
+      }
     }
+  })()
+
+  contextRefreshPromise = refreshPromise
+  try {
+    await refreshPromise
+  } finally {
+    if (contextRefreshPromise === refreshPromise) {
+      contextRefreshPromise = null
+    }
+  }
+}
+
+export function useAppData() {
+  const expenseCategories = computed(() => context.value.expenseCategories)
+  const incomeCategories = computed(() => context.value.incomeCategories)
+  const activeExpenseCategories = computed(() => context.value.activeExpenseCategories)
+  const activeIncomeCategories = computed(() => context.value.activeIncomeCategories)
+  const trips = computed(() => context.value.trips)
+  const activeTripId = computed(() => context.value.activeTripId)
+  const activeTrip = computed(() => context.value.activeTrip)
+  const currency = computed(() => context.value.currency)
+  const fxRateMap = computed(() => context.value.fxRateMap)
+  const latestFxDate = computed(() => context.value.latestFxDate)
+  const savingChallenges = computed(() => context.value.savingChallenges)
+
+  /** Load the small shared context (called after authentication). */
+  async function refreshContext(): Promise<void> {
+    await refreshAppContext()
   }
 
   /** Back-compat alias: the app shell calls `refresh()` on boot. */
@@ -174,7 +240,7 @@ export function useAppData() {
    */
   async function withAction(
     action: () => Promise<void>,
-    options: { reloadContext?: boolean } = {},
+    options: { reloadContext?: boolean; scopes?: AppDataScope[] } = {},
   ): Promise<void> {
     error.value = ''
 
@@ -186,6 +252,9 @@ export function useAppData() {
     }
 
     contextVersion.value += 1
+    for (const scope of options.scopes ?? []) {
+      mutationVersions[scope].value += 1
+    }
 
     if (options.reloadContext) {
       await refreshContext()
@@ -221,6 +290,7 @@ export function useAppData() {
     loading: readonly(loading),
     error: readonly(error),
     contextVersion: readonly(contextVersion),
+    mutationVersion: (scope: AppDataScope) => readonly(mutationVersions[scope]),
     recoverySnapshots: readonly(recoverySnapshots),
 
     // Lifecycle.
@@ -228,53 +298,108 @@ export function useAppData() {
     refreshContext,
 
     // Transaction mutations (do not reload shared context).
-    addExpense: (draft: ExpenseDraft) => withAction(() => createExpense(draft)),
-    addIncome: (draft: IncomeDraft) => withAction(() => createIncome(draft)),
-    addSaving: (draft: SavingDraft) => withAction(() => createSaving(draft)),
+    addExpense: (draft: ExpenseDraft) =>
+      withAction(() => createExpense(draft), {
+        scopes: ['dashboard', 'transactions', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
+      }),
+    addIncome: (draft: IncomeDraft) =>
+      withAction(() => createIncome(draft), {
+        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+      }),
+    addSaving: (draft: SavingDraft) =>
+      withAction(() => createSaving(draft), {
+        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+      }),
+    // Transaction mutations invalidate only aggregates that include transactions.
     updateExpense: (transactionId: string, draft: ExpenseDraft) =>
-      withAction(() => updateExpense(transactionId, draft)),
+      withAction(() => updateExpense(transactionId, draft), {
+        scopes: ['dashboard', 'transactions', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
+      }),
     updateIncome: (transactionId: string, draft: IncomeDraft) =>
-      withAction(() => updateIncome(transactionId, draft)),
+      withAction(() => updateIncome(transactionId, draft), {
+        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+      }),
     updateSaving: (transactionId: string, draft: SavingDraft) =>
-      withAction(() => updateSaving(transactionId, draft)),
-    deleteExpense: (transactionId: string) => withAction(() => deleteExpense(transactionId)),
-    deleteIncome: (transactionId: string) => withAction(() => deleteIncome(transactionId)),
-    deleteSaving: (transactionId: string) => withAction(() => deleteSaving(transactionId)),
+      withAction(() => updateSaving(transactionId, draft), {
+        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+      }),
+    deleteExpense: (transactionId: string) =>
+      withAction(() => deleteExpense(transactionId), {
+        scopes: ['dashboard', 'transactions', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
+      }),
+    deleteIncome: (transactionId: string) =>
+      withAction(() => deleteIncome(transactionId), {
+        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+      }),
+    deleteSaving: (transactionId: string) =>
+      withAction(() => deleteSaving(transactionId), {
+        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+      }),
     importTransactions: (records: readonly ImportTransactionRecord[]) =>
-      withAction(() => importTransactions(records)),
+      withAction(() => importTransactions(records), {
+        scopes: ['dashboard', 'transactions', 'categoryBudget', 'monthlySnapshot'],
+      }),
 
     // Budget cycle / target limits.
-    saveCycle: (draft: CycleDraft, cycleId?: string) => withAction(() => saveCycle(draft, cycleId)),
+    saveCycle: (draft: CycleDraft, cycleId?: string) =>
+      withAction(() => saveCycle(draft, cycleId), {
+        scopes: ['dashboard', 'budgets', 'categoryBudget', 'monthlySnapshot'],
+      }),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>
-      withAction(() => saveTargetLimit(cycleId, categoryId, amount)),
+      withAction(() => saveTargetLimit(cycleId, categoryId, amount), {
+        scopes: ['dashboard', 'budgets', 'categoryBudget'],
+      }),
 
     // Categories (reload shared context so pickers stay fresh).
     saveExpenseCategory: (draft: CategoryDraft, categoryId?: string) =>
-      withAction(() => saveExpenseCategory(draft, categoryId), { reloadContext: true }),
+      withAction(() => saveExpenseCategory(draft, categoryId), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions', 'budgets', 'categoryBudget', 'fixedExpenses'],
+      }),
     saveIncomeCategory: (draft: CategoryDraft, categoryId?: string) =>
-      withAction(() => saveIncomeCategory(draft, categoryId), { reloadContext: true }),
+      withAction(() => saveIncomeCategory(draft, categoryId), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions'],
+      }),
     deleteExpenseCategory: (categoryId: string) =>
-      withAction(() => softDeleteExpenseCategory(categoryId), { reloadContext: true }),
+      withAction(() => softDeleteExpenseCategory(categoryId), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions', 'budgets', 'categoryBudget', 'fixedExpenses'],
+      }),
     deleteIncomeCategory: (categoryId: string) =>
-      withAction(() => softDeleteIncomeCategory(categoryId), { reloadContext: true }),
+      withAction(() => softDeleteIncomeCategory(categoryId), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions'],
+      }),
 
     // Saving challenges (reload context; quick-add lists them).
     addSavingChallenge: (name: string, target_amount: number) =>
-      withAction(() => createSavingChallenge(name, target_amount), { reloadContext: true }),
+      withAction(() => createSavingChallenge(name, target_amount), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions'],
+      }),
     updateSavingChallenge: (
       challengeId: string,
       draft: Pick<SavingChallenge, 'name' | 'target_amount' | 'status'>,
-    ) => withAction(() => updateSavingChallenge(challengeId, draft), { reloadContext: true }),
+    ) =>
+      withAction(() => updateSavingChallenge(challengeId, draft), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions'],
+      }),
     deleteSavingChallenge: (challengeId: string) =>
-      withAction(() => deleteSavingChallenge(challengeId), { reloadContext: true }),
+      withAction(() => deleteSavingChallenge(challengeId), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions'],
+      }),
 
     // Trips (reload context; header + quick-add read trips/active trip).
-    addTrip: (draft: TripDraft) => withAction(() => saveTrip(draft), { reloadContext: true }),
+    addTrip: (draft: TripDraft) =>
+      withAction(() => saveTrip(draft), { reloadContext: true, scopes: ['dashboard', 'transactions', 'trips'] }),
     updateTrip: (tripId: string, draft: TripDraft) => {
       const trip = requireTrip(tripId)
       return withAction(
         () => saveTrip(draft, { trip_id: trip.trip_id, created_at: trip.created_at }),
-        { reloadContext: true },
+        { reloadContext: true, scopes: ['dashboard', 'transactions', 'trips'] },
       )
     },
     completeTrip: (tripId: string) => {
@@ -294,7 +419,7 @@ export function useAppData() {
             },
             { trip_id: trip.trip_id, created_at: trip.created_at },
           ),
-        { reloadContext: true },
+        { reloadContext: true, scopes: ['dashboard', 'transactions', 'trips'] },
       )
     },
     setActiveTrip: (tripId?: string) =>

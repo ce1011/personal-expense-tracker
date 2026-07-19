@@ -4,6 +4,7 @@ import { summarizeRestoreImpact, validateSnapshotPayload } from '@/lib/recovery'
 import type { ImportTransactionRecord } from '@/lib/transactionImport'
 import type {
   AppDataPayload,
+  AppSetting,
   BudgetCycle,
   CategoryDraft,
   CycleDraft,
@@ -37,6 +38,19 @@ import type {
  */
 
 const ACTIVE_TRIP_SETTING_NAME = 'active_trip_id'
+
+let settingsRequest: Promise<AppSetting[]> | null = null
+
+/** Share the in-flight settings read used by the initial context bootstrap. */
+function listSettings(): Promise<AppSetting[]> {
+  if (!settingsRequest) {
+    settingsRequest = api.settings.list().finally(() => {
+      settingsRequest = null
+    })
+  }
+
+  return settingsRequest
+}
 
 type ImportTransactionRecordWithTrip = ImportTransactionRecord & { trip_id?: string }
 type TripSaveMetadata = {
@@ -75,7 +89,7 @@ export async function listSavingChallenges(): Promise<SavingChallenge[]> {
 
 /** Fetch the currency setting (falls back to HKD when unset). */
 export async function getCurrency(): Promise<string> {
-  const settings = await api.settings.list()
+  const settings = await listSettings()
   return settings.find((setting) => setting.name === 'currency')?.parameter ?? 'HKD'
 }
 
@@ -311,7 +325,7 @@ export async function saveTrip(
 }
 
 export async function getActiveTripId(): Promise<string | undefined> {
-  const settings = await api.settings.list()
+  const settings = await listSettings()
   const setting = settings.find((entry) => entry.name === ACTIVE_TRIP_SETTING_NAME)
 
   return setting?.parameter || undefined

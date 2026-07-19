@@ -138,7 +138,7 @@ export function useTransactionsQuery() {
   )
 
   // Re-query when a mutation completes elsewhere (add/edit/delete transaction).
-  watch(appData.contextVersion, scheduleRefresh)
+  watch(appData.mutationVersion('transactions'), scheduleRefresh)
 
   // Keep the trip filter aligned with the global trip-mode selection.
   watch(

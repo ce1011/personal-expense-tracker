@@ -2,7 +2,8 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import { api, ApiError } from '@/api/client'
-import { clearToken, getToken, setToken } from '@/api/tokenStore'
+import { clearAppContext } from '@/composables/useAppData'
+import { clearToken, getToken, onUnauthorized, setToken } from '@/api/tokenStore'
 import type { AuthUser } from '@/api/types'
 
 /**
@@ -50,6 +51,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email: string, password: string): Promise<void> {
     const response = await api.auth.login({ email, password })
+    // Prevent a successful account switch from retaining the previous user's
+    // context while the app watcher initializes the new session.
+    clearAppContext()
     setToken(response.accessToken)
     hasToken.value = true
     user.value = response.user
@@ -57,6 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function register(email: string, password: string, name?: string): Promise<void> {
     const response = await api.auth.register({ email, password, name })
+    clearAppContext()
     setToken(response.accessToken)
     hasToken.value = true
     user.value = response.user
@@ -78,10 +83,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearSession(): void {
+    clearAppContext()
     clearToken()
     hasToken.value = false
     user.value = null
   }
+
+  // The API layer owns status handling; the store owns reactive session teardown.
+  onUnauthorized(clearSession)
 
   /** Test seam: reset the restored-session flag so the guard re-evaluates. */
   function _resetReady(): void {

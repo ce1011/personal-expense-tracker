@@ -1,6 +1,6 @@
 import { onMounted, readonly, shallowRef, watch } from 'vue'
 
-import { useAppData } from '@/composables/useAppData'
+import { useAppData, type AppDataScope } from '@/composables/useAppData'
 
 /**
  * Generic per-page data loader.
@@ -13,7 +13,10 @@ import { useAppData } from '@/composables/useAppData'
  *   (i.e. after any add/update/delete anywhere in the app), so an open page
  *   always reflects the latest server state without re-fetching on focus.
  */
-export function usePageData<T>(loader: () => Promise<T>, options: { immediate?: boolean } = {}) {
+export function usePageData<T>(
+  loader: () => Promise<T>,
+  options: { immediate?: boolean; scope?: AppDataScope } = {},
+) {
   const appData = useAppData()
   const data = shallowRef<T | undefined>(undefined)
   const loading = shallowRef(false)
@@ -38,8 +41,10 @@ export function usePageData<T>(loader: () => Promise<T>, options: { immediate?: 
     })
   }
 
-  // Re-fetch this page's aggregate whenever any mutation completes elsewhere.
-  watch(appData.contextVersion, () => {
+  // Re-fetch only for mutations that can affect this aggregate. Consumers that
+  // omit a scope retain the old broad invalidation behavior for compatibility.
+  const invalidation = options.scope ? appData.mutationVersion(options.scope) : appData.contextVersion
+  watch(invalidation, () => {
     void refresh()
   })
 

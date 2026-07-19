@@ -5,7 +5,9 @@ import { usePageData } from '@/composables/usePageData'
 
 /** Monthly-snapshot page: the single aggregate the page renders. */
 export function useMonthlySnapshotData() {
-  const { data, loading, error, refresh } = usePageData(() => api.monthlySnapshot.get())
+  const { data, loading, error, refresh } = usePageData(() => api.monthlySnapshot.get(), {
+    scope: 'monthlySnapshot',
+  })
 
   const snapshot = computed(() => data.value?.monthlySnapshot)
   const currency = computed(() => data.value?.currency ?? 'HKD')

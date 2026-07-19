@@ -14,7 +14,9 @@ import { buildCategoryProgressRows } from '@/lib/categoryProgress'
  * top of those server-provided inputs.
  */
 export function useCategoryBudgetData() {
-  const { data, loading, error, refresh } = usePageData(() => api.categoryBudget.summary())
+  const { data, loading, error, refresh } = usePageData(() => api.categoryBudget.summary(), {
+    scope: 'categoryBudget',
+  })
 
   const budgetProgressMode = shallowRef<'today' | 'cycle'>('today')
 

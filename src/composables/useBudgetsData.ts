@@ -5,7 +5,9 @@ import { usePageData } from '@/composables/usePageData'
 
 /** Budgets page: cycles, per-cycle target limits, and editable categories. */
 export function useBudgetsData() {
-  const { data, loading, error, refresh } = usePageData(() => api.budgets.summary())
+  const { data, loading, error, refresh } = usePageData(() => api.budgets.summary(), {
+    scope: 'budgets',
+  })
 
   const cycles = computed(() => data.value?.cycles ?? [])
   const targetExpenses = computed(() => data.value?.targetExpenses ?? [])

@@ -1,25 +1,63 @@
-import { computed } from 'vue'
+import type { ComputedRef } from 'vue'
+import { computed, readonly, shallowRef, watch } from 'vue'
 
 import { api } from '@/api/client'
-import { usePageData } from '@/composables/usePageData'
+import { useAppData } from '@/composables/useAppData'
+import type { DashboardData } from '@/api/types'
+
+const dashboard = shallowRef<DashboardData | undefined>(undefined)
+const loading = shallowRef(false)
+const error = shallowRef('')
+let request: Promise<void> | null = null
 
 /**
  * Dashboard (homepage) data.
  *
- * One call — `GET /dashboard` — returns everything the homepage renders, all
- * computed server-side. No client-side derivation or filtering happens here.
+ * The shell also needs the dashboard's current cycle, so this composable keeps
+ * one shared request/state for both consumers. Concurrent startup refreshes
+ * join the same promise instead of issuing duplicate GET /dashboard calls.
  */
-export function useDashboardData() {
-  const { data, loading, error, refresh } = usePageData(() => api.dashboard.get())
+export function useDashboardData(options: { enabled?: ComputedRef<boolean> } = {}) {
+  const appData = useAppData()
+  const enabled = options.enabled ?? computed(() => true)
 
-  const dashboard = computed(() => data.value)
-  const isTripMode = computed(() => data.value?.isTripMode ?? false)
+  async function refresh(): Promise<void> {
+    if (request) return request
+
+    loading.value = true
+    error.value = ''
+    request = api.dashboard
+      .get()
+      .then((nextDashboard) => {
+        dashboard.value = nextDashboard
+      })
+      .catch((caught) => {
+        error.value = caught instanceof Error ? caught.message : 'Unable to load dashboard'
+      })
+      .finally(() => {
+        loading.value = false
+        request = null
+      })
+
+    return request
+  }
+
+  watch(
+    enabled,
+    (isEnabled) => {
+      if (isEnabled) void refresh()
+    },
+    { immediate: true },
+  )
+  watch(appData.mutationVersion('dashboard'), () => {
+    if (enabled.value) void refresh()
+  })
 
   return {
-    dashboard,
-    isTripMode,
-    loading,
-    error,
+    dashboard: computed(() => dashboard.value),
+    isTripMode: computed(() => dashboard.value?.isTripMode ?? false),
+    loading: readonly(loading),
+    error: readonly(error),
     refresh,
   }
 }

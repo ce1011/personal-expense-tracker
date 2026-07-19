@@ -329,6 +329,8 @@ export interface TransactionsQueryParams {
   date_preset?: 'all' | 'today' | 'cycle' | 'previous' | 'future' | 'custom'
   from_date?: string
   to_date?: string
+  cursor?: string
+  limit?: number
 }
 
 export interface TransactionGroup {
@@ -337,8 +339,11 @@ export interface TransactionGroup {
 }
 
 export interface TransactionsQueryResult {
-  transactions: CombinedTransaction[]
   groups: TransactionGroup[]
+  page: {
+    next_cursor: string | null
+    has_more: boolean
+  }
   options: {
     trips: TripSession[]
     expenseCategories: ExpenseCategory[]

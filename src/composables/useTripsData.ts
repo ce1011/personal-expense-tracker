@@ -5,7 +5,9 @@ import { usePageData } from '@/composables/usePageData'
 
 /** Trips page: trips, the active trip + budget helper, and per-trip spent totals. */
 export function useTripsData() {
-  const { data, loading, error, refresh } = usePageData(() => api.tripsSummary.get())
+  const { data, loading, error, refresh } = usePageData(() => api.tripsSummary.get(), {
+    scope: 'trips',
+  })
 
   const trips = computed(() => data.value?.trips ?? [])
   const activeTripId = computed(() => data.value?.activeTripId ?? '')
