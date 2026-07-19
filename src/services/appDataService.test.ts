@@ -39,7 +39,7 @@ const {
   mockIncomeCategoryCreate,
   mockIncomeCategoryUpdate,
   mockIncomeCategoryRemove,
-  mockFxRatesList,
+  mockFxRatesRefresh,
 } = vi.hoisted(() => ({
   mockDataExport: vi.fn(),
   mockDataImport: vi.fn(),
@@ -77,7 +77,7 @@ const {
   mockIncomeCategoryCreate: vi.fn(),
   mockIncomeCategoryUpdate: vi.fn(),
   mockIncomeCategoryRemove: vi.fn(),
-  mockFxRatesList: vi.fn(),
+  mockFxRatesRefresh: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
@@ -147,7 +147,7 @@ vi.mock('@/api/client', () => ({
       },
     },
     fxRates: {
-      list: mockFxRatesList,
+      refresh: mockFxRatesRefresh,
     },
   },
   ApiError: class ApiError extends Error {
@@ -290,12 +290,13 @@ describe('context reads', () => {
   })
 
   test('builds an FX rate map with HKD base and the latest source date', async () => {
-    mockFxRatesList.mockResolvedValue([
+    mockFxRatesRefresh.mockResolvedValue([
       { currency_code: 'JPY', rate_to_hkd: 0.05, source_date: '2026-07-01' },
       { currency_code: 'USD', rate_to_hkd: 7.8, source_date: '2026-07-03' },
     ])
 
     const fx = await getFxContext()
+    expect(mockFxRatesRefresh).toHaveBeenCalledOnce()
     expect(fx.fxRateMap.get('HKD')).toBe(1)
     expect(fx.fxRateMap.get('JPY')).toBe(0.05)
     expect(fx.fxRateMap.get('USD')).toBe(7.8)
@@ -303,7 +304,7 @@ describe('context reads', () => {
   })
 
   test('returns an empty latest FX date when no rates exist', async () => {
-    mockFxRatesList.mockResolvedValue([])
+    mockFxRatesRefresh.mockResolvedValue([])
 
     const fx = await getFxContext()
     expect(fx.fxRateMap.get('HKD')).toBe(1)

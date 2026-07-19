@@ -29,8 +29,8 @@ import type {
  *   `exchange_rate_hkd` and the server derives `amount = original × rate`.
  * - Every mutation writes a full-payload snapshot server-side (trimmed to the
  *   newest 20), so the client no longer maintains local snapshots.
- * - FX rates are synced by the backend (`GET /data/sync`), so
- *   `syncFxRatesIfNeeded` is a no-op here.
+ * - FX rates are refreshed by the backend (`GET /data/sync` / `POST
+ *   /fx-rates/refresh`) when the shared app context initializes.
  * - Page *reads* no longer go through the monolithic `/data/export`; each page
  *   calls its own aggregate endpoint (see `src/composables/use*Data.ts`). This
  *   module only fetches the small shared "context" lists (categories, trips,
@@ -105,7 +105,7 @@ export interface FxContext {
 
 /** FX rates for quick-add conversion (HKD base, plus the latest source date). */
 export async function getFxContext(): Promise<FxContext> {
-  const rates = await api.fxRates.list()
+  const rates = await api.fxRates.refresh()
   const entries = rates.map((rate) => [rate.currency_code, rate.rate_to_hkd] as const)
   const fxRateMap = new Map<SupportedCurrency, number>([['HKD', 1], ...entries])
   const latestFxDate = [...rates].sort((a, b) => b.source_date.localeCompare(a.source_date))[0]
