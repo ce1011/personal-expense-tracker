@@ -1,0 +1,79 @@
+import { computed, defineComponent, h, nextTick } from 'vue'
+import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+
+const { mockTransactionsList } = vi.hoisted(() => ({
+  mockTransactionsList: vi.fn(),
+}))
+
+const appData = {
+  currency: computed(() => 'HKD'),
+  fxRateMap: computed(() =>
+    new Map([
+      ['HKD', 1],
+      ['USD', 7.8],
+    ]),
+  ),
+  latestFxDate: computed(() => '2026-07-20'),
+  activeTripId: computed(() => ''),
+  mutationVersion: vi.fn(() => computed(() => 0)),
+}
+
+vi.mock('@/api/client', () => ({
+  api: {
+    transactionsQuery: {
+      list: mockTransactionsList,
+    },
+  },
+}))
+
+vi.mock('@/composables/useAppData', () => ({
+  useAppData: () => appData,
+}))
+
+import { useTransactionsQuery } from './useTransactionsQuery'
+
+function captureQuery() {
+  let query: ReturnType<typeof useTransactionsQuery> | undefined
+  const Host = defineComponent({
+    setup() {
+      query = useTransactionsQuery()
+      return () => h('div')
+    },
+  })
+  mount(Host)
+  if (!query) throw new Error('query was not captured')
+  return query
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockTransactionsList.mockResolvedValue({
+    groups: [],
+    page: { next_cursor: null, has_more: false },
+    options: {
+      trips: [],
+      expenseCategories: [],
+      incomeCategories: [],
+      savingCategories: [],
+      activeTripId: '',
+    },
+    currency: 'HKD',
+    expenseCategories: [],
+    incomeCategories: [],
+    savingChallenges: [],
+    fxRateMap: { HKD: 1 },
+    latestFxDate: '',
+  })
+})
+
+describe('useTransactionsQuery FX context', () => {
+  test('keeps refreshed global rates when an older aggregate has only fallback FX data', async () => {
+    const query = captureQuery()
+    await query.refresh()
+    await nextTick()
+
+    expect(query.fxRateMap.value.get('USD')).toBe(7.8)
+    expect(query.latestFxDate.value).toBe('2026-07-20')
+  })
+})

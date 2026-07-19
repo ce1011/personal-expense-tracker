@@ -3,6 +3,7 @@ import { computed, reactive, readonly, shallowRef, watch } from 'vue'
 import { api } from '@/api/client'
 import type { TransactionsQueryParams } from '@/api/types'
 import { useAppData } from '@/composables/useAppData'
+import type { SupportedCurrency } from '@/types/app-data'
 import { fromDateInputValue, startOfLocalDay } from '@/lib/date'
 
 export interface TransactionsFilterState {
@@ -58,8 +59,26 @@ export function useTransactionsQuery() {
   const savingCategoryOptions = computed(() => options.value?.savingCategories ?? [])
   const savingChallenges = computed(() => result.value?.savingChallenges ?? [])
   const trips = computed(() => options.value?.trips ?? [])
-  const fxRateMap = computed(() => appData.fxRateMap.value)
-  const latestFxDate = computed(() => result.value?.latestFxDate ?? appData.latestFxDate.value)
+  const fxRateMap = computed(() => {
+    const merged = new Map<SupportedCurrency, number>()
+
+    for (const [currencyCode, rate] of Object.entries(result.value?.fxRateMap ?? {})) {
+      if (typeof rate === 'number' && rate > 0) {
+        merged.set(currencyCode as SupportedCurrency, rate)
+      }
+    }
+
+    // The aggregate can be fetched just before the global refresh completes.
+    // Apply global rates last so the freshly refreshed values win that race.
+    for (const [currencyCode, rate] of appData.fxRateMap.value) {
+      merged.set(currencyCode, rate)
+    }
+
+    return merged
+  })
+  const latestFxDate = computed(
+    () => result.value?.latestFxDate || appData.latestFxDate.value,
+  )
 
   function todayWindow(): { start: number; end: number } {
     const now = new Date()

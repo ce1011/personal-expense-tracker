@@ -92,6 +92,9 @@ type TreatyProxy = Record<string | symbol, any>
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const http = treaty(baseUrl, {
+  // API response types describe wire-format strings. Eden otherwise converts
+  // date-looking strings (including FX `source_date`) into Date instances.
+  parseDate: false,
   headers: () => {
     const token = getToken()
     return token ? { authorization: `Bearer ${token}` } : {}

@@ -188,6 +188,25 @@ describe('useAppData context', () => {
     expect(store.activeTrip.value).toBeUndefined()
   })
 
+  test('keeps refreshed FX data when another context request fails', async () => {
+    mockListExpenseCategories.mockRejectedValue(new Error('network down'))
+    mockGetFxContext.mockResolvedValue({
+      fxRateMap: new Map([
+        ['HKD', 1],
+        ['USD', 7.8],
+      ]),
+      latestFxDate: '2026-07-20',
+    })
+
+    const store = captureStore()
+    await store.refreshContext()
+
+    expect(store.error.value).toBe('network down')
+    expect(store.fxRateMap.value.get('USD')).toBe(7.8)
+    expect(store.latestFxDate.value).toBe('2026-07-20')
+    expect(store.loading.value).toBe(false)
+  })
+
   test('surfaces an error message when the context fails to load', async () => {
     mockListExpenseCategories.mockRejectedValue(new Error('network down'))
 

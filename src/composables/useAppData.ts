@@ -154,36 +154,65 @@ async function refreshAppContext(): Promise<void> {
     error.value = ''
 
     try {
-      const [expenseCats, incomeCats, tripList, challengeList, currencyCode, fx, activeId] =
-        await Promise.all([
+      const [sharedResult, fxResult] = await Promise.allSettled([
+        Promise.all([
           listExpenseCategories(),
           listIncomeCategories(),
           listTrips(),
           listSavingChallenges(),
           getCurrency(),
-          getFxContext(),
           resolveActiveTrip(),
-        ])
+        ]),
+        getFxContext(),
+      ])
 
       // The account may have changed while the requests were in flight.
       if (generation !== contextGeneration) {
         return
       }
 
-      const activeTripIdValue = tripList.some((trip) => trip.trip_id === activeId) ? activeId : ''
+      const fx =
+        fxResult.status === 'fulfilled'
+          ? fxResult.value
+          : {
+              fxRateMap: context.value.fxRateMap,
+              latestFxDate: context.value.latestFxDate,
+            }
 
-      context.value = {
-        expenseCategories: expenseCats,
-        incomeCategories: incomeCats,
-        activeExpenseCategories: expenseCats.filter((category) => !category.deleted),
-        activeIncomeCategories: incomeCats.filter((category) => !category.deleted),
-        trips: tripList,
-        activeTripId: activeTripIdValue,
-        activeTrip: tripList.find((trip) => trip.trip_id === activeTripIdValue),
-        currency: currencyCode,
-        fxRateMap: fx.fxRateMap,
-        latestFxDate: fx.latestFxDate,
-        savingChallenges: challengeList,
+      if (sharedResult.status === 'fulfilled') {
+        const [expenseCats, incomeCats, tripList, challengeList, currencyCode, activeId] =
+          sharedResult.value
+        const activeTripIdValue = tripList.some((trip) => trip.trip_id === activeId) ? activeId : ''
+
+        context.value = {
+          expenseCategories: expenseCats,
+          incomeCategories: incomeCats,
+          activeExpenseCategories: expenseCats.filter((category) => !category.deleted),
+          activeIncomeCategories: incomeCats.filter((category) => !category.deleted),
+          trips: tripList,
+          activeTripId: activeTripIdValue,
+          activeTrip: tripList.find((trip) => trip.trip_id === activeTripIdValue),
+          currency: currencyCode,
+          fxRateMap: fx.fxRateMap,
+          latestFxDate: fx.latestFxDate,
+          savingChallenges: challengeList,
+        }
+      } else if (fxResult.status === 'fulfilled') {
+        context.value = {
+          ...context.value,
+          fxRateMap: fx.fxRateMap,
+          latestFxDate: fx.latestFxDate,
+        }
+      }
+
+      const failure =
+        sharedResult.status === 'rejected'
+          ? sharedResult.reason
+          : fxResult.status === 'rejected'
+            ? fxResult.reason
+            : undefined
+      if (failure !== undefined) {
+        error.value = failure instanceof Error ? failure.message : 'Unable to load app data'
       }
     } catch (caught) {
       if (generation === contextGeneration) {
