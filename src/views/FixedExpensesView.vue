@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue'
+import { shallowRef } from 'vue'
 import { Plus, Receipt } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -9,27 +9,24 @@ import SkeletonList from '@/components/base/SkeletonList.vue'
 import FixedExpenseForm from '@/components/fixedExpenses/FixedExpenseForm.vue'
 import FixedExpensesList from '@/components/fixedExpenses/FixedExpensesList.vue'
 import { useAppData } from '@/composables/useAppData'
+import { useFixedExpensesData } from '@/composables/useFixedExpensesData'
 import { formatCurrency } from '@/lib/formatters'
 import type { ExpenseDraft, ExpenseTransaction } from '@/types/app-data'
 
 const appData = useAppData()
+const {
+  fixedExpenses,
+  cycleFixedExpensesTotal,
+  upcomingBills,
+  activeExpenseCategories,
+  currency,
+  averageAmount,
+  loading,
+  error,
+} = useFixedExpensesData()
+
 const isFormOpen = shallowRef(false)
 const editingTransaction = shallowRef<ExpenseTransaction | undefined>(undefined)
-
-const fixedExpenses = computed(() =>
-  appData.data.value.expenses.filter((expense) => expense.recurring === true),
-)
-
-const averageAmount = computed(() => {
-  if (fixedExpenses.value.length === 0) {
-    return 0
-  }
-
-  return (
-    fixedExpenses.value.reduce((sum, expense) => sum + expense.amount, 0) /
-    fixedExpenses.value.length
-  )
-})
 
 function openCreate(): void {
   editingTransaction.value = undefined
@@ -75,11 +72,11 @@ async function deleteExpense(transactionId: string): Promise<void> {
       </BaseButton>
     </header>
 
-    <p v-if="appData.error.value" class="rounded-xl bg-danger/5 px-3 py-2 text-body-sm text-danger">
-      {{ appData.error.value }}
+    <p v-if="error" class="rounded-xl bg-danger/5 px-3 py-2 text-body-sm text-danger">
+      {{ error }}
     </p>
 
-    <section v-if="appData.loading.value" class="grid grid-cols-2 gap-3 md:grid-cols-3">
+    <section v-if="loading" class="grid grid-cols-2 gap-3 md:grid-cols-3">
       <SkeletonCard />
       <SkeletonCard />
       <SkeletonCard />
@@ -94,7 +91,7 @@ async function deleteExpense(transactionId: string): Promise<void> {
               本期固定支出
             </p>
             <p class="mt-1 text-amount font-bold text-text">
-              {{ formatCurrency(appData.cycleFixedExpensesTotal.value, appData.currency.value) }}
+              {{ formatCurrency(cycleFixedExpensesTotal, currency) }}
             </p>
           </div>
         </div>
@@ -106,9 +103,7 @@ async function deleteExpense(transactionId: string): Promise<void> {
             <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">
               即將到期帳單
             </p>
-            <p class="mt-1 text-amount font-bold text-text">
-              {{ appData.upcomingBills.value.length }} 筆
-            </p>
+            <p class="mt-1 text-amount font-bold text-text">{{ upcomingBills.length }} 筆</p>
           </div>
         </div>
       </BaseCard>
@@ -120,28 +115,28 @@ async function deleteExpense(transactionId: string): Promise<void> {
               平均每筆固定開支
             </p>
             <p class="mt-1 text-amount font-bold text-text">
-              {{ formatCurrency(averageAmount, appData.currency.value) }}
+              {{ formatCurrency(averageAmount, currency) }}
             </p>
           </div>
         </div>
       </BaseCard>
     </section>
 
-    <SkeletonList v-if="appData.loading.value" :rows="4" />
+    <SkeletonList v-if="loading" :rows="4" />
 
     <FixedExpensesList
       v-else
       :fixed-expenses="fixedExpenses"
-      :expense-categories="appData.activeExpenseCategories.value"
-      :currency="appData.currency.value"
+      :expense-categories="activeExpenseCategories"
+      :currency="currency"
       @edit="openEdit"
       @delete="deleteExpense"
     />
 
     <FixedExpenseForm
       :show="isFormOpen"
-      :expense-categories="appData.activeExpenseCategories.value"
-      :currency="appData.currency.value"
+      :expense-categories="activeExpenseCategories"
+      :currency="currency"
       :transaction="editingTransaction"
       @close="closeForm"
       @create="createExpense"

@@ -21,26 +21,22 @@ import WeeklyCashflowCard from '@/components/dailyFinance/WeeklyCashflowCard.vue
 import WeeklyReviewModal from '@/components/dailyFinance/WeeklyReviewModal.vue'
 import TransactionListItem from '@/components/transactions/TransactionListItem.vue'
 import { useAppData } from '@/composables/useAppData'
-import { startOfLocalDay } from '@/lib/date'
+import { useDashboardData } from '@/composables/useDashboardData'
 import { formatDate } from '@/lib/formatters'
 import type { ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
+const { dashboard, isTripMode, loading, error } = useDashboardData()
 const router = useRouter()
 const isWeeklyReviewOpen = shallowRef(false)
 const toastMessage = shallowRef('')
 let toastTimeout: ReturnType<typeof setTimeout> | undefined
 
-const isTripMode = computed(() => Boolean(appData.activeTrip.value))
-const cycleLabel = computed(() => appData.currentWindow.value?.label)
-const visibleRecentTransactions = computed(() => {
-  const endOfToday = startOfLocalDay(new Date()) + 86_400_000
-  const source = isTripMode.value
-    ? appData.tripTransactions.value
-    : appData.combinedTransactions.value
-
-  return source.filter((transaction) => transaction.date < endOfToday).slice(0, 8)
-})
+const cycleLabel = computed(() => dashboard.value?.currentWindow?.label)
+const currency = computed(() => dashboard.value?.currency ?? appData.currency.value)
+const fxRateMap = computed(() => appData.fxRateMap.value)
+const recentTransactions = computed(() => dashboard.value?.recentTransactions ?? [])
+const activeTrip = computed(() => dashboard.value?.activeTrip)
 
 function openWeeklyReview(): void {
   isWeeklyReviewOpen.value = true
@@ -90,7 +86,7 @@ async function updateSavingChallengeStatus(
   challengeId: string,
   status: 'active' | 'completed' | 'paused',
 ): Promise<void> {
-  const challenge = appData.savingChallenges.value.find(
+  const challenge = dashboard.value?.savingChallenges.find(
     (entry) => entry.challenge_id === challengeId,
   )
 
@@ -121,7 +117,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="grid gap-4">
-    <section v-if="appData.loading.value" class="grid gap-4">
+    <section v-if="loading" class="grid gap-4">
       <SkeletonCard :lines="3" />
       <div class="grid grid-cols-2 gap-3">
         <SkeletonCard :lines="2" />
@@ -130,87 +126,78 @@ onBeforeUnmount(() => {
       <SkeletonCard :lines="2" />
     </section>
 
-    <section v-else-if="!isTripMode" class="grid gap-4">
+    <section v-else-if="!isTripMode && dashboard" class="grid gap-4">
       <HeroCard
-        :remaining-budget="appData.remainingBudget.value"
-        :income-total="appData.cycleIncomeTotal.value"
-        :expense-total="appData.cycleExpenseTotal.value"
-        :saving-total="appData.cycleSavingTotal.value"
-        :currency="appData.currency.value"
+        :remaining-budget="dashboard.remainingBudget"
+        :income-total="dashboard.cycleIncomeTotal"
+        :expense-total="dashboard.cycleExpenseTotal"
+        :saving-total="dashboard.cycleSavingTotal"
+        :currency="currency"
         :cycle-label="cycleLabel"
         @weekly-review="openWeeklyReview"
       />
 
-      <OverspendForecastCard
-        :forecast="appData.overspendForecast.value"
-        :currency="appData.currency.value"
-      />
+      <OverspendForecastCard :forecast="dashboard.overspendForecast" :currency="currency" />
 
       <KpiGrid
-        :today-available="appData.dailySafeToSpend.value.safeToSpendToday"
-        :today-spent="appData.todaySpent.value"
-        :saving-target="appData.currentCycle.value?.saving_target ?? 0"
-        :fixed-expenses="appData.cycleFixedExpensesTotal.value"
-        :currency="appData.currency.value"
-        :is-over-today="appData.dailySafeToSpend.value.isOverToday"
+        :today-available="dashboard.dailySafeToSpend.safeToSpendToday"
+        :today-spent="dashboard.todaySpent"
+        :saving-target="dashboard.currentCycle?.saving_target ?? 0"
+        :fixed-expenses="dashboard.cycleFixedExpensesTotal"
+        :currency="currency"
+        :is-over-today="dashboard.dailySafeToSpend.isOverToday"
       />
 
       <div class="grid gap-4 lg:grid-cols-2">
-        <SpendingStreakCard :streak="appData.spendingStreak.value" />
-        <WeeklyCashflowCard :brief="appData.weeklyCashflowBrief.value" />
+        <SpendingStreakCard :streak="dashboard.spendingStreak" />
+        <WeeklyCashflowCard :brief="dashboard.weeklyCashflowBrief" />
       </div>
     </section>
 
-    <section
-      v-if="appData.error.value"
-      class="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger"
-    >
-      {{ appData.error.value }}
+    <section v-if="error" class="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">
+      {{ error }}
     </section>
 
-    <section v-if="appData.loading.value" class="grid gap-4">
+    <section v-if="loading" class="grid gap-4">
       <SkeletonCard :lines="2" />
       <SkeletonCard :lines="2" />
       <SkeletonList :rows="3" />
     </section>
 
-    <section v-else-if="!isTripMode" class="grid gap-4">
+    <section v-else-if="!isTripMode && dashboard" class="grid gap-4">
       <QuickAddShortcuts
-        :suggestions="appData.quickAddSuggestions.value"
-        :expense-categories="appData.activeExpenseCategories.value"
-        :income-categories="appData.activeIncomeCategories.value"
-        :currency="appData.currency.value"
-        :fx-rate-map="appData.fxRateMap.value"
+        :suggestions="dashboard.quickAddSuggestions"
+        :expense-categories="dashboard.activeExpenseCategories"
+        :income-categories="dashboard.activeIncomeCategories"
+        :currency="currency"
+        :fx-rate-map="fxRateMap"
         @create-expense="addExpense"
         @create-income="addIncome"
         @create-saving="addSaving"
       />
       <SavingChallengesList
-        :challenges="appData.activeChallenges.value"
-        :currency="appData.currency.value"
+        :challenges="dashboard.activeChallenges"
+        :currency="currency"
         @create="createSavingChallenge"
         @update-status="updateSavingChallengeStatus"
         @delete="deleteSavingChallenge"
       />
       <RecurringExpensesSummary
-        :fixed-total="appData.cycleFixedExpensesTotal.value"
-        :upcoming-bills="appData.upcomingBills.value"
-        :currency="appData.currency.value"
+        :fixed-total="dashboard.cycleFixedExpensesTotal"
+        :upcoming-bills="dashboard.upcomingBills"
+        :currency="currency"
       />
-      <UnusualExpenseAlertsList :alerts="appData.unusualExpenseAlerts.value" />
-      <CategoryAlertsList
-        :alerts="appData.categoryAlerts.value"
-        :currency="appData.currency.value"
-      />
+      <UnusualExpenseAlertsList :alerts="dashboard.unusualExpenseAlerts" />
+      <CategoryAlertsList :alerts="dashboard.categoryAlerts" :currency="currency" />
     </section>
 
-    <section v-else class="grid gap-4">
+    <section v-else-if="isTripMode" class="grid gap-4">
       <BaseCard variant="primary">
         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary-2">旅程模式</p>
-        <h2 class="mt-1 text-xl font-bold text-text">{{ appData.activeTrip.value?.name }}</h2>
+        <h2 class="mt-1 text-xl font-bold text-text">{{ activeTrip?.name }}</h2>
         <p class="mt-1 text-sm text-text-2">
-          {{ formatDate(appData.activeTrip.value?.start_date ?? 0) }} -
-          {{ formatDate(appData.activeTrip.value?.end_date ?? 0) }}
+          {{ formatDate(activeTrip?.start_date ?? 0) }} -
+          {{ formatDate(activeTrip?.end_date ?? 0) }}
         </p>
         <p class="mt-1 text-xs text-text-3">
           目前只顯示已綁定這次旅程的交易。要切換模式請使用頂部選單。
@@ -233,16 +220,16 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <SkeletonList v-if="appData.loading.value" :rows="5" />
-      <BaseCard v-else-if="visibleRecentTransactions.length" class="overflow-hidden p-0">
+      <SkeletonList v-if="loading" :rows="5" />
+      <BaseCard v-else-if="recentTransactions.length" class="overflow-hidden p-0">
         <div class="divide-y divide-border">
           <TransactionListItem
-            v-for="transaction in visibleRecentTransactions"
+            v-for="transaction in recentTransactions"
             :key="`${transaction.kind}-${transaction.id}`"
             :item="transaction"
-            :expense-categories="appData.data.value.expenseCategories"
-            :income-categories="appData.data.value.incomeCategories"
-            :currency="appData.currency.value"
+            :expense-categories="dashboard?.expenseCategories ?? []"
+            :income-categories="dashboard?.incomeCategories ?? []"
+            :currency="currency"
             @select="goToTransactions"
           />
         </div>
@@ -260,9 +247,9 @@ onBeforeUnmount(() => {
     </section>
 
     <WeeklyReviewModal
-      v-if="isWeeklyReviewOpen"
-      :review="appData.weeklyReview.value"
-      :currency="appData.currency.value"
+      v-if="isWeeklyReviewOpen && dashboard"
+      :review="dashboard.weeklyReview"
+      :currency="currency"
       @close="closeWeeklyReview"
     />
 

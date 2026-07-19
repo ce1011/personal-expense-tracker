@@ -11,11 +11,14 @@ import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonList from '@/components/base/SkeletonList.vue'
 import TripBudgetHelperCard from '@/components/trips/TripBudgetHelperCard.vue'
 import { useAppData } from '@/composables/useAppData'
+import { useTripsData } from '@/composables/useTripsData'
 import { fromDateInputValue, toDateInputValue } from '@/lib/date'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import type { SupportedCurrency, TripDraft, TripSession, TripStatus } from '@/types/app-data'
 
 const appData = useAppData()
+const { trips, activeTripId, activeTrip, tripBudgetHelper, spentInTrip, currency, loading } =
+  useTripsData()
 
 const isSheetOpen = shallowRef(false)
 const selectedTripId = shallowRef('')
@@ -32,7 +35,7 @@ const form = reactive({
 })
 
 const selectedTrip = computed(() =>
-  appData.trips.value.find((trip) => trip.trip_id === selectedTripId.value),
+  trips.value.find((trip) => trip.trip_id === selectedTripId.value),
 )
 const isEditing = computed(() => Boolean(selectedTrip.value))
 
@@ -53,7 +56,7 @@ const statusOptions = [
 
 const modeOptions = computed(() => [
   { value: '', label: '一般模式' },
-  ...appData.trips.value.map((trip) => ({
+  ...trips.value.map((trip) => ({
     value: trip.trip_id,
     label: `${trip.name} · ${trip.destination}`,
   })),
@@ -80,9 +83,9 @@ watch(
 )
 
 const tripCards = computed(() =>
-  appData.trips.value.map((trip) => ({
+  trips.value.map((trip) => ({
     ...trip,
-    isActive: appData.activeTripId.value === trip.trip_id,
+    isActive: activeTripId.value === trip.trip_id,
   })),
 )
 
@@ -198,17 +201,11 @@ function statusHint(trip: TripSession): string {
     return '這個旅程已完成，仍可查看與微調內容。'
   }
 
-  if (appData.activeTripId.value === trip.trip_id) {
+  if (activeTripId.value === trip.trip_id) {
     return '目前已套用到記帳與總覽旅程模式。'
   }
 
   return '可設為目前旅程，讓交易與總覽聚焦這次旅程。'
-}
-
-function spentInTrip(trip: TripSession): number {
-  return appData.data.value.expenses
-    .filter((expense) => expense.trip_id === trip.trip_id)
-    .reduce((sum, expense) => sum + expense.amount, 0)
 }
 
 function selectMode(tripId: string): void {
@@ -235,7 +232,7 @@ function selectMode(tripId: string): void {
           @click="isModeDropdownOpen = !isModeDropdownOpen"
         >
           <Route class="size-4 text-primary" aria-hidden="true" />
-          {{ appData.activeTrip.value?.name ?? '一般模式' }}
+          {{ activeTrip?.name ?? '一般模式' }}
           <ChevronDown
             class="size-4 text-text-3 transition"
             :class="isModeDropdownOpen ? 'rotate-180' : ''"
@@ -252,11 +249,7 @@ function selectMode(tripId: string): void {
             :key="option.value"
             type="button"
             class="w-full rounded-lg px-3 py-2 text-left text-body-sm transition hover:bg-accent"
-            :class="
-              appData.activeTripId.value === option.value
-                ? 'bg-primary/5 text-primary'
-                : 'text-text'
-            "
+            :class="activeTripId === option.value ? 'bg-primary/5 text-primary' : 'text-text'"
             @click="selectMode(option.value)"
           >
             {{ option.label }}
@@ -270,17 +263,13 @@ function selectMode(tripId: string): void {
       新增旅程
     </BaseButton>
 
-    <TripBudgetHelperCard
-      v-if="appData.activeTrip.value"
-      :helper="appData.tripBudgetHelper.value"
-      :currency="appData.currency.value"
-    />
+    <TripBudgetHelperCard v-if="activeTrip" :helper="tripBudgetHelper" :currency="currency" />
 
-    <SkeletonList v-if="appData.loading.value" :rows="4" />
+    <SkeletonList v-if="loading" :rows="4" />
 
     <BaseCard v-else-if="tripCards.length">
       <h2 class="text-h3 font-semibold text-text">旅程列表</h2>
-      <p class="text-body-sm text-text-2">已儲存 {{ appData.trips.value.length }} 個旅程</p>
+      <p class="text-body-sm text-text-2">已儲存 {{ trips.length }} 個旅程</p>
 
       <div class="mt-4 grid gap-3">
         <button
@@ -313,7 +302,7 @@ function selectMode(tripId: string): void {
               </p>
               <p class="text-caption text-text-2">
                 預算 {{ formatCurrency(trip.budget_amount, trip.budget_currency) }} · 已用
-                {{ formatCurrency(spentInTrip(trip), appData.currency.value) }}
+                {{ formatCurrency(spentInTrip(trip.trip_id), currency) }}
               </p>
             </div>
           </div>

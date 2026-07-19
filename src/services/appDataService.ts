@@ -7,10 +7,13 @@ import type {
   BudgetCycle,
   CategoryDraft,
   CycleDraft,
+  ExpenseCategory,
   ExpenseDraft,
+  IncomeCategory,
   IncomeDraft,
   SavingChallenge,
   SavingDraft,
+  SupportedCurrency,
   TripDraft,
   TripSession,
 } from '@/types/app-data'
@@ -18,10 +21,7 @@ import type {
 /**
  * Persistence layer.
  *
- * MIGRATED: this module used to read/write a local Dexie (IndexedDB) database.
- * It now delegates to the Elysia backend via the Eden client (`@/api/client`),
- * keeping the exact same exported function signatures so `useAppData` — and
- * therefore every view — works unchanged.
+ * Delegates to the Elysia backend via the Eden client (`@/api/client`).
  *
  * Server-side behavior worth noting:
  * - Amounts are stored in HKD; create/update bodies send `currency_code` +
@@ -30,6 +30,10 @@ import type {
  *   newest 20), so the client no longer maintains local snapshots.
  * - FX rates are synced by the backend (`GET /data/sync`), so
  *   `syncFxRatesIfNeeded` is a no-op here.
+ * - Page *reads* no longer go through the monolithic `/data/export`; each page
+ *   calls its own aggregate endpoint (see `src/composables/use*Data.ts`). This
+ *   module only fetches the small shared "context" lists (categories, trips,
+ *   saving-challenges) plus the full payload exclusively for backup/restore.
  */
 
 const ACTIVE_TRIP_SETTING_NAME = 'active_trip_id'
@@ -45,31 +49,54 @@ export async function ensureSeedData(): Promise<void> {
   // defaults the frontend used to seed locally. Nothing to do here.
 }
 
-/** Load the full app payload from the backend. */
-export async function loadAppData(): Promise<AppDataPayload> {
-  const payload = await api.data.export()
+// ---------------------------------------------------------------------------
+// Shared "context" reads (small lists used across the shell + quick-add).
+// ---------------------------------------------------------------------------
 
-  return {
-    cycles: [...payload.cycles].sort((a, b) => b.cycle_code.localeCompare(a.cycle_code)),
-    expenseCategories: [...payload.expenseCategories].sort((a, b) =>
-      a.name_en.localeCompare(b.name_en),
-    ),
-    incomeCategories: [...payload.incomeCategories].sort((a, b) =>
-      a.name_en.localeCompare(b.name_en),
-    ),
-    expenses: [...payload.expenses].sort((a, b) => b.date - a.date),
-    incomes: [...payload.incomes].sort((a, b) => b.date - a.date),
-    targetExpenses: payload.targetExpenses,
-    savings: [...payload.savings].sort((a, b) => b.date - a.date),
-    settings: payload.settings,
-    trips: [...(payload.trips ?? [])].sort((a, b) => b.updated_at - a.updated_at),
-    fxRates: [...(payload.fxRates ?? [])].sort((a, b) =>
-      a.currency_code.localeCompare(b.currency_code),
-    ),
-    savingChallenges: [...(payload.savingChallenges ?? [])].sort(
-      (a, b) => b.updated_at - a.updated_at,
-    ),
-  }
+export async function listExpenseCategories(): Promise<ExpenseCategory[]> {
+  const categories = await api.categories.expenses.list()
+  return [...categories].sort((a, b) => a.name_en.localeCompare(b.name_en))
+}
+
+export async function listIncomeCategories(): Promise<IncomeCategory[]> {
+  const categories = await api.categories.incomes.list()
+  return [...categories].sort((a, b) => a.name_en.localeCompare(b.name_en))
+}
+
+export async function listTrips(): Promise<TripSession[]> {
+  const trips = await api.trips.list()
+  return [...trips].sort((a, b) => a.start_date - b.start_date)
+}
+
+export async function listSavingChallenges(): Promise<SavingChallenge[]> {
+  const challenges = await api.savingChallenges.list()
+  return [...challenges].sort((a, b) => b.updated_at - a.updated_at)
+}
+
+/** Fetch the currency setting (falls back to HKD when unset). */
+export async function getCurrency(): Promise<string> {
+  const settings = await api.settings.list()
+  return settings.find((setting) => setting.name === 'currency')?.parameter ?? 'HKD'
+}
+
+/** Full-payload export — used ONLY for the Settings backup download. */
+export async function exportBackup(): Promise<AppDataPayload> {
+  return api.data.export()
+}
+
+export interface FxContext {
+  fxRateMap: ReadonlyMap<SupportedCurrency, number>
+  latestFxDate: string
+}
+
+/** FX rates for quick-add conversion (HKD base, plus the latest source date). */
+export async function getFxContext(): Promise<FxContext> {
+  const rates = await api.fxRates.list()
+  const entries = rates.map((rate) => [rate.currency_code, rate.rate_to_hkd] as const)
+  const fxRateMap = new Map<SupportedCurrency, number>([['HKD', 1], ...entries])
+  const latestFxDate = [...rates].sort((a, b) => b.source_date.localeCompare(a.source_date))[0]
+    ?.source_date
+  return { fxRateMap, latestFxDate: latestFxDate ?? '' }
 }
 
 /** Overwrite the whole dataset (import / restore). */

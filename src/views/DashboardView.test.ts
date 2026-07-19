@@ -1,10 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, ref } from 'vue'
-import { describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import DashboardView from './DashboardView.vue'
+import type { DashboardData } from '@/api/types'
+import type { CombinedTransaction, SupportedCurrency, TripSession } from '@/types/app-data'
 import { useAppData } from '@/composables/useAppData'
-import type { AppDataPayload, CombinedTransaction } from '@/types/app-data'
+import { useDashboardData } from '@/composables/useDashboardData'
+import DashboardView from './DashboardView.vue'
 
 vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({
@@ -16,127 +18,70 @@ vi.mock('@/composables/useAppData', () => ({
   useAppData: vi.fn(),
 }))
 
-const basePayload: AppDataPayload = {
-  cycles: [],
-  expenseCategories: [],
-  incomeCategories: [],
-  expenses: [],
-  incomes: [],
-  targetExpenses: [],
-  savings: [],
-  settings: [],
-  trips: [],
-  fxRates: [],
-  savingChallenges: [],
+vi.mock('@/composables/useDashboardData', () => ({
+  useDashboardData: vi.fn(),
+}))
+
+const tokyoTrip: TripSession = {
+  trip_id: 'trip-1',
+  name: 'Tokyo Trip',
+  destination: 'Tokyo',
+  start_date: new Date(2026, 6, 1).getTime(),
+  end_date: new Date(2026, 6, 10).getTime(),
+  budget_amount: 10000,
+  budget_currency: 'JPY',
+  status: 'active',
+  notes: '',
+  created_at: Date.now(),
+  updated_at: Date.now(),
 }
 
-function createMockAppData(
-  overrides: {
-    loading?: boolean
-    error?: string
-    activeTrip?: boolean
-    transactions?: CombinedTransaction[]
-  } = {},
-) {
-  const loading = ref(overrides.loading ?? false)
-  const error = ref(overrides.error ?? '')
-  const data = ref(basePayload)
-  const transactions = ref(overrides.transactions ?? [])
-  const activeTrip = ref(
-    overrides.activeTrip
-      ? {
-          trip_id: 'trip-1',
-          name: 'Tokyo Trip',
-          destination: 'Tokyo',
-          start_date: new Date(2026, 6, 1).getTime(),
-          end_date: new Date(2026, 6, 10).getTime(),
-          budget_amount: 10000,
-          budget_currency: 'JPY',
-          status: 'active' as const,
-          notes: '',
-          created_at: Date.now(),
-          updated_at: Date.now(),
-        }
-      : undefined,
-  )
-
+function createDashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
   return {
-    data,
-    loading,
-    error,
-    activeTrip: computed(() => activeTrip.value),
-    currentWindow: computed(() => ({
-      start: new Date(2026, 6, 1).getTime(),
-      end: new Date(2026, 6, 31).getTime(),
-      label: '2026-07',
-    })),
-    combinedTransactions: computed(() => transactions.value),
-    tripTransactions: computed(() => transactions.value),
-    currency: computed(() => 'HKD'),
-    remainingBudget: computed(() => 5000),
-    cycleIncomeTotal: computed(() => 15000),
-    cycleExpenseTotal: computed(() => 10000),
-    cycleSavingTotal: computed(() => 2000),
-    overspendForecast: computed(() => ({
-      projectedOverspendAmount: 700,
-      projectedRemainingBudget: -700,
-      projectedSurplusAmount: 0,
-      isProjectedToOverspend: true,
-      averageDailySpend: 100,
-      remainingDays: 10,
-    })),
-    spendingStreak: computed(() => ({
-      currentNoSpendDays: 3,
-      longestNoSpendDays: 5,
-      currentLowSpendDays: 6,
-      longestLowSpendDays: 6,
-      lowSpendThreshold: 80,
-    })),
-    unusualExpenseAlerts: computed(() => [
-      {
-        transactionId: 'expense-overspend',
-        merchantName: 'Central Cafe',
-        categoryId: 'food',
-        amount: 68,
-        baselineAmount: 42,
-        multiplier: 1.62,
-        message: '你最近 30 日 Central Cafe 平均約 $42，今次 $68。',
-      },
-    ]),
-    detectedRecurringExpenses: computed(() => [
-      {
-        name: 'Netflix',
-        averageAmount: 100,
-        confidence: 1,
-        frequency: 'monthly' as const,
-        recurringDay: 5,
-        nextDueTimestamp: new Date(2026, 6, 5).getTime(),
-        sampleCount: 3,
-      },
-    ]),
-    weeklyCashflowBrief: computed(() => ['本週淨現金流為 +$550。']),
-    dailySafeToSpend: computed(() => ({
-      safeToSpendToday: 200,
-      projectedSurplus: 100,
-      isOverToday: false,
-    })),
-    todaySpent: computed(() => 50),
-    currentCycle: computed(() => ({
+    currency: 'HKD',
+    currentCycle: {
       cycle_id: 'cycle-1',
       cycle_code: '2026-07',
       income_day: 25,
       income: 15000,
       saving_target: 2000,
-    })),
-    cycleFixedExpensesTotal: computed(() => 3000),
-    upcomingBills: computed(() => []),
-    quickAddSuggestions: computed(() => []),
-    activeExpenseCategories: computed(() => data.value.expenseCategories),
-    activeIncomeCategories: computed(() => data.value.incomeCategories),
-    fxRateMap: computed(() => new Map([['HKD', 1]])),
-    activeChallenges: computed(() => []),
-    categoryAlerts: computed(() => []),
-    weeklyReview: computed(() => ({
+    },
+    currentWindow: {
+      start: new Date(2026, 6, 1).getTime(),
+      end: new Date(2026, 6, 31).getTime(),
+      label: '2026-07',
+    },
+    cycleIncomeTotal: 15000,
+    cycleExpenseTotal: 10000,
+    cycleSavingTotal: 2000,
+    remainingBudget: 5000,
+    daysUntilNextIncome: 6,
+    cycleFixedExpensesTotal: 3000,
+    todaySpent: 50,
+    averageDailyBudgetUntilIncome: 800,
+    dailySafeToSpend: { safeToSpendToday: 200, projectedSurplus: 100, isOverToday: false },
+    overspendForecast: {
+      spentSoFar: 10000,
+      elapsedDays: 20,
+      remainingDays: 10,
+      averageDailySpend: 100,
+      projectedVariableSpend: 1000,
+      projectedFixedSpend: 0,
+      projectedTotalSpend: 11000,
+      projectedRemainingBudget: -700,
+      projectedOverspendAmount: 700,
+      projectedSurplusAmount: 0,
+      isProjectedToOverspend: true,
+      paceRatio: 1.1,
+    },
+    spendingStreak: {
+      currentNoSpendDays: 3,
+      longestNoSpendDays: 5,
+      currentLowSpendDays: 6,
+      longestLowSpendDays: 6,
+      lowSpendThreshold: 80,
+    },
+    weeklyReview: {
       weekStart: new Date(2026, 5, 28).getTime(),
       weekEnd: new Date(2026, 6, 4).getTime(),
       totalSpent: 1000,
@@ -148,15 +93,46 @@ function createMockAppData(
       largestExpense: null,
       vsPreviousWeek: null,
       brief: ['本週淨現金流為 +$550。'],
-    })),
-    tripBudgetHelper: computed(() => ({
-      daysRemaining: 2,
-      dailyAllowance: 455,
-      projectedTripBalance: 745,
-      remainingBudget: 910,
-      spentTotal: 170,
-      isOffPace: false,
-    })),
+    },
+    weeklyCashflowBrief: ['本週淨現金流為 +$550。'],
+    quickAddSuggestions: [],
+    activeChallenges: [],
+    upcomingBills: [],
+    unusualExpenseAlerts: [],
+    categoryAlerts: [],
+    activeExpenseCategories: [],
+    activeIncomeCategories: [],
+    expenseCategories: [],
+    incomeCategories: [],
+    savingChallenges: [],
+    trips: [],
+    activeTripId: '',
+    activeTrip: undefined,
+    fxRateMap: { HKD: 1 },
+    latestFxDate: '2026-07-01',
+    recentTransactions: [],
+    isTripMode: false,
+    ...overrides,
+  }
+}
+
+function createMockDashboard(
+  overrides: { loading?: boolean; error?: string; data?: DashboardData } = {},
+) {
+  const data = ref<DashboardData | undefined>(overrides.data)
+  return {
+    dashboard: computed(() => data.value),
+    isTripMode: computed(() => data.value?.isTripMode ?? false),
+    loading: ref(overrides.loading ?? false),
+    error: ref(overrides.error ?? ''),
+    refresh: vi.fn(),
+  }
+}
+
+function createMockAppData() {
+  return {
+    currency: computed(() => 'HKD'),
+    fxRateMap: computed(() => new Map<SupportedCurrency, number>([['HKD', 1]])),
     addExpense: vi.fn(),
     addIncome: vi.fn(),
     addSaving: vi.fn(),
@@ -167,10 +143,14 @@ function createMockAppData(
 }
 
 const mockedUseAppData = vi.mocked(useAppData)
+const mockedUseDashboardData = vi.mocked(useDashboardData)
 
-function mountDashboard(overrides: Parameters<typeof createMockAppData>[0] = {}) {
-  mockedUseAppData.mockReturnValue(
-    createMockAppData(overrides) as unknown as ReturnType<typeof useAppData>,
+function mountDashboard(
+  overrides: { loading?: boolean; error?: string; data?: DashboardData } = {},
+) {
+  mockedUseAppData.mockReturnValue(createMockAppData() as unknown as ReturnType<typeof useAppData>)
+  mockedUseDashboardData.mockReturnValue(
+    createMockDashboard(overrides) as unknown as ReturnType<typeof useDashboardData>,
   )
 
   return mount(DashboardView, {
@@ -196,6 +176,10 @@ function mountDashboard(overrides: Parameters<typeof createMockAppData>[0] = {})
 }
 
 describe('DashboardView', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   test('shows loading skeletons while data is loading', () => {
     const wrapper = mountDashboard({ loading: true })
     expect(wrapper.find('[data-testid="hero-card"]').exists()).toBe(false)
@@ -203,7 +187,7 @@ describe('DashboardView', () => {
   })
 
   test('shows dashboard sections when loaded outside trip mode', () => {
-    const wrapper = mountDashboard()
+    const wrapper = mountDashboard({ data: createDashboardData() })
     expect(wrapper.find('[data-testid="hero-card"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="kpi-grid"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="overspend"]').exists()).toBe(true)
@@ -217,7 +201,7 @@ describe('DashboardView', () => {
   })
 
   test('renders recent transactions when present', async () => {
-    const transactions: CombinedTransaction[] = [
+    const recentTransactions: CombinedTransaction[] = [
       {
         id: 'expense-1',
         kind: 'expense',
@@ -227,7 +211,7 @@ describe('DashboardView', () => {
         date: new Date(2026, 6, 3, 12, 0, 0).getTime(),
       },
     ]
-    const wrapper = mountDashboard({ transactions })
+    const wrapper = mountDashboard({ data: createDashboardData({ recentTransactions }) })
     await flushPromises()
     expect(wrapper.text()).toContain('最近交易')
     expect(wrapper.text()).toContain('Lunch')
@@ -235,13 +219,20 @@ describe('DashboardView', () => {
   })
 
   test('shows empty state when no transactions exist', async () => {
-    const wrapper = mountDashboard({ transactions: [] })
+    const wrapper = mountDashboard({ data: createDashboardData({ recentTransactions: [] }) })
     await flushPromises()
     expect(wrapper.text()).toContain('還沒有交易紀錄')
   })
 
   test('shows trip mode card when active trip is set', async () => {
-    const wrapper = mountDashboard({ activeTrip: true })
+    const wrapper = mountDashboard({
+      data: createDashboardData({
+        isTripMode: true,
+        activeTrip: tokyoTrip,
+        activeTripId: tokyoTrip.trip_id,
+        trips: [tokyoTrip],
+      }),
+    })
     await flushPromises()
     expect(wrapper.text()).toContain('旅程模式')
     expect(wrapper.text()).toContain('Tokyo Trip')

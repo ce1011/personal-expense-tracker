@@ -140,9 +140,7 @@ async function submit(): Promise<void> {
         </p>
 
         <BaseButton type="submit" :disabled="submitting">
-          {{
-            submitting ? '處理中...' : mode === 'login' ? '登入' : '註冊並登入'
-          }}
+          {{ submitting ? '處理中...' : mode === 'login' ? '登入' : '註冊並登入' }}
         </BaseButton>
       </form>
 

@@ -198,9 +198,13 @@ describe('recovery helpers', () => {
     const result = validateSnapshotPayload(invalid)
 
     expect(result.ok).toBe(false)
-    expect(result.errors).toContain('Expense expense-1 references unknown category missing-category')
+    expect(result.errors).toContain(
+      'Expense expense-1 references unknown category missing-category',
+    )
     expect(result.errors).toContain('Expense expense-1 references unknown trip missing-trip')
-    expect(result.errors).toContain('Saving saving-1 references unknown challenge missing-challenge')
+    expect(result.errors).toContain(
+      'Saving saving-1 references unknown challenge missing-challenge',
+    )
     expect(result.errors).toContain('Setting active_trip_id references unknown trip missing-trip')
   })
 })

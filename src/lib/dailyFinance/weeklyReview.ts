@@ -158,7 +158,9 @@ function buildBrief(input: {
   const brief = [`本週淨現金流為 ${formatSignedAmount(input.netCashflow)}。`]
 
   if (input.topCategory) {
-    brief.push(`最大支出來自${input.topCategory.name}，共 ${formatAmount(input.topCategory.amount)}。`)
+    brief.push(
+      `最大支出來自${input.topCategory.name}，共 ${formatAmount(input.topCategory.amount)}。`,
+    )
   }
 
   if (input.largestExpense) {
@@ -169,9 +171,7 @@ function buildBrief(input: {
 
   if (input.vsPreviousWeek) {
     const direction = input.vsPreviousWeek.spentDelta <= 0 ? '少使了' : '多使了'
-    brief.push(
-      `比上週${direction} ${formatAmount(Math.abs(input.vsPreviousWeek.spentDelta))}。`,
-    )
+    brief.push(`比上週${direction} ${formatAmount(Math.abs(input.vsPreviousWeek.spentDelta))}。`)
   }
 
   brief.push(`本週共記錄 ${input.transactionCount} 筆交易。`)

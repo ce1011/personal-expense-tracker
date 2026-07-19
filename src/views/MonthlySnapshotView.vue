@@ -4,19 +4,18 @@ import { FileText, TrendingDown, TrendingUp } from 'lucide-vue-next'
 import BaseCard from '@/components/base/BaseCard.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
-import { useAppData } from '@/composables/useAppData'
+import { useMonthlySnapshotData } from '@/composables/useMonthlySnapshotData'
 import { formatCurrency, formatPercent } from '@/lib/formatters'
 
-const appData = useAppData()
-const snapshot = appData.monthlySnapshot
+const { snapshot, currency, loading } = useMonthlySnapshotData()
 
 function deltaLabel(delta: number): string {
   if (delta > 0) {
-    return `多 ${formatCurrency(delta, appData.currency.value)}`
+    return `多 ${formatCurrency(delta, currency.value)}`
   }
 
   if (delta < 0) {
-    return `少 ${formatCurrency(Math.abs(delta), appData.currency.value)}`
+    return `少 ${formatCurrency(Math.abs(delta), currency.value)}`
   }
 
   return '持平'
@@ -28,10 +27,10 @@ function deltaLabel(delta: number): string {
     <header>
       <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">每月快照</p>
       <h1 class="mt-1 text-h1 font-bold text-text">本期財務總覽</h1>
-      <p class="mt-1 text-body-sm text-text-2">{{ snapshot.cycleWindow.label }}</p>
+      <p class="mt-1 text-body-sm text-text-2">{{ snapshot?.cycleWindow.label }}</p>
     </header>
 
-    <div v-if="appData.loading.value" class="grid gap-4">
+    <div v-if="loading" class="grid gap-4">
       <SkeletonCard :lines="3" />
       <section class="grid grid-cols-2 gap-3">
         <SkeletonCard />
@@ -43,7 +42,7 @@ function deltaLabel(delta: number): string {
       <SkeletonCard :lines="5" />
     </div>
 
-    <template v-else>
+    <template v-else-if="snapshot">
       <BaseCard variant="primary">
         <div class="flex items-center gap-2">
           <FileText class="size-5 text-primary" aria-hidden="true" />
@@ -52,10 +51,10 @@ function deltaLabel(delta: number): string {
               本期結餘
             </p>
             <p class="mt-1 text-amount-lg font-bold text-text">
-              {{ formatCurrency(snapshot.remainingBudget, appData.currency.value) }}
+              {{ formatCurrency(snapshot.remainingBudget, currency) }}
             </p>
             <p class="mt-1 text-body-sm text-text-2">
-              日均支出 {{ formatCurrency(snapshot.dailyAverageSpent, appData.currency.value) }}
+              日均支出 {{ formatCurrency(snapshot.dailyAverageSpent, currency) }}
             </p>
           </div>
         </div>
@@ -65,19 +64,19 @@ function deltaLabel(delta: number): string {
         <BaseCard>
           <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">收入</p>
           <p class="mt-2 text-amount font-bold text-primary">
-            {{ formatCurrency(snapshot.incomeTotal, appData.currency.value) }}
+            {{ formatCurrency(snapshot.incomeTotal, currency) }}
           </p>
         </BaseCard>
         <BaseCard>
           <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">支出</p>
           <p class="mt-2 text-amount font-bold text-danger">
-            {{ formatCurrency(snapshot.expenseTotal, appData.currency.value) }}
+            {{ formatCurrency(snapshot.expenseTotal, currency) }}
           </p>
         </BaseCard>
         <BaseCard>
           <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">儲蓄</p>
           <p class="mt-2 text-amount font-bold text-primary">
-            {{ formatCurrency(snapshot.savingTotal, appData.currency.value) }}
+            {{ formatCurrency(snapshot.savingTotal, currency) }}
           </p>
         </BaseCard>
         <BaseCard>
@@ -158,7 +157,7 @@ function deltaLabel(delta: number): string {
             <div class="flex items-center justify-between text-body-sm">
               <span class="font-semibold text-text">{{ category.name }}</span>
               <span class="text-text-2">
-                {{ formatCurrency(category.amount, appData.currency.value) }} ·
+                {{ formatCurrency(category.amount, currency) }} ·
                 {{ Math.round(category.percentage) }}%
               </span>
             </div>

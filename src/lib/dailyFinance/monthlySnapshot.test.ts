@@ -200,14 +200,7 @@ describe('getMonthlySnapshot', () => {
       saving_target: 10000,
     }
 
-    const result = getMonthlySnapshot(
-      [currentCycle],
-      [],
-      [],
-      [],
-      categories,
-      now,
-    )
+    const result = getMonthlySnapshot([currentCycle], [], [], [], categories, now)
 
     expect(result.expenseTotal).toBe(0)
     expect(result.topExpenseCategories).toEqual([])

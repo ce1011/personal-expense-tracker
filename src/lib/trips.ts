@@ -115,7 +115,10 @@ export function getTripBudgetHelper(
   const endDay = toUtcDayStart(trip.end_date)
   const daysRemaining = Math.max(1, Math.floor((endDay - today) / DAY_IN_MS) + 1)
   const dailyAllowance = remainingBudget / daysRemaining
-  const totalTripDays = Math.max(1, Math.floor((endDay - toUtcDayStart(trip.start_date)) / DAY_IN_MS) + 1)
+  const totalTripDays = Math.max(
+    1,
+    Math.floor((endDay - toUtcDayStart(trip.start_date)) / DAY_IN_MS) + 1,
+  )
   const elapsedDays = Math.min(totalTripDays, Math.max(1, totalTripDays - daysRemaining + 1))
   const projectedTripBalance = trip.budget_amount - (spentTotal / elapsedDays) * totalTripDays
 

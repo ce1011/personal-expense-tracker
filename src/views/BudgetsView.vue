@@ -9,10 +9,12 @@ import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import TargetLimitEditor from '@/components/budgets/TargetLimitEditor.vue'
 import { useAppData } from '@/composables/useAppData'
+import { useBudgetsData } from '@/composables/useBudgetsData'
 import { getCycleWindow } from '@/lib/budgetCycle'
 import type { CycleDraft } from '@/types/app-data'
 
 const appData = useAppData()
+const { cycles, targetExpenses, activeExpenseCategories, currency, loading } = useBudgetsData()
 const selectedCycleId = shallowRef('')
 const form = reactive<CycleDraft>({
   cycle_code: '',
@@ -22,12 +24,10 @@ const form = reactive<CycleDraft>({
 })
 
 const selectedCycle = computed(() =>
-  appData.data.value.cycles.find((cycle) => cycle.cycle_id === selectedCycleId.value),
+  cycles.value.find((cycle) => cycle.cycle_id === selectedCycleId.value),
 )
 const cycleLimits = computed(() =>
-  appData.data.value.targetExpenses.filter(
-    (limit) => limit.cycle_id === selectedCycle.value?.cycle_id,
-  ),
+  targetExpenses.value.filter((limit) => limit.cycle_id === selectedCycle.value?.cycle_id),
 )
 const selectedWindowLabel = computed(() =>
   form.cycle_code && /^\d{6}$/.test(form.cycle_code)
@@ -36,10 +36,10 @@ const selectedWindowLabel = computed(() =>
 )
 
 watch(
-  () => appData.data.value.cycles,
-  (cycles) => {
+  cycles,
+  (list) => {
     if (!selectedCycleId.value) {
-      selectedCycleId.value = cycles[0]?.cycle_id ?? ''
+      selectedCycleId.value = list[0]?.cycle_id ?? ''
     }
   },
   { immediate: true },
@@ -83,7 +83,7 @@ function saveCycle(): void {
       </p>
     </header>
 
-    <div v-if="appData.loading.value" class="grid gap-4">
+    <div v-if="loading" class="grid gap-4">
       <SkeletonCard :lines="3" />
       <SkeletonCard :lines="4" />
       <SkeletonCard :lines="5" />
@@ -102,9 +102,9 @@ function saveCycle(): void {
           </BaseButton>
         </div>
 
-        <div v-if="appData.data.value.cycles.length" class="mt-4 flex gap-2 overflow-x-auto pb-2">
+        <div v-if="cycles.length" class="mt-4 flex gap-2 overflow-x-auto pb-2">
           <button
-            v-for="cycle in appData.data.value.cycles"
+            v-for="cycle in cycles"
             :key="cycle.cycle_id"
             type="button"
             class="shrink-0 rounded-xl border px-4 py-2.5 text-left transition"
@@ -175,9 +175,9 @@ function saveCycle(): void {
 
       <TargetLimitEditor
         :cycle="selectedCycle"
-        :categories="appData.activeExpenseCategories.value"
+        :categories="activeExpenseCategories"
         :limits="cycleLimits"
-        :currency="appData.currency.value"
+        :currency="currency"
         @save-limit="appData.saveTargetLimit"
       />
     </template>

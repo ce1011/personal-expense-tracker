@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { onMounted, shallowRef } from 'vue'
+import { computed, onMounted, shallowRef } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 
 import AppShell from '@/components/AppShell.vue'
 import QuickAddSheet from '@/components/transactions/QuickAddSheet.vue'
 import { useAppData } from '@/composables/useAppData'
+import { useShellData } from '@/composables/useShellData'
 import type { ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const route = useRoute()
 const isQuickAddOpen = shallowRef(false)
+
+// Shell chrome (header cycle label + trip-mode switch). Skipped on public
+// (auth) routes, which render bare without the shell.
+const isPublic = computed(() => Boolean(route.meta.public))
+const { currentCycle, loading } = useShellData(isPublic)
 
 onMounted(() => {
   void appData.refresh()
@@ -44,11 +50,7 @@ async function addSaving(draft: SavingDraft): Promise<void> {
   <RouterView v-if="route.meta.public" />
 
   <template v-else>
-    <AppShell
-      :current-cycle="appData.currentCycle.value"
-      :loading="appData.loading.value"
-      @quick-add="openQuickAdd"
-    >
+    <AppShell :current-cycle="currentCycle" :loading="loading" @quick-add="openQuickAdd">
       <RouterView />
     </AppShell>
 

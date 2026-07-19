@@ -12,7 +12,7 @@ import {
   Upload,
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
-import { computed, shallowRef } from 'vue'
+import { computed, onMounted, shallowRef } from 'vue'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
@@ -64,8 +64,13 @@ const isPreviewingRestore = shallowRef(false)
 const isRestoringSnapshotId = shallowRef('')
 const restoreIntegrityErrors = computed(() => restoreErrors.value)
 
-function exportBackup(): void {
-  const json = JSON.stringify(appData.data.value, null, 2)
+onMounted(() => {
+  void appData.loadRecoverySnapshots()
+})
+
+async function exportBackup(): Promise<void> {
+  const payload = await appData.exportBackupPayload()
+  const json = JSON.stringify(payload, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -112,6 +117,7 @@ async function restoreBackup(): Promise<void> {
     await appData.restorePayload(preview.payload)
     restoreText.value = ''
     restoreStatus.value = '還原完成，並已先保存一份可回復快照。'
+    await appData.loadRecoverySnapshots()
   } finally {
     isPreviewingRestore.value = false
   }
@@ -130,6 +136,7 @@ async function restoreSnapshot(snapshotId: string): Promise<void> {
 
     await appData.restoreSnapshot(snapshotId)
     restoreStatus.value = '已還原指定版本，並已保存目前版本作回復保護。'
+    await appData.loadRecoverySnapshots()
   } finally {
     isRestoringSnapshotId.value = ''
   }
@@ -274,7 +281,11 @@ async function logout(): Promise<void> {
           {{ restoreStatus }}
         </p>
 
-        <BaseButton class="mt-4" :disabled="!restoreText.trim() || isPreviewingRestore" @click="restoreBackup">
+        <BaseButton
+          class="mt-4"
+          :disabled="!restoreText.trim() || isPreviewingRestore"
+          @click="restoreBackup"
+        >
           {{ isPreviewingRestore ? '驗證中...' : '驗證並覆蓋本機資料' }}
         </BaseButton>
       </BaseCard>

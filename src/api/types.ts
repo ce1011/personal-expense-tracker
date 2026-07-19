@@ -2,6 +2,7 @@ import type {
   AppDataPayload,
   BudgetCycle,
   CategoryDraft,
+  CombinedTransaction,
   CycleDraft,
   ExpenseCategory,
   ExpenseDraft,
@@ -150,4 +151,244 @@ export type {
   TargetExpenseLimit,
   TripDraft,
   TripSession,
+}
+
+// ---------------------------------------------------------------------------
+// Per-page aggregate responses (mirror backend/src/services/*.ts)
+// ---------------------------------------------------------------------------
+
+export interface CycleWindow {
+  start: number
+  end: number
+  label: string
+}
+
+export interface SafeToSpendResult {
+  safeToSpendToday: number
+  projectedSurplus: number
+  isOverToday: boolean
+}
+
+export interface OverspendForecast {
+  spentSoFar: number
+  elapsedDays: number
+  remainingDays: number
+  averageDailySpend: number
+  projectedVariableSpend: number
+  projectedFixedSpend: number
+  projectedTotalSpend: number
+  projectedRemainingBudget: number
+  projectedOverspendAmount: number
+  projectedSurplusAmount: number
+  isProjectedToOverspend: boolean
+  paceRatio: number
+}
+
+export interface SpendingStreak {
+  currentNoSpendDays: number
+  longestNoSpendDays: number
+  currentLowSpendDays: number
+  longestLowSpendDays: number
+  lowSpendThreshold: number
+}
+
+export interface WeeklyReview {
+  weekStart: number
+  weekEnd: number
+  totalSpent: number
+  totalIncome: number
+  totalSavings: number
+  netCashflow: number
+  transactionCount: number
+  topCategory: { category_id: string; name: string; amount: number } | null
+  largestExpense: { category_id: string; name: string; amount: number } | null
+  vsPreviousWeek: { spentDelta: number; spentDeltaPercent: number } | null
+  brief: string[]
+}
+
+export interface QuickAddSuggestion {
+  kind: 'expense' | 'income' | 'saving'
+  category_id: string
+  name: string
+  amount?: number
+}
+
+export interface ChallengeProgress {
+  challenge_id: string
+  name: string
+  target_amount: number
+  current_amount: number
+  percentage: number
+  status: 'active' | 'completed' | 'paused'
+}
+
+export interface UpcomingBill {
+  transaction_id: string
+  name: string
+  amount: number
+  dueTimestamp: number
+  daysUntilDue: number
+}
+
+export interface UnusualExpenseAlert {
+  transactionId: string
+  merchantName: string
+  categoryId: string
+  amount: number
+  baselineAmount: number
+  multiplier: number
+  message: string
+}
+
+export interface CategoryAlert {
+  category_id: string
+  category_name: string
+  color_code: string
+  target: number
+  spent: number
+  remaining: number
+  percentage: number
+  severity: 'ok' | 'warning' | 'danger'
+}
+
+export interface MonthlySnapshot {
+  cycleWindow: { start: number; end: number; label: string }
+  incomeTotal: number
+  expenseTotal: number
+  savingTotal: number
+  savingsRate: number
+  topExpenseCategories: { category_id: string; name: string; amount: number; percentage: number }[]
+  remainingBudget: number
+  dailyAverageSpent: number
+  vsLastCycle: {
+    expenseDelta: number
+    expenseDeltaPercent: number
+    savingDelta: number
+  } | null
+}
+
+export interface TripBudgetHelper {
+  daysRemaining: number
+  dailyAllowance: number
+  projectedTripBalance: number
+  remainingBudget: number
+  spentTotal: number
+  isOffPace: boolean
+}
+
+export interface SavingCategoryOption {
+  category_id: string
+  name_en: string
+  name_tc: string
+  color_code: string
+  icon_image_name: string
+}
+
+/** One call = everything the homepage renders. */
+export interface DashboardData {
+  currency: string
+  currentCycle?: BudgetCycle
+  currentWindow?: CycleWindow
+  cycleIncomeTotal: number
+  cycleExpenseTotal: number
+  cycleSavingTotal: number
+  remainingBudget: number
+  daysUntilNextIncome: number
+  cycleFixedExpensesTotal: number
+  todaySpent: number
+  averageDailyBudgetUntilIncome: number
+  dailySafeToSpend: SafeToSpendResult
+  overspendForecast?: OverspendForecast
+  spendingStreak: SpendingStreak
+  weeklyReview: WeeklyReview
+  weeklyCashflowBrief: string[]
+  quickAddSuggestions: QuickAddSuggestion[]
+  activeChallenges: ChallengeProgress[]
+  upcomingBills: UpcomingBill[]
+  unusualExpenseAlerts: UnusualExpenseAlert[]
+  categoryAlerts: CategoryAlert[]
+  activeExpenseCategories: ExpenseCategory[]
+  activeIncomeCategories: IncomeCategory[]
+  expenseCategories: ExpenseCategory[]
+  incomeCategories: IncomeCategory[]
+  savingChallenges: SavingChallenge[]
+  trips: TripSession[]
+  activeTripId: string
+  activeTrip?: TripSession
+  fxRateMap: Record<string, number>
+  latestFxDate: string
+  recentTransactions: CombinedTransaction[]
+  isTripMode: boolean
+}
+
+export interface TransactionsQueryParams {
+  q?: string
+  kind?: 'all' | 'expense' | 'income' | 'saving'
+  category_id?: string
+  trip_id?: string
+  date_preset?: 'all' | 'today' | 'cycle' | 'future'
+}
+
+export interface TransactionGroup {
+  label: string
+  items: CombinedTransaction[]
+}
+
+export interface TransactionsQueryResult {
+  transactions: CombinedTransaction[]
+  groups: TransactionGroup[]
+  options: {
+    trips: TripSession[]
+    expenseCategories: ExpenseCategory[]
+    incomeCategories: IncomeCategory[]
+    savingCategories: SavingCategoryOption[]
+    activeTripId: string
+  }
+  currency: string
+  expenseCategories: ExpenseCategory[]
+  incomeCategories: IncomeCategory[]
+  savingChallenges: SavingChallenge[]
+  currentWindow?: CycleWindow
+  fxRateMap: Record<string, number>
+  latestFxDate: string
+}
+
+export interface BudgetsSummary {
+  cycles: BudgetCycle[]
+  targetExpenses: TargetExpenseLimit[]
+  activeExpenseCategories: ExpenseCategory[]
+  currency: string
+}
+
+export interface CategoryBudgetSummary {
+  currentCycle?: BudgetCycle
+  currentWindow?: CycleWindow
+  remainingCycleDays: number
+  cycleExpenses: ExpenseTransaction[]
+  todayExpenses: ExpenseTransaction[]
+  targetExpenses: TargetExpenseLimit[]
+  activeExpenseCategories: ExpenseCategory[]
+  currency: string
+}
+
+export interface FixedExpensesSummary {
+  fixedExpenses: ExpenseTransaction[]
+  cycleFixedExpensesTotal: number
+  upcomingBills: UpcomingBill[]
+  activeExpenseCategories: ExpenseCategory[]
+  currency: string
+}
+
+export interface TripsSummary {
+  trips: TripSession[]
+  activeTripId: string
+  activeTrip?: TripSession
+  tripBudgetHelper?: TripBudgetHelper
+  spentByTrip: Record<string, number>
+  currency: string
+}
+
+export interface MonthlySnapshotSummary {
+  monthlySnapshot: MonthlySnapshot
+  currency: string
 }

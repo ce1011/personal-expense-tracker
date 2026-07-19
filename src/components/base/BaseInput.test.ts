@@ -76,4 +76,3 @@ describe('BaseInput', () => {
     expect(wrapper.find('input').attributes('disabled')).toBeDefined()
   })
 })
-

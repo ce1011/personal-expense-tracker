@@ -33,13 +33,17 @@ export function getOverspendForecast(input: OverspendForecastInput): OverspendFo
   const totalDays = Math.max(1, Math.round((cycleEndExclusive - cycleStart) / DAY_IN_MS))
   const today = startOfLocalDay(new Date(nowTimestamp))
   const clampedToday = Math.min(Math.max(today, cycleStart), cycleEndExclusive)
-  const elapsedDays = Math.max(1, Math.min(totalDays, Math.floor((clampedToday - cycleStart) / DAY_IN_MS) + 1))
+  const elapsedDays = Math.max(
+    1,
+    Math.min(totalDays, Math.floor((clampedToday - cycleStart) / DAY_IN_MS) + 1),
+  )
   const remainingDays = Math.max(0, totalDays - elapsedDays)
   const averageDailySpend = input.cycleExpenseTotal / elapsedDays
   const projectedVariableSpend = averageDailySpend * remainingDays
   const projectedFixedSpend = input.fixedExpensesTotal
   const projectedTotalSpend = input.cycleExpenseTotal + projectedVariableSpend + projectedFixedSpend
-  const projectedRemainingBudget = input.remainingBudget - projectedVariableSpend - projectedFixedSpend
+  const projectedRemainingBudget =
+    input.remainingBudget - projectedVariableSpend - projectedFixedSpend
   const projectedOverspendAmount = Math.max(-projectedRemainingBudget, 0)
   const projectedSurplusAmount = Math.max(projectedRemainingBudget, 0)
   const currentPlannedTotal = input.cycleExpenseTotal + input.remainingBudget

@@ -85,19 +85,27 @@ export function validateSnapshotPayload(payload: AppDataPayload): IntegrityValid
   }
 
   const errors: string[] = []
-  const expenseCategoryIds = new Set(payload.expenseCategories.map((category) => category.category_id))
-  const incomeCategoryIds = new Set(payload.incomeCategories.map((category) => category.category_id))
+  const expenseCategoryIds = new Set(
+    payload.expenseCategories.map((category) => category.category_id),
+  )
+  const incomeCategoryIds = new Set(
+    payload.incomeCategories.map((category) => category.category_id),
+  )
   const savingCategoryIds = new Set(savingCategoryMap.keys())
   const cycleIds = new Set(payload.cycles.map((cycle) => cycle.cycle_id))
   const tripIds = new Set((payload.trips ?? []).map((trip) => trip.trip_id))
-  const challengeIds = new Set((payload.savingChallenges ?? []).map((challenge) => challenge.challenge_id))
+  const challengeIds = new Set(
+    (payload.savingChallenges ?? []).map((challenge) => challenge.challenge_id),
+  )
   const activeTripIds = payload.settings
     .filter((setting) => setting.name === 'active_trip_id')
     .map((setting) => setting.parameter)
 
   for (const expense of payload.expenses) {
     if (!expenseCategoryIds.has(expense.category_id)) {
-      errors.push(`Expense ${expense.transaction_id} references unknown category ${expense.category_id}`)
+      errors.push(
+        `Expense ${expense.transaction_id} references unknown category ${expense.category_id}`,
+      )
     }
 
     if (expense.trip_id && !tripIds.has(expense.trip_id)) {
@@ -107,7 +115,9 @@ export function validateSnapshotPayload(payload: AppDataPayload): IntegrityValid
 
   for (const income of payload.incomes) {
     if (!incomeCategoryIds.has(income.category_id)) {
-      errors.push(`Income ${income.transaction_id} references unknown category ${income.category_id}`)
+      errors.push(
+        `Income ${income.transaction_id} references unknown category ${income.category_id}`,
+      )
     }
 
     if (income.trip_id && !tripIds.has(income.trip_id)) {
@@ -131,7 +141,9 @@ export function validateSnapshotPayload(payload: AppDataPayload): IntegrityValid
 
   for (const target of payload.targetExpenses) {
     if (!cycleIds.has(target.cycle_id)) {
-      errors.push(`Target expense ${target.target_expense_id} references unknown cycle ${target.cycle_id}`)
+      errors.push(
+        `Target expense ${target.target_expense_id} references unknown cycle ${target.cycle_id}`,
+      )
     }
 
     if (!expenseCategoryIds.has(target.category_id)) {

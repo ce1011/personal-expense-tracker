@@ -81,7 +81,10 @@ describe('router', () => {
 
     // Successful login stores the token and updates reactive auth state.
     const auth = useAuthStore()
-    mockAuthLogin.mockResolvedValue({ user: { id: 'user-1', email: 'test@example.com' }, accessToken: 'tok' })
+    mockAuthLogin.mockResolvedValue({
+      user: { id: 'user-1', email: 'test@example.com' },
+      accessToken: 'tok',
+    })
     await auth.login('test@example.com', 'password123')
     expect(auth.isAuthenticated).toBe(true)
 

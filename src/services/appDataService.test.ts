@@ -17,6 +17,7 @@ const {
   mockSavingUpdate,
   mockSavingRemove,
   mockTransactionsImport,
+  mockChallengeList,
   mockChallengeCreate,
   mockChallengeUpdate,
   mockChallengeRemove,
@@ -30,12 +31,15 @@ const {
   mockCycleCreate,
   mockCycleUpdate,
   mockTargetUpsert,
+  mockExpenseCategoryList,
   mockExpenseCategoryCreate,
   mockExpenseCategoryUpdate,
   mockExpenseCategoryRemove,
+  mockIncomeCategoryList,
   mockIncomeCategoryCreate,
   mockIncomeCategoryUpdate,
   mockIncomeCategoryRemove,
+  mockFxRatesList,
 } = vi.hoisted(() => ({
   mockDataExport: vi.fn(),
   mockDataImport: vi.fn(),
@@ -51,6 +55,7 @@ const {
   mockSavingUpdate: vi.fn(),
   mockSavingRemove: vi.fn(),
   mockTransactionsImport: vi.fn(),
+  mockChallengeList: vi.fn(),
   mockChallengeCreate: vi.fn(),
   mockChallengeUpdate: vi.fn(),
   mockChallengeRemove: vi.fn(),
@@ -64,12 +69,15 @@ const {
   mockCycleCreate: vi.fn(),
   mockCycleUpdate: vi.fn(),
   mockTargetUpsert: vi.fn(),
+  mockExpenseCategoryList: vi.fn(),
   mockExpenseCategoryCreate: vi.fn(),
   mockExpenseCategoryUpdate: vi.fn(),
   mockExpenseCategoryRemove: vi.fn(),
+  mockIncomeCategoryList: vi.fn(),
   mockIncomeCategoryCreate: vi.fn(),
   mockIncomeCategoryUpdate: vi.fn(),
   mockIncomeCategoryRemove: vi.fn(),
+  mockFxRatesList: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
@@ -101,6 +109,7 @@ vi.mock('@/api/client', () => ({
       import: mockTransactionsImport,
     },
     savingChallenges: {
+      list: mockChallengeList,
       create: mockChallengeCreate,
       update: mockChallengeUpdate,
       remove: mockChallengeRemove,
@@ -125,15 +134,20 @@ vi.mock('@/api/client', () => ({
     },
     categories: {
       expenses: {
+        list: mockExpenseCategoryList,
         create: mockExpenseCategoryCreate,
         update: mockExpenseCategoryUpdate,
         remove: mockExpenseCategoryRemove,
       },
       incomes: {
+        list: mockIncomeCategoryList,
         create: mockIncomeCategoryCreate,
         update: mockIncomeCategoryUpdate,
         remove: mockIncomeCategoryRemove,
       },
+    },
+    fxRates: {
+      list: mockFxRatesList,
     },
   },
   ApiError: class ApiError extends Error {
@@ -154,10 +168,16 @@ import {
   deleteExpense,
   deleteIncome,
   deleteSaving,
+  exportBackup,
   getActiveTripId,
+  getCurrency,
+  getFxContext,
   getRecoverySnapshotSummaries,
   importTransactions,
-  loadAppData,
+  listExpenseCategories,
+  listIncomeCategories,
+  listSavingChallenges,
+  listTrips,
   replaceAllDataWithSnapshot,
   restoreFromSnapshot,
   saveCycle,
@@ -172,20 +192,6 @@ import {
   updateIncome,
   updateSaving,
 } from './appDataService'
-
-const emptyPayload: AppDataPayload = {
-  cycles: [],
-  expenseCategories: [],
-  incomeCategories: [],
-  expenses: [],
-  incomes: [],
-  targetExpenses: [],
-  savings: [],
-  settings: [],
-  trips: [],
-  fxRates: [],
-  savingChallenges: [],
-}
 
 const validPayload: AppDataPayload = {
   cycles: [
@@ -234,42 +240,82 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('loadAppData', () => {
-  test('sorts the exported payload for the UI', async () => {
-    mockDataExport.mockResolvedValue({
-      ...emptyPayload,
-      cycles: [
-        { cycle_id: 'a', cycle_code: '2026-06', income_day: 1, income: 1, saving_target: 0 },
-        { cycle_id: 'b', cycle_code: '2026-07', income_day: 1, income: 1, saving_target: 0 },
-      ],
-      expenses: [
-        {
-          transaction_id: 'old',
-          category_id: 'food',
-          name: 'old',
-          amount: 1,
-          date: 100,
-          create_date: 1,
-          edit_date: 1,
-          synced: false,
-        },
-        {
-          transaction_id: 'new',
-          category_id: 'food',
-          name: 'new',
-          amount: 1,
-          date: 200,
-          create_date: 1,
-          edit_date: 1,
-          synced: false,
-        },
-      ],
-    })
+describe('context reads', () => {
+  test('sorts expense and income categories by English name', async () => {
+    mockExpenseCategoryList.mockResolvedValue([
+      { category_id: 'b', name_en: 'Transport', name_tc: '', color_code: '', icon_image_name: '' },
+      { category_id: 'a', name_en: 'Food', name_tc: '', color_code: '', icon_image_name: '' },
+    ])
+    mockIncomeCategoryList.mockResolvedValue([
+      { category_id: 'x', name_en: 'Salary', name_tc: '', color_code: '', icon_image_name: '' },
+      { category_id: 'y', name_en: 'Bonus', name_tc: '', color_code: '', icon_image_name: '' },
+    ])
 
-    const payload = await loadAppData()
+    await expect(listExpenseCategories()).resolves.toEqual([
+      expect.objectContaining({ category_id: 'a' }),
+      expect.objectContaining({ category_id: 'b' }),
+    ])
+    await expect(listIncomeCategories()).resolves.toEqual([
+      expect.objectContaining({ category_id: 'y' }),
+      expect.objectContaining({ category_id: 'x' }),
+    ])
+  })
 
-    expect(payload.cycles.map((cycle) => cycle.cycle_code)).toEqual(['2026-07', '2026-06'])
-    expect(payload.expenses.map((expense) => expense.transaction_id)).toEqual(['new', 'old'])
+  test('sorts trips by start date ascending', async () => {
+    mockTripsList.mockResolvedValue([
+      { trip_id: 'late', start_date: 200 },
+      { trip_id: 'early', start_date: 100 },
+    ])
+
+    const trips = await listTrips()
+    expect(trips.map((trip) => trip.trip_id)).toEqual(['early', 'late'])
+  })
+
+  test('sorts saving challenges by most recently updated', async () => {
+    mockChallengeList.mockResolvedValue([
+      { challenge_id: 'old', updated_at: 100 },
+      { challenge_id: 'new', updated_at: 300 },
+    ])
+
+    const challenges = await listSavingChallenges()
+    expect(challenges.map((challenge) => challenge.challenge_id)).toEqual(['new', 'old'])
+  })
+
+  test('reads the currency setting, defaulting to HKD', async () => {
+    mockSettingsList.mockResolvedValue([{ setting_id: 's1', name: 'currency', parameter: 'JPY' }])
+    await expect(getCurrency()).resolves.toBe('JPY')
+
+    mockSettingsList.mockResolvedValue([])
+    await expect(getCurrency()).resolves.toBe('HKD')
+  })
+
+  test('builds an FX rate map with HKD base and the latest source date', async () => {
+    mockFxRatesList.mockResolvedValue([
+      { currency_code: 'JPY', rate_to_hkd: 0.05, source_date: '2026-07-01' },
+      { currency_code: 'USD', rate_to_hkd: 7.8, source_date: '2026-07-03' },
+    ])
+
+    const fx = await getFxContext()
+    expect(fx.fxRateMap.get('HKD')).toBe(1)
+    expect(fx.fxRateMap.get('JPY')).toBe(0.05)
+    expect(fx.fxRateMap.get('USD')).toBe(7.8)
+    expect(fx.latestFxDate).toBe('2026-07-03')
+  })
+
+  test('returns an empty latest FX date when no rates exist', async () => {
+    mockFxRatesList.mockResolvedValue([])
+
+    const fx = await getFxContext()
+    expect(fx.fxRateMap.get('HKD')).toBe(1)
+    expect(fx.latestFxDate).toBe('')
+  })
+})
+
+describe('exportBackup', () => {
+  test('returns the full payload from the export endpoint', async () => {
+    mockDataExport.mockResolvedValue(validPayload)
+    await expect(exportBackup()).resolves.toEqual(validPayload)
+    expect(mockDataExport).toHaveBeenCalled()
   })
 })
 
@@ -346,8 +392,14 @@ describe('transactions', () => {
     await deleteIncome('income-1')
     await deleteSaving('saving-1')
 
-    expect(mockExpenseUpdate).toHaveBeenCalledWith('expense-1', expect.objectContaining({ name: 'Dinner' }))
-    expect(mockIncomeUpdate).toHaveBeenCalledWith('income-1', expect.objectContaining({ name: 'Salary' }))
+    expect(mockExpenseUpdate).toHaveBeenCalledWith(
+      'expense-1',
+      expect.objectContaining({ name: 'Dinner' }),
+    )
+    expect(mockIncomeUpdate).toHaveBeenCalledWith(
+      'income-1',
+      expect.objectContaining({ name: 'Salary' }),
+    )
     expect(mockSavingUpdate).toHaveBeenCalledWith(
       'saving-1',
       expect.objectContaining({ description: 'Top up' }),
@@ -407,7 +459,10 @@ describe('importTransactions', () => {
 
 describe('cycles', () => {
   test('updates via PUT when an explicit cycleId is provided', async () => {
-    await saveCycle({ cycle_code: '2026-07', income_day: 1, income: 20000, saving_target: 5000 }, 'cycle-9')
+    await saveCycle(
+      { cycle_code: '2026-07', income_day: 1, income: 20000, saving_target: 5000 },
+      'cycle-9',
+    )
 
     expect(mockCycleUpdate).toHaveBeenCalledWith(
       'cycle-9',
@@ -435,9 +490,7 @@ describe('cycles', () => {
 
     await saveCycle({ cycle_code: '2026-08', income_day: 1, income: 1000, saving_target: 100 })
 
-    expect(mockCycleCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ cycle_code: '2026-08' }),
-    )
+    expect(mockCycleCreate).toHaveBeenCalledWith(expect.objectContaining({ cycle_code: '2026-08' }))
     expect(mockCycleUpdate).not.toHaveBeenCalled()
   })
 })
@@ -494,7 +547,10 @@ describe('trips and active trip setting', () => {
     await saveTrip(draft, { trip_id: 'trip-1', created_at: 5 })
 
     expect(mockTripCreate).toHaveBeenCalledWith(expect.objectContaining({ name: 'Tokyo' }))
-    expect(mockTripUpdate).toHaveBeenCalledWith('trip-1', expect.objectContaining({ name: 'Tokyo' }))
+    expect(mockTripUpdate).toHaveBeenCalledWith(
+      'trip-1',
+      expect.objectContaining({ name: 'Tokyo' }),
+    )
   })
 
   test('reads and sets the active trip id setting', async () => {

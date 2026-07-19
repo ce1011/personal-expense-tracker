@@ -5,16 +5,21 @@ import type {
   AppDataPayload,
   AuthResponse,
   BudgetCycle,
+  BudgetsSummary,
+  CategoryBudgetSummary,
   ChallengeBody,
   CycleBody,
+  DashboardData,
   ExpenseBody,
   ExpenseCategory,
   ExpenseTransaction,
+  FixedExpensesSummary,
   ImportBody,
   IncomeBody,
   IncomeCategory,
   IncomeTransaction,
   LoginBody,
+  MonthlySnapshotSummary,
   RegisterBody,
   SavingBody,
   SavingChallenge,
@@ -23,8 +28,11 @@ import type {
   SnapshotSummaryRecord,
   TargetExpenseBody,
   TargetExpenseLimit,
+  TransactionsQueryParams,
+  TransactionsQueryResult,
   TripBody,
   TripSession,
+  TripsSummary,
 } from './types'
 import type { AppSetting, FxRateRecord } from '@/types/app-data'
 
@@ -48,9 +56,7 @@ import type { AppSetting, FxRateRecord } from '@/types/app-data'
  */
 const baseUrl =
   (import.meta.env.VITE_API_URL as string | undefined) ??
-  (typeof window !== 'undefined'
-    ? `${window.location.origin}/api`
-    : 'http://localhost:3000/api')
+  (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:3000/api')
 
 /** API path prefixes used by the backend. */
 export const API_PREFIXES = [
@@ -64,6 +70,11 @@ export const API_PREFIXES = [
   '/settings',
   '/data',
   '/fx-rates',
+  '/dashboard',
+  '/budgets',
+  '/category-budget',
+  '/fixed-expenses',
+  '/monthly-snapshot',
 ] as const
 
 interface TreatyResult<T> {
@@ -133,8 +144,7 @@ function extractMessage(status: number, value: unknown): string {
 /** Typed request surface over the Eden proxy (mirrors `backend/src/routes`). */
 export const api = {
   auth: {
-    register: (body: RegisterBody) =>
-      request<AuthResponse>(http.auth.register.post(body)),
+    register: (body: RegisterBody) => request<AuthResponse>(http.auth.register.post(body)),
     login: (body: LoginBody) => request<AuthResponse>(http.auth.login.post(body)),
     me: () => request<{ user: { id: string; email: string } }>(http.auth.me.get()),
     logout: () => request<{ ok: boolean }>(http.auth.logout.post()),
@@ -146,8 +156,7 @@ export const api = {
         request<ExpenseCategory>(http.categories.expenses.post(body)),
       update: (id: string, body: ExpenseCategoryInput) =>
         request<ExpenseCategory>(http.categories.expenses({ id }).put(body)),
-      remove: (id: string) =>
-        request<ExpenseCategory>(http.categories.expenses({ id }).delete()),
+      remove: (id: string) => request<ExpenseCategory>(http.categories.expenses({ id }).delete()),
     },
     incomes: {
       list: () => request<IncomeCategory[]>(http.categories.incomes.get()),
@@ -155,8 +164,7 @@ export const api = {
         request<IncomeCategory>(http.categories.incomes.post(body)),
       update: (id: string, body: ExpenseCategoryInput) =>
         request<IncomeCategory>(http.categories.incomes({ id }).put(body)),
-      remove: (id: string) =>
-        request<IncomeCategory>(http.categories.incomes({ id }).delete()),
+      remove: (id: string) => request<IncomeCategory>(http.categories.incomes({ id }).delete()),
     },
   },
   transactions: {
@@ -180,8 +188,7 @@ export const api = {
     },
     savings: {
       list: () => request<SavingRecord[]>(http.transactions.savings.get()),
-      create: (body: SavingBody) =>
-        request<SavingRecord>(http.transactions.savings.post(body)),
+      create: (body: SavingBody) => request<SavingRecord>(http.transactions.savings.post(body)),
       update: (id: string, body: SavingBody) =>
         request<SavingRecord>(http.transactions.savings({ id }).put(body)),
       remove: (id: string) =>
@@ -206,8 +213,7 @@ export const api = {
       ),
     upsert: (body: TargetExpenseBody) =>
       request<TargetExpenseLimit>(http['target-expenses'].put(body)),
-    remove: (id: string) =>
-      request<TargetExpenseLimit>(http['target-expenses']({ id }).delete()),
+    remove: (id: string) => request<TargetExpenseLimit>(http['target-expenses']({ id }).delete()),
   },
   savingChallenges: {
     list: () => request<SavingChallenge[]>(http['saving-challenges'].get()),
@@ -215,14 +221,12 @@ export const api = {
       request<SavingChallenge>(http['saving-challenges'].post(body)),
     update: (id: string, body: ChallengeBody) =>
       request<SavingChallenge>(http['saving-challenges']({ id }).put(body)),
-    remove: (id: string) =>
-      request<SavingChallenge>(http['saving-challenges']({ id }).delete()),
+    remove: (id: string) => request<SavingChallenge>(http['saving-challenges']({ id }).delete()),
   },
   trips: {
     list: () => request<TripSession[]>(http.trips.get()),
     create: (body: TripBody) => request<TripSession>(http.trips.post(body)),
-    update: (id: string, body: TripBody) =>
-      request<TripSession>(http.trips({ id }).put(body)),
+    update: (id: string, body: TripBody) => request<TripSession>(http.trips({ id }).put(body)),
     remove: (id: string) => request<TripSession>(http.trips({ id }).delete()),
   },
   settings: {
@@ -237,17 +241,36 @@ export const api = {
     sync: () => request<AppDataPayload>(http.data.sync.get()),
     snapshots: {
       list: () => request<SnapshotSummaryRecord[]>(http.data.snapshots.get()),
-      get: (id: string) =>
-        request<SnapshotDetail>(http.data.snapshots({ id }).get()),
-      restore: (id: string) =>
-        request<{ ok: boolean }>(http.data.snapshots({ id }).restore.post()),
-      remove: (id: string) =>
-        request<{ ok: boolean }>(http.data.snapshots({ id }).delete()),
+      get: (id: string) => request<SnapshotDetail>(http.data.snapshots({ id }).get()),
+      restore: (id: string) => request<{ ok: boolean }>(http.data.snapshots({ id }).restore.post()),
+      remove: (id: string) => request<{ ok: boolean }>(http.data.snapshots({ id }).delete()),
     },
   },
   fxRates: {
     list: () => request<FxRateRecord[]>(http['fx-rates'].get()),
     refresh: () => request<FxRateRecord[]>(http['fx-rates'].refresh.post()),
+  },
+  dashboard: {
+    get: () => request<DashboardData>(http.dashboard.get()),
+  },
+  transactionsQuery: {
+    list: (params: TransactionsQueryParams = {}) =>
+      request<TransactionsQueryResult>(http.transactions.get(undefined, { query: params })),
+  },
+  budgets: {
+    summary: () => request<BudgetsSummary>(http.budgets.summary.get()),
+  },
+  categoryBudget: {
+    summary: () => request<CategoryBudgetSummary>(http['category-budget'].summary.get()),
+  },
+  fixedExpenses: {
+    summary: () => request<FixedExpensesSummary>(http['fixed-expenses'].summary.get()),
+  },
+  tripsSummary: {
+    get: () => request<TripsSummary>(http.trips.summary.get()),
+  },
+  monthlySnapshot: {
+    get: () => request<MonthlySnapshotSummary>(http['monthly-snapshot'].get()),
   },
 }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SearchX } from 'lucide-vue-next'
-import { computed, reactive, shallowRef, watch } from 'vue'
+import { computed, shallowRef } from 'vue'
 
 import BaseInput from '@/components/base/BaseInput.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
@@ -8,21 +8,15 @@ import SkeletonList from '@/components/base/SkeletonList.vue'
 import QuickAddSheet from '@/components/transactions/QuickAddSheet.vue'
 import TransactionDateGroup from '@/components/transactions/TransactionDateGroup.vue'
 import { useAppData } from '@/composables/useAppData'
-import { startOfLocalDay } from '@/lib/date'
-import { savingCategories } from '@/lib/savingCategories'
+import { useTransactionsQuery } from '@/composables/useTransactionsQuery'
 import type { CombinedTransaction, ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
-const search = shallowRef('')
+const query = useTransactionsQuery()
+const { filters } = query
+
 const selectedTransaction = shallowRef<CombinedTransaction | undefined>()
 const showFilters = shallowRef(false)
-
-const filters = reactive({
-  tripId: 'all',
-  kind: 'all' as 'all' | 'expense' | 'income' | 'saving',
-  categoryId: 'all',
-  datePreset: 'all' as 'all' | 'today' | 'cycle' | 'future',
-})
 
 const kindOptions: { value: typeof filters.kind; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -38,35 +32,32 @@ const datePresetOptions: { value: typeof filters.datePreset; label: string }[] =
   { value: 'future', label: '未來' },
 ]
 
-const todayWindow = computed(() => {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  return { start, end: start + 86_400_000 }
-})
-
 const availableCategories = computed(() => {
   if (filters.kind === 'expense') {
-    return appData.activeExpenseCategories.value
+    return query.activeExpenseCategories.value
   }
 
   if (filters.kind === 'income') {
-    return appData.activeIncomeCategories.value
+    return query.activeIncomeCategories.value
   }
 
   if (filters.kind === 'saving') {
-    return savingCategories
+    return query.savingCategoryOptions.value
   }
 
   return [
-    ...appData.activeExpenseCategories.value.map((category) => ({
+    ...query.activeExpenseCategories.value.map((category) => ({
       ...category,
       kind: 'expense' as const,
     })),
-    ...appData.activeIncomeCategories.value.map((category) => ({
+    ...query.activeIncomeCategories.value.map((category) => ({
       ...category,
       kind: 'income' as const,
     })),
-    ...savingCategories.map((category) => ({ ...category, kind: 'saving' as const })),
+    ...query.savingCategoryOptions.value.map((category) => ({
+      ...category,
+      kind: 'saving' as const,
+    })),
   ]
 })
 
@@ -81,108 +72,10 @@ const categoryNameById = computed(() => {
 const tripNameById = computed(() => {
   const map = new Map<string, string>()
   map.set('unassigned', '未關聯旅程')
-  for (const trip of appData.trips.value) {
+  for (const trip of query.trips.value) {
     map.set(trip.trip_id, `${trip.name}｜${trip.destination}`)
   }
   return map
-})
-
-const baseTransactions = computed(() => {
-  if (filters.tripId === 'all') {
-    return appData.combinedTransactions.value
-  }
-
-  if (filters.tripId === 'unassigned') {
-    return appData.unassignedTransactions.value
-  }
-
-  if (filters.tripId === appData.activeTripId.value) {
-    return appData.tripTransactions.value
-  }
-
-  return appData.combinedTransactions.value.filter(
-    (transaction) => transaction.trip_id === filters.tripId,
-  )
-})
-
-const filteredTransactions = computed(() => {
-  const query = search.value.trim().toLowerCase()
-
-  return baseTransactions.value.filter((transaction) => {
-    if (query && !transaction.name.toLowerCase().includes(query)) {
-      return false
-    }
-
-    if (filters.kind !== 'all' && transaction.kind !== filters.kind) {
-      return false
-    }
-
-    if (filters.categoryId !== 'all' && transaction.category_id !== filters.categoryId) {
-      return false
-    }
-
-    if (filters.datePreset === 'today') {
-      if (transaction.date < todayWindow.value.start || transaction.date >= todayWindow.value.end) {
-        return false
-      }
-    }
-
-    if (filters.datePreset === 'cycle') {
-      const window = appData.currentWindow.value
-      if (!window || transaction.date < window.start || transaction.date >= window.end) {
-        return false
-      }
-    }
-
-    if (filters.datePreset === 'future' && transaction.date < todayWindow.value.end) {
-      return false
-    }
-
-    return true
-  })
-})
-
-const groupedTransactions = computed(() => {
-  const groups = new Map<string, CombinedTransaction[]>()
-  const now = Date.now()
-  const today = startOfLocalDay(new Date())
-  const yesterday = today - 86_400_000
-  const oneWeekAgo = today - 7 * 86_400_000
-
-  for (const transaction of filteredTransactions.value) {
-    const date = startOfLocalDay(new Date(transaction.date))
-    let label: string
-
-    if (date === today) {
-      label = '今天'
-    } else if (date === yesterday) {
-      label = '昨天'
-    } else if (date > oneWeekAgo) {
-      label = new Intl.DateTimeFormat('zh-HK', { month: 'long', day: 'numeric' }).format(
-        new Date(date),
-      )
-    } else {
-      label = '更早'
-    }
-
-    const existing = groups.get(label)
-    if (existing) {
-      existing.push(transaction)
-    } else {
-      groups.set(label, [transaction])
-    }
-  }
-
-  // Preserve chronological order by first transaction in each group.
-  const entries = [...groups.entries()].map(([label, items]) => ({
-    label,
-    items,
-    firstDate: items[items.length - 1]?.date ?? now,
-  }))
-
-  entries.sort((a, b) => b.firstDate - a.firstDate)
-
-  return entries
 })
 
 const activeFilterChips = computed(() => {
@@ -201,35 +94,6 @@ const activeFilterChips = computed(() => {
 
   return chips
 })
-
-watch(
-  () => appData.activeTripId.value,
-  (activeTripId) => {
-    filters.tripId = activeTripId || 'all'
-  },
-  { immediate: true },
-)
-
-watch(
-  () => appData.trips.value,
-  (trips) => {
-    if (filters.tripId === 'all' || filters.tripId === 'unassigned') {
-      return
-    }
-
-    if (!trips.some((trip) => trip.trip_id === filters.tripId)) {
-      filters.tripId = appData.activeTripId.value || 'all'
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  () => filters.kind,
-  () => {
-    filters.categoryId = 'all'
-  },
-)
 
 function addExpense(draft: ExpenseDraft): void {
   void appData.addExpense(draft)
@@ -288,14 +152,6 @@ function deleteTransaction(): void {
   void action.then(closeSheet)
 }
 
-function resetFilters(): void {
-  filters.tripId = appData.activeTripId.value || 'all'
-  filters.kind = 'all'
-  filters.categoryId = 'all'
-  filters.datePreset = 'all'
-  search.value = ''
-}
-
 function removeFilterChip(key: string): void {
   if (key === 'trip') {
     filters.tripId = 'all'
@@ -328,7 +184,12 @@ function setCategoryFilter(categoryId: string): void {
     >
       <div class="flex items-center gap-3">
         <div class="relative flex-1">
-          <BaseInput v-model="search" placeholder="搜尋交易名稱" type="search" inputmode="search" />
+          <BaseInput
+            v-model="filters.search"
+            placeholder="搜尋交易名稱"
+            type="search"
+            inputmode="search"
+          />
         </div>
         <button
           type="button"
@@ -376,7 +237,7 @@ function setCategoryFilter(categoryId: string): void {
           </button>
         </div>
 
-        <div v-if="appData.trips.value.length" class="grid gap-1.5">
+        <div v-if="query.trips.value.length" class="grid gap-1.5">
           <p class="text-xs font-medium text-text-2">旅程</p>
           <div class="flex flex-wrap gap-2">
             <button
@@ -404,7 +265,7 @@ function setCategoryFilter(categoryId: string): void {
               未關聯
             </button>
             <button
-              v-for="trip in appData.trips.value"
+              v-for="trip in query.trips.value"
               :key="trip.trip_id"
               type="button"
               class="rounded-full px-3 py-1.5 text-sm font-medium transition"
@@ -481,7 +342,7 @@ function setCategoryFilter(categoryId: string): void {
         <button
           type="button"
           class="text-xs font-medium text-text-2 hover:text-text"
-          @click="resetFilters"
+          @click="query.resetFilters"
         >
           清除全部
         </button>
@@ -489,16 +350,16 @@ function setCategoryFilter(categoryId: string): void {
     </section>
 
     <section class="grid gap-4">
-      <SkeletonList v-if="appData.loading.value" :rows="6" />
-      <div v-else-if="groupedTransactions.length" class="space-y-4">
+      <SkeletonList v-if="query.loading.value" :rows="6" />
+      <div v-else-if="query.groups.value.length" class="space-y-4">
         <TransactionDateGroup
-          v-for="group in groupedTransactions"
+          v-for="group in query.groups.value"
           :key="group.label"
           :label="group.label"
           :items="group.items"
-          :expense-categories="appData.data.value.expenseCategories"
-          :income-categories="appData.data.value.incomeCategories"
-          :currency="appData.currency.value"
+          :expense-categories="query.expenseCategories.value"
+          :income-categories="query.incomeCategories.value"
+          :currency="query.currency.value"
           @select="startEditing"
         />
       </div>
@@ -513,13 +374,13 @@ function setCategoryFilter(categoryId: string): void {
     <QuickAddSheet
       :model-value="Boolean(selectedTransaction)"
       :transaction="selectedTransaction"
-      :expense-categories="appData.activeExpenseCategories.value"
-      :income-categories="appData.activeIncomeCategories.value"
-      :saving-challenges="appData.savingChallenges.value"
-      :trip-options="appData.trips.value"
+      :expense-categories="query.activeExpenseCategories.value"
+      :income-categories="query.activeIncomeCategories.value"
+      :saving-challenges="query.savingChallenges.value"
+      :trip-options="query.trips.value"
       :default-trip-id="appData.activeTripId.value || undefined"
-      :fx-rate-map="appData.fxRateMap.value"
-      :latest-fx-date="appData.latestFxDate.value"
+      :fx-rate-map="query.fxRateMap.value"
+      :latest-fx-date="query.latestFxDate.value"
       @update:model-value="closeSheet"
       @create-expense="addExpense"
       @create-income="addIncome"

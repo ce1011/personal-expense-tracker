@@ -1,115 +1,23 @@
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue'
 import { AlertTriangle, PieChart, TrendingUp } from 'lucide-vue-next'
 
 import BaseCard from '@/components/base/BaseCard.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import CategoryProgressItem from '@/components/categoryBudget/CategoryProgressItem.vue'
-import { useAppData } from '@/composables/useAppData'
-import {
-  buildCategoryBudgetInsights,
-  getDailyRemainingBudget,
-} from '@/lib/categoryBudgetInsights'
-import { buildCategoryProgressRows } from '@/lib/categoryProgress'
-import { getRemainingCycleDays } from '@/lib/budgetCycle'
-import { startOfLocalDay } from '@/lib/date'
+import { useCategoryBudgetData } from '@/composables/useCategoryBudgetData'
 import { formatCurrency, formatPercent, withHash } from '@/lib/formatters'
 
-const appData = useAppData()
-const budgetProgressMode = shallowRef<'today' | 'cycle'>('today')
-
-const todayExpenses = computed(() => {
-  const start = startOfLocalDay(new Date())
-  const end = start + 86_400_000
-  return appData.data.value.expenses.filter(
-    (expense) => expense.date >= start && expense.date < end,
-  )
-})
-
-const remainingCycleDays = computed(() => {
-  const window = appData.currentWindow.value
-
-  if (!window) {
-    return 1
-  }
-
-  return getRemainingCycleDays(window)
-})
-
-const futureCycleDays = computed(() => Math.max(1, remainingCycleDays.value - 1))
-
-const cycleProgressRows = computed(() =>
-  buildCategoryProgressRows(
-    appData.activeExpenseCategories.value,
-    appData.cycleExpenses.value,
-    appData.data.value.targetExpenses,
-    appData.currentCycle.value?.cycle_id,
-  ),
-)
-
-const cycleInsights = computed(() => buildCategoryBudgetInsights(cycleProgressRows.value))
-
-const dailyRemainingBudget = computed(() =>
-  getDailyRemainingBudget(cycleInsights.value.totalRemaining, futureCycleDays.value),
-)
-
-const progressRows = computed(() => {
-  const expenses =
-    budgetProgressMode.value === 'today' ? todayExpenses.value : appData.cycleExpenses.value
-  const targetDivisor = budgetProgressMode.value === 'today' ? remainingCycleDays.value : 1
-
-  return buildCategoryProgressRows(
-    appData.activeExpenseCategories.value,
-    expenses,
-    appData.data.value.targetExpenses,
-    appData.currentCycle.value?.cycle_id,
-    targetDivisor,
-    appData.cycleExpenses.value,
-    budgetProgressMode.value === 'today',
-  )
-})
-
-const insights = computed(() => {
-  const rowInsights = buildCategoryBudgetInsights(progressRows.value)
-
-  if (budgetProgressMode.value === 'cycle') {
-    return rowInsights
-  }
-
-  const dailyTarget = Math.max(0, dailyRemainingBudget.value)
-
-  return {
-    ...rowInsights,
-    totalTarget: dailyTarget,
-    totalRemaining: dailyTarget - rowInsights.totalSpent,
-    utilizationRate:
-      dailyTarget > 0 ? Math.min(1, rowInsights.totalSpent / dailyTarget) : 0,
-  }
-})
-
-const budgetTargetDescription = computed(() =>
-  budgetProgressMode.value === 'today'
-    ? `本期餘額平均分配至未來 ${futureCycleDays.value} 日`
-    : '所有分類上限合計',
-)
-
-const rankedRows = computed(() => [...progressRows.value].sort((a, b) => b.spent - a.spent))
-
-const totalSpent = computed(() => rankedRows.value.reduce((sum, row) => sum + row.spent, 0))
-
-const spendingShareRows = computed(() =>
-  rankedRows.value
-    .filter((row) => row.spent > 0)
-    .map((row) => ({
-      ...row,
-      share: totalSpent.value > 0 ? row.spent / totalSpent.value : 0,
-    })),
-)
-
-const riskRows = computed(() =>
-  rankedRows.value.filter((row) => row.spent > row.target || (row.target > 0 && row.ratio >= 0.8)),
-)
+const {
+  budgetProgressMode,
+  currency,
+  insights,
+  budgetTargetDescription,
+  rankedRows,
+  spendingShareRows,
+  riskRows,
+  loading,
+} = useCategoryBudgetData()
 
 function rowTone(row: (typeof rankedRows.value)[number]): 'danger' | 'warning' | 'good' {
   if (row.target > 0 && row.spent > row.target) {
@@ -177,7 +85,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       </button>
     </div>
 
-    <section v-if="appData.loading.value" class="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <section v-if="loading" class="grid grid-cols-2 gap-3 md:grid-cols-4">
       <SkeletonCard v-for="index in 4" :key="index" />
     </section>
 
@@ -185,7 +93,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       <BaseCard>
         <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">預算上限</p>
         <p class="mt-2 text-amount font-bold text-text">
-          {{ formatCurrency(insights.totalTarget, appData.currency.value) }}
+          {{ formatCurrency(insights.totalTarget, currency) }}
         </p>
         <p class="mt-1 text-caption text-text-2">
           {{ budgetTargetDescription }}
@@ -194,7 +102,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       <BaseCard>
         <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">已使用</p>
         <p class="mt-2 text-amount font-bold text-text">
-          {{ formatCurrency(insights.totalSpent, appData.currency.value) }}
+          {{ formatCurrency(insights.totalSpent, currency) }}
         </p>
         <p class="mt-1 text-caption text-text-2">{{ insights.activeCategories }} 個分類有活動</p>
       </BaseCard>
@@ -204,7 +112,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
           class="mt-2 text-amount font-bold"
           :class="insights.totalRemaining > 0 ? 'text-primary' : 'text-danger'"
         >
-          {{ formatCurrency(insights.totalRemaining, appData.currency.value) }}
+          {{ formatCurrency(insights.totalRemaining, currency) }}
         </p>
         <p class="mt-1 text-caption text-text-2">
           {{ insights.overBudgetCount }} 個超支，{{ insights.nearLimitCount }} 個接近上限
@@ -224,7 +132,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       </BaseCard>
     </section>
 
-    <SkeletonCard v-if="appData.loading.value" :lines="4" />
+    <SkeletonCard v-if="loading" :lines="4" />
 
     <BaseCard v-else-if="riskRows.length" variant="warning">
       <div class="flex items-center gap-2">
@@ -249,8 +157,8 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
                 {{ row.category.name_tc || row.category.name_en }}
               </p>
               <p class="text-caption text-text-2">
-                {{ formatCurrency(row.spent, appData.currency.value) }} /
-                {{ row.target ? formatCurrency(row.target, appData.currency.value) : '未設定上限' }}
+                {{ formatCurrency(row.spent, currency) }} /
+                {{ row.target ? formatCurrency(row.target, currency) : '未設定上限' }}
               </p>
             </div>
           </div>
@@ -268,7 +176,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
       </div>
     </BaseCard>
 
-    <div v-if="appData.loading.value" class="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+    <div v-if="loading" class="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
       <SkeletonCard :lines="6" />
       <SkeletonCard :lines="6" />
     </div>
@@ -294,7 +202,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
             v-for="row in rankedRows"
             :key="row.category.category_id"
             :row="row"
-            :currency="appData.currency.value"
+            :currency="currency"
           />
         </div>
         <EmptyState
@@ -322,7 +230,7 @@ function rowStatus(row: (typeof rankedRows.value)[number]): string {
                 row.category.name_tc || row.category.name_en
               }}</span>
               <span class="text-text-2">
-                {{ formatCurrency(row.spent, appData.currency.value) }} ·
+                {{ formatCurrency(row.spent, currency) }} ·
                 {{ formatPercent(row.share) }}
               </span>
             </div>
