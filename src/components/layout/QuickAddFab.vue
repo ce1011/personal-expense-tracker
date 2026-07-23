@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { Plus } from 'lucide-vue-next'
 
+import { useOverlayState } from '@/composables/useOverlayState'
+
 const emit = defineEmits<{
   click: []
 }>()
+
+const { isOverlayOpen } = useOverlayState()
 
 function handleClick(): void {
   emit('click')
@@ -14,6 +18,9 @@ function handleClick(): void {
   <button
     type="button"
     class="quick-add-fab fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-4 z-30 hidden size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg focus-visible:ring-offset-2 md:inline-flex"
+    :class="{ 'quick-add-fab--hidden': isOverlayOpen }"
+    :aria-hidden="isOverlayOpen"
+    :inert="isOverlayOpen"
     aria-label="快速新增交易"
     @click="handleClick"
   >
@@ -29,7 +36,20 @@ function handleClick(): void {
   transition:
     background-color 180ms ease,
     box-shadow 220ms ease,
-    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease,
+    visibility 0s linear;
+}
+
+.quick-add-fab--hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(1rem) scale(0.85);
+  transition:
+    opacity 160ms ease,
+    transform 220ms ease,
+    visibility 0s linear 220ms;
 }
 
 .quick-add-fab::before {

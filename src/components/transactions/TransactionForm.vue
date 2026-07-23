@@ -271,7 +271,7 @@ function removeTransaction(): void {
 </script>
 
 <template>
-  <form class="grid gap-4" @submit.prevent="submitForm">
+  <form class="transaction-form grid gap-4" @submit.prevent="submitForm">
     <div v-if="!isEditing" class="grid grid-cols-3 gap-2 rounded-xl bg-accent p-1">
       <button
         v-for="option in kindOptions"
@@ -393,8 +393,8 @@ function removeTransaction(): void {
       <p class="mt-0.5 text-xs text-text-3">匯率日期：{{ latestFxDate || '尚未取得' }}</p>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3 pt-2">
-      <BaseButton type="submit" :disabled="!canSubmit">
+    <div class="transaction-actions flex flex-wrap items-center gap-3 pt-2">
+      <BaseButton class="transaction-actions__primary" type="submit" :disabled="!canSubmit">
         {{ isEditing ? '儲存修改' : '新增交易' }}
       </BaseButton>
       <BaseButton variant="secondary" type="button" @click="cancelEdit"> 取消 </BaseButton>
@@ -411,3 +411,39 @@ function removeTransaction(): void {
     </div>
   </form>
 </template>
+
+<style scoped>
+@media (max-width: 639px) {
+  .transaction-form {
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  }
+
+  .transaction-actions {
+    position: fixed;
+    z-index: 2;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.5rem;
+    margin: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--color-border));
+    background: color-mix(in srgb, white 92%, transparent);
+    padding: 0.75rem 1rem max(0.75rem, env(safe-area-inset-bottom));
+    box-shadow: 0 -12px 36px rgb(67 40 119 / 10%);
+    backdrop-filter: blur(20px) saturate(140%);
+  }
+
+  .transaction-actions :deep(.base-button) {
+    min-width: 0;
+    padding-right: 0.85rem;
+    padding-left: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .transaction-actions__primary {
+    width: 100%;
+  }
+}
+</style>

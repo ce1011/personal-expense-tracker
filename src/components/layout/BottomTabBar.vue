@@ -3,12 +3,15 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChartPie, LayoutDashboard, ListChecks, PlusCircle, Settings2 } from 'lucide-vue-next'
 
+import { useOverlayState } from '@/composables/useOverlayState'
+
 const emit = defineEmits<{
   quickAdd: []
 }>()
 
 const route = useRoute()
 const router = useRouter()
+const { isOverlayOpen } = useOverlayState()
 
 const tabs = [
   { label: '總覽', to: '/', icon: LayoutDashboard, name: 'dashboard' },
@@ -37,6 +40,9 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
 <template>
   <nav
     class="bottom-tab safe-bottom fixed bottom-0 left-0 right-0 z-30 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2"
+    :class="{ 'bottom-tab--hidden': isOverlayOpen }"
+    :aria-hidden="isOverlayOpen"
+    :inert="isOverlayOpen"
     aria-label="主要導航"
   >
     <div class="mx-auto flex max-w-md items-end justify-around">
@@ -83,6 +89,21 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
   background: color-mix(in srgb, white 88%, transparent);
   box-shadow: 0 -12px 40px rgb(67 40 119 / 9%);
   backdrop-filter: blur(22px) saturate(140%);
+  transition:
+    opacity 220ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear;
+}
+
+.bottom-tab--hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+  transition:
+    opacity 160ms ease,
+    transform 240ms ease,
+    visibility 0s linear 240ms;
 }
 
 .tab-item {
