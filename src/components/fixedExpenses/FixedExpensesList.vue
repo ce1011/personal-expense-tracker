@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pencil, Trash2 } from 'lucide-vue-next'
+import { Check, Pencil, Trash2 } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 import BaseCard from '@/components/base/BaseCard.vue'
@@ -16,6 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   edit: [transaction: ExpenseTransaction]
+  record: [transaction: ExpenseTransaction]
   delete: [transactionId: string]
 }>()
 
@@ -82,6 +83,15 @@ function confirmDelete(transaction: ExpenseTransaction): void {
           <p class="mr-2 text-right text-body-sm font-semibold text-text">
             {{ formatCurrency(expense.amount, currency) }}
           </p>
+          <button
+            type="button"
+            class="inline-flex min-h-10 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-primary transition hover:bg-accent"
+            :aria-label="`記錄${expense.name}為實際支出`"
+            @click="emit('record', expense)"
+          >
+            <Check class="size-4" aria-hidden="true" />
+            記錄
+          </button>
           <button
             type="button"
             class="inline-flex size-10 items-center justify-center rounded-xl text-text-2 transition hover:bg-accent hover:text-text"

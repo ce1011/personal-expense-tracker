@@ -11,7 +11,7 @@ import FixedExpensesList from '@/components/fixedExpenses/FixedExpensesList.vue'
 import { useAppData } from '@/composables/useAppData'
 import { useFixedExpensesData } from '@/composables/useFixedExpensesData'
 import { formatCurrency } from '@/lib/formatters'
-import type { ExpenseDraft, ExpenseTransaction } from '@/types/app-data'
+import type { ExpenseDraft, ExpenseTransaction, SupportedCurrency } from '@/types/app-data'
 
 const appData = useAppData()
 const {
@@ -51,6 +51,20 @@ async function createExpense(draft: ExpenseDraft): Promise<void> {
 async function updateExpense(transactionId: string, draft: ExpenseDraft): Promise<void> {
   await appData.updateExpense(transactionId, draft)
   closeForm()
+}
+
+async function recordExpense(transaction: ExpenseTransaction): Promise<void> {
+  await appData.addExpense({
+    category_id: transaction.category_id,
+    name: transaction.name,
+    amount: transaction.amount,
+    date: Date.now(),
+    currency_code: currency.value as SupportedCurrency,
+    exchange_rate_hkd: 1,
+    recurring: false,
+    recurring_frequency: undefined,
+    recurring_day: undefined,
+  })
 }
 
 async function deleteExpense(transactionId: string): Promise<void> {
@@ -130,6 +144,7 @@ async function deleteExpense(transactionId: string): Promise<void> {
       :expense-categories="activeExpenseCategories"
       :currency="currency"
       @edit="openEdit"
+      @record="recordExpense"
       @delete="deleteExpense"
     />
 
