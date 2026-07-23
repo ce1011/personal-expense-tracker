@@ -1,3 +1,5 @@
+import { clearRequestCache } from './requestCache'
+
 const TOKEN_STORAGE_KEY = 'expense-tracker.access-token'
 
 let memoryToken: string | null = null
@@ -26,6 +28,9 @@ export function getToken(): string | null {
 
 /** Persist the access token. */
 export function setToken(token: string): void {
+  if (token !== getToken()) {
+    clearRequestCache()
+  }
   memoryToken = token
 
   if (storageAvailable()) {
@@ -35,6 +40,7 @@ export function setToken(token: string): void {
 
 /** Discard the access token (logout / 401 handling). */
 export function clearToken(): void {
+  clearRequestCache()
   memoryToken = null
 
   if (storageAvailable()) {

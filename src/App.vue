@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 
 import AppShell from '@/components/AppShell.vue'
 import QuickAddSheet from '@/components/transactions/QuickAddSheet.vue'
-import { initializeAppContext, useAppData } from '@/composables/useAppData'
+import { useAppData } from '@/composables/useAppData'
 import { useShellData } from '@/composables/useShellData'
-import { useAuthStore } from '@/stores/auth'
 import type { ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
 const appData = useAppData()
-const auth = useAuthStore()
 const route = useRoute()
 const isQuickAddOpen = shallowRef(false)
 
@@ -18,18 +16,6 @@ const isQuickAddOpen = shallowRef(false)
 // (auth) routes, which render bare without the shell.
 const isPublic = computed(() => Boolean(route.meta.public))
 const { currentCycle, loading } = useShellData(isPublic)
-
-// Initialize shared context only after auth restoration/login has completed.
-// The watcher also handles login/register without coupling the auth view to app data.
-watch(
-  () => [auth.ready, auth.isAuthenticated] as const,
-  ([ready, authenticated]) => {
-    if (ready && authenticated) {
-      void initializeAppContext()
-    }
-  },
-  { immediate: true },
-)
 
 function openQuickAdd(): void {
   isQuickAddOpen.value = true

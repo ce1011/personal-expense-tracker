@@ -1,5 +1,6 @@
 import { treaty } from '@elysiajs/eden'
 
+import { cachedRequest, requestCacheKey } from './requestCache'
 import { getToken, notifyUnauthorized } from './tokenStore'
 import type {
   AppDataPayload,
@@ -57,6 +58,9 @@ import type { AppSetting, FxRateRecord } from '@/types/app-data'
 const baseUrl =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:3000/api')
+
+const AGGREGATE_CACHE_TTL_MS = 20_000
+const TRANSACTIONS_CACHE_TTL_MS = 10_000
 
 /** API path prefixes used by the backend. */
 export const API_PREFIXES = [
@@ -255,26 +259,60 @@ export const api = {
     refresh: () => request<FxRateRecord[]>(http['fx-rates'].refresh.post()),
   },
   dashboard: {
-    get: () => request<DashboardData>(http.dashboard.get()),
+    get: () =>
+      cachedRequest(
+        'dashboard',
+        () => request<DashboardData>(http.dashboard.get()),
+        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['dashboard'] },
+      ),
   },
   transactionsQuery: {
     list: (params: TransactionsQueryParams = {}) =>
-      request<TransactionsQueryResult>(http.transactions.get({ query: params })),
+      cachedRequest(
+        requestCacheKey('transactions', params),
+        () => request<TransactionsQueryResult>(http.transactions.get({ query: params })),
+        { ttlMs: TRANSACTIONS_CACHE_TTL_MS, tags: ['transactions'] },
+      ),
   },
   budgets: {
-    summary: () => request<BudgetsSummary>(http.budgets.summary.get()),
+    summary: () =>
+      cachedRequest(
+        'budgets-summary',
+        () => request<BudgetsSummary>(http.budgets.summary.get()),
+        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['budgets'] },
+      ),
   },
   categoryBudget: {
-    summary: () => request<CategoryBudgetSummary>(http['category-budget'].summary.get()),
+    summary: () =>
+      cachedRequest(
+        'category-budget-summary',
+        () => request<CategoryBudgetSummary>(http['category-budget'].summary.get()),
+        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['categoryBudget'] },
+      ),
   },
   fixedExpenses: {
-    summary: () => request<FixedExpensesSummary>(http['fixed-expenses'].summary.get()),
+    summary: () =>
+      cachedRequest(
+        'fixed-expenses-summary',
+        () => request<FixedExpensesSummary>(http['fixed-expenses'].summary.get()),
+        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['fixedExpenses'] },
+      ),
   },
   tripsSummary: {
-    get: () => request<TripsSummary>(http.trips.summary.get()),
+    get: () =>
+      cachedRequest(
+        'trips-summary',
+        () => request<TripsSummary>(http.trips.summary.get()),
+        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['trips'] },
+      ),
   },
   monthlySnapshot: {
-    get: () => request<MonthlySnapshotSummary>(http['monthly-snapshot'].get()),
+    get: () =>
+      cachedRequest(
+        'monthly-snapshot',
+        () => request<MonthlySnapshotSummary>(http['monthly-snapshot'].get()),
+        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['monthlySnapshot'] },
+      ),
   },
 }
 

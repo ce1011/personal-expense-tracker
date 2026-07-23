@@ -46,3 +46,16 @@ bun run build
 ```sh
 bun lint
 ```
+
+## API cache strategy
+
+Authenticated aggregate reads use a bounded in-memory cache:
+
+- dashboard and page summaries: 20-second TTL
+- transaction query pages: 10-second TTL
+- concurrent identical requests share one in-flight promise
+- successful mutations invalidate only affected page scopes
+- logout, 401, account switch, import, and restore clear the full cache
+
+The cache is intentionally not persisted to localStorage, Cache Storage, or the
+service worker because responses contain personal financial data.

@@ -1,5 +1,6 @@
 import { computed, readonly, shallowRef } from 'vue'
 
+import { clearRequestCache, invalidateRequestCache } from '@/api/requestCache'
 import {
   createExpense,
   createIncome,
@@ -10,16 +11,10 @@ import {
   deleteSaving,
   deleteSavingChallenge,
   exportBackup,
-  getActiveTripId,
-  getCurrency,
-  getFxContext,
+  getDashboardContext,
   getRecoverySnapshotSummaries,
   getRestorePreview,
   importTransactions,
-  listExpenseCategories,
-  listIncomeCategories,
-  listSavingChallenges,
-  listTrips,
   replaceAllDataWithSnapshot,
   restoreFromSnapshot,
   saveCycle,
@@ -35,6 +30,7 @@ import {
   updateSaving,
   updateSavingChallenge,
 } from '@/services/appDataService'
+import type { DashboardData } from '@/api/types'
 import type { ImportTransactionRecord } from '@/lib/transactionImport'
 import type {
   AppDataPayload,
@@ -65,9 +61,8 @@ import type {
  * - display currency + FX rates (quick-add currency conversion)
  * - saving challenges (quick-add saving target)
  *
- * Every mutation invalidates the context (via `contextVersion`) so any open
- * page re-fetches its own aggregate; mutations that touch transactions also
- * refresh the shared context (a trip/category may have been created inline).
+ * Every mutation invalidates the matching request-cache scopes and bumps their
+ * reactive versions so open pages re-fetch only affected aggregates.
  */
 
 export interface AppContext {
@@ -117,6 +112,7 @@ const mutationVersions = {
 }
 
 export type AppDataScope = keyof typeof mutationVersions
+const ALL_DATA_SCOPES = Object.keys(mutationVersions) as AppDataScope[]
 const recoverySnapshots = shallowRef<
   Array<{ snapshotId: string; createdAt: number; reason: string }>
 >([])
@@ -126,14 +122,11 @@ const recoverySnapshots = shallowRef<
 let contextGeneration = 0
 let contextRefreshPromise: Promise<void> | null = null
 
-async function resolveActiveTrip(): Promise<string> {
-  return (await getActiveTripId()) ?? ''
-}
-
 /** Clear all auth-scoped data before logout, 401 teardown, or account switch. */
 export function clearAppContext(): void {
   contextGeneration += 1
   contextRefreshPromise = null
+  clearRequestCache()
   context.value = EMPTY_CONTEXT
   recoverySnapshots.value = []
   loading.value = false
@@ -147,6 +140,34 @@ export function initializeAppContext(): Promise<void> {
   return refreshAppContext()
 }
 
+function hydrateAppContext(data: DashboardData): void {
+  const expenseCategories = data.expenseCategories
+  const incomeCategories = data.incomeCategories
+  const activeTripId = data.trips.some((trip) => trip.trip_id === data.activeTripId)
+    ? data.activeTripId
+    : ''
+  const rates = new Map<SupportedCurrency, number>([['HKD', 1]])
+  for (const [currencyCode, rate] of Object.entries(data.fxRateMap)) {
+    if (rate > 0) {
+      rates.set(currencyCode as SupportedCurrency, rate)
+    }
+  }
+
+  context.value = {
+    expenseCategories,
+    incomeCategories,
+    activeExpenseCategories: expenseCategories.filter((category) => !category.deleted),
+    activeIncomeCategories: incomeCategories.filter((category) => !category.deleted),
+    trips: data.trips,
+    activeTripId,
+    activeTrip: data.trips.find((trip) => trip.trip_id === activeTripId),
+    currency: data.currency,
+    fxRateMap: rates,
+    latestFxDate: data.latestFxDate,
+    savingChallenges: data.savingChallenges,
+  }
+}
+
 async function refreshAppContext(): Promise<void> {
   if (contextRefreshPromise) {
     return contextRefreshPromise
@@ -158,68 +179,15 @@ async function refreshAppContext(): Promise<void> {
     error.value = ''
 
     try {
-      const [sharedResult, fxResult] = await Promise.allSettled([
-        Promise.all([
-          listExpenseCategories(),
-          listIncomeCategories(),
-          listTrips(),
-          listSavingChallenges(),
-          getCurrency(),
-          resolveActiveTrip(),
-        ]),
-        getFxContext(),
-      ])
+      const dashboard = await getDashboardContext()
 
       // The account may have changed while the requests were in flight.
       if (generation !== contextGeneration) {
         return
       }
 
-      const fx =
-        fxResult.status === 'fulfilled'
-          ? fxResult.value
-          : {
-              fxRateMap: context.value.fxRateMap,
-              latestFxDate: context.value.latestFxDate,
-            }
-
-      if (sharedResult.status === 'fulfilled') {
-        const [expenseCats, incomeCats, tripList, challengeList, currencyCode, activeId] =
-          sharedResult.value
-        const activeTripIdValue = tripList.some((trip) => trip.trip_id === activeId) ? activeId : ''
-
-        context.value = {
-          expenseCategories: expenseCats,
-          incomeCategories: incomeCats,
-          activeExpenseCategories: expenseCats.filter((category) => !category.deleted),
-          activeIncomeCategories: incomeCats.filter((category) => !category.deleted),
-          trips: tripList,
-          activeTripId: activeTripIdValue,
-          activeTrip: tripList.find((trip) => trip.trip_id === activeTripIdValue),
-          currency: currencyCode,
-          fxRateMap: fx.fxRateMap,
-          latestFxDate: fx.latestFxDate,
-          savingChallenges: challengeList,
-        }
-      } else if (fxResult.status === 'fulfilled') {
-        context.value = {
-          ...context.value,
-          fxRateMap: fx.fxRateMap,
-          latestFxDate: fx.latestFxDate,
-        }
-      }
-
-      const failure =
-        sharedResult.status === 'rejected'
-          ? sharedResult.reason
-          : fxResult.status === 'rejected'
-            ? fxResult.reason
-            : undefined
-      if (failure !== undefined) {
-        error.value = failure instanceof Error ? failure.message : 'Unable to load app data'
-      } else {
-        lastSyncedAt.value = Date.now()
-      }
+      hydrateAppContext(dashboard)
+      lastSyncedAt.value = Date.now()
     } catch (caught) {
       if (generation === contextGeneration) {
         error.value = caught instanceof Error ? caught.message : 'Unable to load app data'
@@ -279,8 +247,15 @@ export function useAppData() {
     try {
       await action()
 
+      const scopes = options.scopes
+      if (scopes?.length) {
+        invalidateRequestCache(scopes)
+      } else {
+        clearRequestCache()
+      }
+
       contextVersion.value += 1
-      for (const scope of options.scopes ?? []) {
+      for (const scope of scopes ?? []) {
         mutationVersions[scope].value += 1
       }
 
@@ -334,54 +309,76 @@ export function useAppData() {
     // Lifecycle.
     refresh,
     refreshContext,
+    hydrateContext: hydrateAppContext,
 
     // Transaction mutations (do not reload shared context).
     addExpense: (draft: ExpenseDraft) =>
       withAction(() => createExpense(draft), {
-        scopes: ['dashboard', 'transactions', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
+        scopes: [
+          'dashboard',
+          'transactions',
+          'categoryBudget',
+          'fixedExpenses',
+          'trips',
+          'monthlySnapshot',
+        ],
       }),
     addIncome: (draft: IncomeDraft) =>
       withAction(() => createIncome(draft), {
-        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
       }),
     addSaving: (draft: SavingDraft) =>
       withAction(() => createSaving(draft), {
-        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
       }),
     // Transaction mutations invalidate only aggregates that include transactions.
     updateExpense: (transactionId: string, draft: ExpenseDraft) =>
       withAction(() => updateExpense(transactionId, draft), {
-        scopes: ['dashboard', 'transactions', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
+        scopes: [
+          'dashboard',
+          'transactions',
+          'categoryBudget',
+          'fixedExpenses',
+          'trips',
+          'monthlySnapshot',
+        ],
       }),
     updateIncome: (transactionId: string, draft: IncomeDraft) =>
       withAction(() => updateIncome(transactionId, draft), {
-        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
       }),
     updateSaving: (transactionId: string, draft: SavingDraft) =>
       withAction(() => updateSaving(transactionId, draft), {
-        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
       }),
     deleteExpense: (transactionId: string) =>
       withAction(() => deleteExpense(transactionId), {
-        scopes: ['dashboard', 'transactions', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
+        scopes: [
+          'dashboard',
+          'transactions',
+          'categoryBudget',
+          'fixedExpenses',
+          'trips',
+          'monthlySnapshot',
+        ],
       }),
     deleteIncome: (transactionId: string) =>
       withAction(() => deleteIncome(transactionId), {
-        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
       }),
     deleteSaving: (transactionId: string) =>
       withAction(() => deleteSaving(transactionId), {
-        scopes: ['dashboard', 'transactions', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
       }),
     importTransactions: (records: readonly ImportTransactionRecord[]) =>
       withAction(() => importTransactions(records), {
-        scopes: ['dashboard', 'transactions', 'categoryBudget', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'categoryBudget', 'trips', 'monthlySnapshot'],
       }),
 
     // Budget cycle / target limits.
     saveCycle: (draft: CycleDraft, cycleId?: string) =>
       withAction(() => saveCycle(draft, cycleId), {
-        scopes: ['dashboard', 'budgets', 'categoryBudget', 'monthlySnapshot'],
+        scopes: ['dashboard', 'budgets', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
       }),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>
       withAction(() => saveTargetLimit(cycleId, categoryId, amount), {
@@ -392,7 +389,14 @@ export function useAppData() {
     saveExpenseCategory: (draft: CategoryDraft, categoryId?: string) =>
       withAction(() => saveExpenseCategory(draft, categoryId), {
         reloadContext: true,
-        scopes: ['dashboard', 'transactions', 'budgets', 'categoryBudget', 'fixedExpenses'],
+        scopes: [
+          'dashboard',
+          'transactions',
+          'budgets',
+          'categoryBudget',
+          'fixedExpenses',
+          'monthlySnapshot',
+        ],
       }),
     saveIncomeCategory: (draft: CategoryDraft, categoryId?: string) =>
       withAction(() => saveIncomeCategory(draft, categoryId), {
@@ -402,7 +406,14 @@ export function useAppData() {
     deleteExpenseCategory: (categoryId: string) =>
       withAction(() => softDeleteExpenseCategory(categoryId), {
         reloadContext: true,
-        scopes: ['dashboard', 'transactions', 'budgets', 'categoryBudget', 'fixedExpenses'],
+        scopes: [
+          'dashboard',
+          'transactions',
+          'budgets',
+          'categoryBudget',
+          'fixedExpenses',
+          'monthlySnapshot',
+        ],
       }),
     deleteIncomeCategory: (categoryId: string) =>
       withAction(() => softDeleteIncomeCategory(categoryId), {
@@ -464,16 +475,29 @@ export function useAppData() {
       )
     },
     setActiveTrip: (tripId?: string) =>
-      withAction(() => setActiveTripId(tripId), { reloadContext: true }),
-    clearActiveTrip: () => withAction(() => setActiveTripId(), { reloadContext: true }),
+      withAction(() => setActiveTripId(tripId), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions', 'trips'],
+      }),
+    clearActiveTrip: () =>
+      withAction(() => setActiveTripId(), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions', 'trips'],
+      }),
 
     // Settings: backup / recovery (the only place the full payload is used).
     exportBackupPayload: () => exportBackup(),
     getRestorePreview,
     restorePayload: (payload: AppDataPayload) =>
-      withAction(() => replaceAllDataWithSnapshot(payload), { reloadContext: true }),
+      withAction(() => replaceAllDataWithSnapshot(payload), {
+        reloadContext: true,
+        scopes: ALL_DATA_SCOPES,
+      }),
     restoreSnapshot: (snapshotId: string) =>
-      withAction(() => restoreFromSnapshot(snapshotId), { reloadContext: true }),
+      withAction(() => restoreFromSnapshot(snapshotId), {
+        reloadContext: true,
+        scopes: ALL_DATA_SCOPES,
+      }),
     loadRecoverySnapshots: async (): Promise<void> => {
       recoverySnapshots.value = await getRecoverySnapshotSummaries()
     },

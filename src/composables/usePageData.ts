@@ -1,5 +1,6 @@
 import { onMounted, readonly, shallowRef, watch } from 'vue'
 
+import { clearRequestCache, invalidateRequestCache } from '@/api/requestCache'
 import { useAppData, type AppDataScope } from '@/composables/useAppData'
 
 /**
@@ -9,9 +10,11 @@ import { useAppData, type AppDataScope } from '@/composables/useAppData'
  * exposed as a read-only ref plus `loading`/`error`. The page data refreshes:
  *
  * - once on mount (when `immediate` is true), and
- * - whenever the shared `useAppData` mutation layer bumps `contextVersion`
- *   (i.e. after any add/update/delete anywhere in the app), so an open page
- *   always reflects the latest server state without re-fetching on focus.
+ * - whenever the shared mutation layer bumps this page's scope.
+ *
+ * Initial navigation may reuse a short-lived aggregate from the request cache.
+ * Explicit `refresh()` bypasses that entry, while mutations invalidate the
+ * relevant scope before this watcher runs.
  */
 export function usePageData<T>(
   loader: () => Promise<T>,
@@ -21,23 +24,40 @@ export function usePageData<T>(
   const data = shallowRef<T | undefined>(undefined)
   const loading = shallowRef(false)
   const error = shallowRef('')
+  let requestVersion = 0
 
-  async function refresh(): Promise<void> {
+  async function load(force = false): Promise<void> {
+    if (force) {
+      if (options.scope) {
+        invalidateRequestCache([options.scope])
+      } else {
+        clearRequestCache()
+      }
+    }
+
+    const version = ++requestVersion
     loading.value = true
     error.value = ''
 
     try {
-      data.value = await loader()
+      const nextData = await loader()
+      if (version === requestVersion) {
+        data.value = nextData
+      }
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : 'Unable to load data'
+      if (version === requestVersion) {
+        error.value = caught instanceof Error ? caught.message : 'Unable to load data'
+      }
     } finally {
-      loading.value = false
+      if (version === requestVersion) {
+        loading.value = false
+      }
     }
   }
 
   if (options.immediate ?? true) {
     onMounted(() => {
-      void refresh()
+      void load()
     })
   }
 
@@ -45,13 +65,13 @@ export function usePageData<T>(
   // omit a scope retain the old broad invalidation behavior for compatibility.
   const invalidation = options.scope ? appData.mutationVersion(options.scope) : appData.contextVersion
   watch(invalidation, () => {
-    void refresh()
+    void load()
   })
 
   return {
     data,
     loading: readonly(loading),
     error: readonly(error),
-    refresh,
+    refresh: () => load(true),
   }
 }

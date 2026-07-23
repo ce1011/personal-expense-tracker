@@ -2,30 +2,19 @@ import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
+import type { DashboardData } from '@/api/types'
 import type { ExpenseCategory, SavingChallenge, TripSession } from '@/types/app-data'
-import { useAppData } from './useAppData'
+import { clearAppContext, useAppData } from './useAppData'
 
 const {
-  mockListExpenseCategories,
-  mockListIncomeCategories,
-  mockListTrips,
-  mockListSavingChallenges,
-  mockGetCurrency,
-  mockGetFxContext,
-  mockGetActiveTripId,
+  mockGetDashboardContext,
   mockCreateExpense,
   mockSoftDeleteExpenseCategory,
   mockSetActiveTripId,
   mockSaveTrip,
   mockGetRecoverySnapshotSummaries,
 } = vi.hoisted(() => ({
-  mockListExpenseCategories: vi.fn(),
-  mockListIncomeCategories: vi.fn(),
-  mockListTrips: vi.fn(),
-  mockListSavingChallenges: vi.fn(),
-  mockGetCurrency: vi.fn(),
-  mockGetFxContext: vi.fn(),
-  mockGetActiveTripId: vi.fn(),
+  mockGetDashboardContext: vi.fn(),
   mockCreateExpense: vi.fn(),
   mockSoftDeleteExpenseCategory: vi.fn(),
   mockSetActiveTripId: vi.fn(),
@@ -34,13 +23,7 @@ const {
 }))
 
 vi.mock('@/services/appDataService', () => ({
-  listExpenseCategories: mockListExpenseCategories,
-  listIncomeCategories: mockListIncomeCategories,
-  listTrips: mockListTrips,
-  listSavingChallenges: mockListSavingChallenges,
-  getCurrency: mockGetCurrency,
-  getFxContext: mockGetFxContext,
-  getActiveTripId: mockGetActiveTripId,
+  getDashboardContext: mockGetDashboardContext,
   createExpense: mockCreateExpense,
   createIncome: vi.fn(),
   createSaving: vi.fn(),
@@ -111,6 +94,34 @@ function makeChallenge(overrides: Partial<SavingChallenge> = {}): SavingChalleng
   } as SavingChallenge
 }
 
+function makeDashboard(
+  overrides: Partial<
+    Pick<
+      DashboardData,
+      | 'currency'
+      | 'expenseCategories'
+      | 'incomeCategories'
+      | 'trips'
+      | 'activeTripId'
+      | 'fxRateMap'
+      | 'latestFxDate'
+      | 'savingChallenges'
+    >
+  > = {},
+): DashboardData {
+  return {
+    currency: 'HKD',
+    expenseCategories: [],
+    incomeCategories: [],
+    trips: [],
+    activeTripId: '',
+    fxRateMap: { HKD: 1 },
+    latestFxDate: '',
+    savingChallenges: [],
+    ...overrides,
+  } as DashboardData
+}
+
 /** Mount a host component that captures the store, so lifecycle hooks run. */
 function captureStore() {
   let store: ReturnType<typeof useAppData> | undefined
@@ -129,35 +140,26 @@ function captureStore() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockListExpenseCategories.mockResolvedValue([])
-  mockListIncomeCategories.mockResolvedValue([])
-  mockListTrips.mockResolvedValue([])
-  mockListSavingChallenges.mockResolvedValue([])
-  mockGetCurrency.mockResolvedValue('HKD')
-  mockGetFxContext.mockResolvedValue({
-    fxRateMap: new Map([['HKD', 1]]),
-    latestFxDate: '',
-  })
-  mockGetActiveTripId.mockResolvedValue(undefined)
+  clearAppContext()
+  mockGetDashboardContext.mockResolvedValue(makeDashboard())
 })
 
 describe('useAppData context', () => {
   test('refreshContext loads and exposes the shared context', async () => {
-    mockListExpenseCategories.mockResolvedValue([
-      makeCategory({ category_id: 'active-1' }),
-      makeCategory({ category_id: 'deleted-1', deleted: true }),
-    ])
-    mockListTrips.mockResolvedValue([makeTrip()])
-    mockListSavingChallenges.mockResolvedValue([makeChallenge()])
-    mockGetCurrency.mockResolvedValue('JPY')
-    mockGetFxContext.mockResolvedValue({
-      fxRateMap: new Map([
-        ['HKD', 1],
-        ['JPY', 0.05],
-      ]),
-      latestFxDate: '2026-07-03',
-    })
-    mockGetActiveTripId.mockResolvedValue('trip-1')
+    mockGetDashboardContext.mockResolvedValue(
+      makeDashboard({
+        expenseCategories: [
+          makeCategory({ category_id: 'active-1' }),
+          makeCategory({ category_id: 'deleted-1', deleted: true }),
+        ],
+        trips: [makeTrip()],
+        savingChallenges: [makeChallenge()],
+        currency: 'JPY',
+        fxRateMap: { HKD: 1, JPY: 0.05 },
+        latestFxDate: '2026-07-03',
+        activeTripId: 'trip-1',
+      }),
+    )
 
     const store = captureStore()
     await store.refreshContext()
@@ -178,8 +180,7 @@ describe('useAppData context', () => {
   })
 
   test('clears an active trip id that no longer matches a trip', async () => {
-    mockListTrips.mockResolvedValue([])
-    mockGetActiveTripId.mockResolvedValue('ghost-trip')
+    mockGetDashboardContext.mockResolvedValue(makeDashboard({ activeTripId: 'ghost-trip' }))
 
     const store = captureStore()
     await store.refreshContext()
@@ -188,27 +189,20 @@ describe('useAppData context', () => {
     expect(store.activeTrip.value).toBeUndefined()
   })
 
-  test('keeps refreshed FX data when another context request fails', async () => {
-    mockListExpenseCategories.mockRejectedValue(new Error('network down'))
-    mockGetFxContext.mockResolvedValue({
-      fxRateMap: new Map([
-        ['HKD', 1],
-        ['USD', 7.8],
-      ]),
-      latestFxDate: '2026-07-20',
-    })
+  test('keeps the previous context when the aggregate request fails', async () => {
+    mockGetDashboardContext.mockRejectedValue(new Error('network down'))
 
     const store = captureStore()
     await store.refreshContext()
 
     expect(store.error.value).toBe('network down')
-    expect(store.fxRateMap.value.get('USD')).toBe(7.8)
-    expect(store.latestFxDate.value).toBe('2026-07-20')
+    expect(store.fxRateMap.value.get('HKD')).toBe(1)
+    expect(store.latestFxDate.value).toBe('')
     expect(store.loading.value).toBe(false)
   })
 
   test('surfaces an error message when the context fails to load', async () => {
-    mockListExpenseCategories.mockRejectedValue(new Error('network down'))
+    mockGetDashboardContext.mockRejectedValue(new Error('network down'))
 
     const store = captureStore()
     await store.refreshContext()
@@ -223,6 +217,7 @@ describe('useAppData actions', () => {
     mockCreateExpense.mockResolvedValue(undefined)
     const store = captureStore()
     const versionBefore = store.contextVersion.value
+    const tripsVersionBefore = store.mutationVersion('trips').value
 
     await store.addExpense({
       category_id: 'food',
@@ -235,12 +230,15 @@ describe('useAppData actions', () => {
 
     expect(mockCreateExpense).toHaveBeenCalled()
     expect(store.contextVersion.value).toBe(versionBefore + 1)
-    expect(mockListExpenseCategories).not.toHaveBeenCalled()
+    expect(store.mutationVersion('trips').value).toBe(tripsVersionBefore + 1)
+    expect(mockGetDashboardContext).not.toHaveBeenCalled()
   })
 
   test('a context mutation reloads the shared context after succeeding', async () => {
     mockSoftDeleteExpenseCategory.mockResolvedValue(undefined)
-    mockListExpenseCategories.mockResolvedValue([makeCategory()])
+    mockGetDashboardContext.mockResolvedValue(
+      makeDashboard({ expenseCategories: [makeCategory()] }),
+    )
     const store = captureStore()
     const versionBefore = store.contextVersion.value
 
@@ -248,14 +246,15 @@ describe('useAppData actions', () => {
 
     expect(mockSoftDeleteExpenseCategory).toHaveBeenCalledWith('food')
     expect(store.contextVersion.value).toBe(versionBefore + 1)
-    expect(mockListExpenseCategories).toHaveBeenCalled()
+    expect(mockGetDashboardContext).toHaveBeenCalled()
     expect(store.expenseCategories.value).toHaveLength(1)
   })
 
   test('setActiveTrip reloads context and updates the active trip', async () => {
     mockSetActiveTripId.mockResolvedValue(undefined)
-    mockListTrips.mockResolvedValue([makeTrip()])
-    mockGetActiveTripId.mockResolvedValue('trip-1')
+    mockGetDashboardContext.mockResolvedValue(
+      makeDashboard({ trips: [makeTrip()], activeTripId: 'trip-1' }),
+    )
     const store = captureStore()
 
     await store.setActiveTrip('trip-1')
@@ -265,8 +264,9 @@ describe('useAppData actions', () => {
   })
 
   test('completeTrip saves the trip with a completed status', async () => {
-    mockListTrips.mockResolvedValue([makeTrip()])
-    mockGetActiveTripId.mockResolvedValue('trip-1')
+    mockGetDashboardContext.mockResolvedValue(
+      makeDashboard({ trips: [makeTrip()], activeTripId: 'trip-1' }),
+    )
     mockSaveTrip.mockResolvedValue(undefined)
     const store = captureStore()
     await store.refreshContext()

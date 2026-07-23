@@ -2,6 +2,7 @@ import { api, ApiError } from '@/api/client'
 import { parseBackupJson } from '@/lib/backup'
 import { summarizeRestoreImpact, validateSnapshotPayload } from '@/lib/recovery'
 import type { ImportTransactionRecord } from '@/lib/transactionImport'
+import type { DashboardData } from '@/api/types'
 import type {
   AppDataPayload,
   AppSetting,
@@ -27,10 +28,10 @@ import type {
  * Server-side behavior worth noting:
  * - Amounts are stored in HKD; create/update bodies send `currency_code` +
  *   `exchange_rate_hkd` and the server derives `amount = original × rate`.
- * - Every mutation writes a full-payload snapshot server-side (trimmed to the
- *   newest 20), so the client no longer maintains local snapshots.
- * - FX rates are refreshed by the backend (`GET /data/sync` / `POST
- *   /fx-rates/refresh`) when the shared app context initializes.
+ * - Full-payload snapshots are created only before destructive import/restore
+ *   operations; ordinary CRUD does not copy the complete account payload.
+ * - FX rates are refreshed by the backend while producing the dashboard
+ *   aggregate that also initializes shared app context.
  * - Page *reads* no longer go through the monolithic `/data/export`; each page
  *   calls its own aggregate endpoint (see `src/composables/use*Data.ts`). This
  *   module only fetches the small shared "context" lists (categories, trips,
@@ -39,17 +40,13 @@ import type {
 
 const ACTIVE_TRIP_SETTING_NAME = 'active_trip_id'
 
-let settingsRequest: Promise<AppSetting[]> | null = null
-
-/** Share the in-flight settings read used by the initial context bootstrap. */
 function listSettings(): Promise<AppSetting[]> {
-  if (!settingsRequest) {
-    settingsRequest = api.settings.list().finally(() => {
-      settingsRequest = null
-    })
-  }
+  return api.settings.list()
+}
 
-  return settingsRequest
+/** Aggregate used by shell, dashboard, and shared context. */
+export function getDashboardContext(): Promise<DashboardData> {
+  return api.dashboard.get()
 }
 
 type ImportTransactionRecordWithTrip = ImportTransactionRecord & { trip_id?: string }

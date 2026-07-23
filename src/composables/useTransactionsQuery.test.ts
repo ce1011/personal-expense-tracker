@@ -67,7 +67,7 @@ beforeEach(() => {
   })
 })
 
-describe('useTransactionsQuery FX context', () => {
+describe('useTransactionsQuery', () => {
   test('keeps refreshed global rates when an older aggregate has only fallback FX data', async () => {
     const query = captureQuery()
     await query.refresh()
@@ -75,5 +75,84 @@ describe('useTransactionsQuery FX context', () => {
 
     expect(query.fxRateMap.value.get('USD')).toBe(7.8)
     expect(query.latestFxDate.value).toBe('2026-07-20')
+  })
+
+  test('loads the next cursor page and appends matching date groups', async () => {
+    mockTransactionsList
+      .mockResolvedValueOnce({
+        groups: [
+          {
+            label: '今天',
+            items: [
+              {
+                id: 'expense-2',
+                kind: 'expense',
+                category_id: 'food',
+                name: 'Dinner',
+                amount: 80,
+                date: 2,
+              },
+            ],
+          },
+        ],
+        page: { next_cursor: 'cursor-2', has_more: true },
+        options: {
+          trips: [],
+          expenseCategories: [],
+          incomeCategories: [],
+          savingCategories: [],
+          activeTripId: '',
+        },
+        currency: 'HKD',
+        expenseCategories: [],
+        incomeCategories: [],
+        savingChallenges: [],
+        fxRateMap: { HKD: 1 },
+        latestFxDate: '',
+      })
+      .mockResolvedValueOnce({
+        groups: [
+          {
+            label: '今天',
+            items: [
+              {
+                id: 'expense-1',
+                kind: 'expense',
+                category_id: 'food',
+                name: 'Lunch',
+                amount: 50,
+                date: 1,
+              },
+            ],
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+        options: {
+          trips: [],
+          expenseCategories: [],
+          incomeCategories: [],
+          savingCategories: [],
+          activeTripId: '',
+        },
+        currency: 'HKD',
+        expenseCategories: [],
+        incomeCategories: [],
+        savingChallenges: [],
+        fxRateMap: { HKD: 1 },
+        latestFxDate: '',
+      })
+
+    const query = captureQuery()
+    await query.refresh()
+    await query.loadMore()
+
+    expect(mockTransactionsList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: 'cursor-2', limit: 50 }),
+    )
+    expect(query.groups.value[0]?.items.map((item) => item.id)).toEqual([
+      'expense-2',
+      'expense-1',
+    ])
+    expect(query.hasMore.value).toBe(false)
   })
 })

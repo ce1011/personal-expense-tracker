@@ -40,6 +40,7 @@ const {
   mockIncomeCategoryUpdate,
   mockIncomeCategoryRemove,
   mockFxRatesRefresh,
+  mockDashboardGet,
 } = vi.hoisted(() => ({
   mockDataExport: vi.fn(),
   mockDataImport: vi.fn(),
@@ -78,6 +79,7 @@ const {
   mockIncomeCategoryUpdate: vi.fn(),
   mockIncomeCategoryRemove: vi.fn(),
   mockFxRatesRefresh: vi.fn(),
+  mockDashboardGet: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
@@ -149,6 +151,9 @@ vi.mock('@/api/client', () => ({
     fxRates: {
       refresh: mockFxRatesRefresh,
     },
+    dashboard: {
+      get: mockDashboardGet,
+    },
   },
   ApiError: class ApiError extends Error {
     constructor(
@@ -172,6 +177,7 @@ import {
   getActiveTripId,
   getCurrency,
   getFxContext,
+  getDashboardContext,
   getRecoverySnapshotSummaries,
   importTransactions,
   listExpenseCategories,
@@ -241,6 +247,13 @@ beforeEach(() => {
 })
 
 describe('context reads', () => {
+  test('reads the shared dashboard aggregate through the cached API client', async () => {
+    mockDashboardGet.mockResolvedValue({ currency: 'HKD' })
+
+    await expect(getDashboardContext()).resolves.toEqual({ currency: 'HKD' })
+    expect(mockDashboardGet).toHaveBeenCalledOnce()
+  })
+
   test('sorts expense and income categories by English name', async () => {
     mockExpenseCategoryList.mockResolvedValue([
       { category_id: 'b', name_en: 'Transport', name_tc: '', color_code: '', icon_image_name: '' },

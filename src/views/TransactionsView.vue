@@ -3,6 +3,7 @@ import { SearchX } from 'lucide-vue-next'
 import { computed, shallowRef } from 'vue'
 
 import BaseInput from '@/components/base/BaseInput.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonList from '@/components/base/SkeletonList.vue'
 import QuickAddSheet from '@/components/transactions/QuickAddSheet.vue'
@@ -375,6 +376,11 @@ function setCategoryFilter(categoryId: string): void {
           :currency="query.currency.value"
           @select="startEditing"
         />
+        <div v-if="query.hasMore.value" class="flex justify-center pt-2">
+          <BaseButton variant="secondary" :loading="query.loadingMore.value" @click="query.loadMore">
+            載入更多
+          </BaseButton>
+        </div>
       </div>
       <EmptyState
         v-else

@@ -1,6 +1,7 @@
 import { computed, reactive, readonly, shallowRef, watch } from 'vue'
 
 import { api } from '@/api/client'
+import { invalidateRequestCache } from '@/api/requestCache'
 import type { TransactionsQueryParams } from '@/api/types'
 import { useAppData } from '@/composables/useAppData'
 import type { SupportedCurrency } from '@/types/app-data'
@@ -44,12 +45,14 @@ export function useTransactionsQuery() {
     undefined,
   )
   const loading = shallowRef(false)
+  const loadingMore = shallowRef(false)
   const error = shallowRef('')
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let requestVersion = 0
 
   const groups = computed(() => result.value?.groups ?? [])
+  const hasMore = computed(() => result.value?.page.has_more ?? false)
   const options = computed(() => result.value?.options)
   const currency = computed(() => result.value?.currency ?? appData.currency.value)
   const expenseCategories = computed(() => result.value?.expenseCategories ?? [])
@@ -87,13 +90,15 @@ export function useTransactionsQuery() {
     return { start, end }
   }
 
-  function toQuery(): TransactionsQueryParams {
+  function toQuery(cursor?: string): TransactionsQueryParams {
     const params: TransactionsQueryParams = {
       q: filters.search.trim() || undefined,
       kind: filters.kind,
       category_id: filters.categoryId,
       trip_id: filters.tripId,
       date_preset: filters.datePreset,
+      cursor,
+      limit: 50,
     }
 
     if (filters.datePreset === 'today') {
@@ -112,9 +117,14 @@ export function useTransactionsQuery() {
     return params
   }
 
-  async function refresh(): Promise<void> {
+  async function refresh(force = true): Promise<void> {
+    if (force) {
+      invalidateRequestCache(['transactions'])
+    }
+
     const version = ++requestVersion
     loading.value = true
+    loadingMore.value = false
     error.value = ''
 
     try {
@@ -133,10 +143,40 @@ export function useTransactionsQuery() {
     }
   }
 
+  async function loadMore(): Promise<void> {
+    const current = result.value
+    const cursor = current?.page.next_cursor
+    if (!cursor || loading.value || loadingMore.value) {
+      return
+    }
+
+    const version = ++requestVersion
+    loadingMore.value = true
+    error.value = ''
+
+    try {
+      const nextResult = await api.transactionsQuery.list(toQuery(cursor))
+      if (version === requestVersion && result.value === current) {
+        result.value = {
+          ...nextResult,
+          groups: mergeGroups(current.groups, nextResult.groups),
+        }
+      }
+    } catch (caught) {
+      if (version === requestVersion) {
+        error.value = caught instanceof Error ? caught.message : 'Unable to load more transactions'
+      }
+    } finally {
+      if (version === requestVersion) {
+        loadingMore.value = false
+      }
+    }
+  }
+
   function scheduleRefresh(): void {
     clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => {
-      void refresh()
+      void refresh(false)
     }, DEBOUNCE_MS)
   }
 
@@ -218,6 +258,7 @@ export function useTransactionsQuery() {
   return {
     filters,
     groups,
+    hasMore,
     options,
     currency,
     expenseCategories,
@@ -230,9 +271,28 @@ export function useTransactionsQuery() {
     fxRateMap,
     latestFxDate,
     loading: readonly(loading),
+    loadingMore: readonly(loadingMore),
     error: readonly(error),
     refresh,
+    loadMore,
     resetFilters,
     setDatePreset,
   }
+}
+
+type TransactionGroups = NonNullable<
+  Awaited<ReturnType<typeof api.transactionsQuery.list>>['groups']
+>
+
+function mergeGroups(current: TransactionGroups, incoming: TransactionGroups): TransactionGroups {
+  const merged = current.map((group) => ({ ...group, items: [...group.items] }))
+  for (const nextGroup of incoming) {
+    const existing = merged.find((group) => group.label === nextGroup.label)
+    if (existing) {
+      existing.items.push(...nextGroup.items)
+    } else {
+      merged.push({ ...nextGroup, items: [...nextGroup.items] })
+    }
+  }
+  return merged
 }
