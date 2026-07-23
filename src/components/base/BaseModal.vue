@@ -31,21 +31,14 @@ function handlePanelClick(event: MouseEvent): void {
 </script>
 
 <template>
-  <Transition
-    enter-active-class="transition duration-200 ease-out"
-    enter-from-class="opacity-0"
-    enter-to-class="opacity-100"
-    leave-active-class="transition duration-150 ease-in"
-    leave-from-class="opacity-100"
-    leave-to-class="opacity-0"
-  >
+  <Transition name="modal-pop">
     <div
       v-if="show"
-      class="fixed inset-0 z-40 grid place-items-center bg-text/40 px-4 py-8 backdrop-blur-sm"
+      class="modal-backdrop fixed inset-0 z-40 grid place-items-center bg-text/40 px-4 py-8 backdrop-blur-sm"
       @click="handleBackdropClick"
     >
       <div
-        class="w-full rounded-2xl bg-surface p-4 shadow-xl"
+        class="modal-panel w-full rounded-2xl bg-surface p-4 shadow-xl"
         :class="maxWidth"
         @click="handlePanelClick"
       >
@@ -56,7 +49,7 @@ function handlePanelClick(event: MouseEvent): void {
           </div>
           <button
             type="button"
-            class="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-text-2 transition hover:bg-accent"
+            class="modal-close inline-flex size-10 shrink-0 items-center justify-center rounded-full text-text-2 transition hover:bg-accent"
             aria-label="關閉"
             @click="handleCloseClick"
           >
@@ -69,3 +62,47 @@ function handlePanelClick(event: MouseEvent): void {
     </div>
   </Transition>
 </template>
+
+<style scoped>
+.modal-backdrop {
+  transition:
+    opacity 220ms ease,
+    backdrop-filter 260ms ease;
+}
+
+.modal-panel {
+  box-shadow:
+    0 30px 80px rgb(34 22 58 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 85%);
+  transition:
+    opacity 180ms ease,
+    transform 360ms cubic-bezier(0.22, 1.35, 0.36, 1);
+  transform-origin: 50% 62%;
+}
+
+.modal-pop-enter-from,
+.modal-pop-leave-to {
+  opacity: 0;
+  backdrop-filter: blur(0);
+}
+
+.modal-pop-enter-from .modal-panel,
+.modal-pop-leave-to .modal-panel {
+  opacity: 0;
+  transform: translateY(18px) scale(0.94);
+}
+
+.modal-pop-leave-active,
+.modal-pop-leave-active .modal-panel {
+  transition-duration: 170ms;
+  transition-timing-function: ease-in;
+}
+
+.modal-close:hover {
+  transform: rotate(8deg) scale(1.05);
+}
+
+.modal-close:active {
+  transform: scale(0.9);
+}
+</style>

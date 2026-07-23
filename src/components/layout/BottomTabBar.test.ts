@@ -45,4 +45,30 @@ describe('BottomTabBar', () => {
     sheet.unmount()
     navigation.unmount()
   })
+
+  test('slides the active indicator to the section that owns the current route', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', name: 'dashboard', component: { template: '<div />' } },
+        { path: '/budgets', name: 'budgets', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/')
+    await router.isReady()
+
+    const navigation = mount(BottomTabBar, {
+      global: { plugins: [router] },
+    })
+    const items = navigation.get('.bottom-tab__items')
+
+    expect(items.attributes('style')).toContain('--active-tab-index: 0')
+
+    await router.push('/budgets')
+    await nextTick()
+
+    expect(items.attributes('style')).toContain('--active-tab-index: 3')
+
+    navigation.unmount()
+  })
 })

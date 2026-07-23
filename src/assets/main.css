@@ -27,6 +27,9 @@
 }
 
 :root {
+  --motion-spring: cubic-bezier(0.22, 1.35, 0.36, 1);
+  --motion-out: cubic-bezier(0.16, 1, 0.3, 1);
+
   color: #22163a;
   background: #f8f6ff;
   font-family: 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -152,6 +155,26 @@ button {
   transform: translate3d(0, -5px, 0) scale(0.997);
 }
 
+.page-shift-enter-active:not(.dashboard-flow) > * {
+  animation: page-section-arrive 460ms backwards var(--motion-out);
+}
+
+.page-shift-enter-active:not(.dashboard-flow) > :nth-child(2) {
+  animation-delay: 55ms;
+}
+
+.page-shift-enter-active:not(.dashboard-flow) > :nth-child(3) {
+  animation-delay: 105ms;
+}
+
+.page-shift-enter-active:not(.dashboard-flow) > :nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.page-shift-enter-active:not(.dashboard-flow) > :nth-child(n + 5) {
+  animation-delay: 190ms;
+}
+
 .auth-page-enter-active,
 .auth-page-leave-active {
   transition:
@@ -168,6 +191,13 @@ button {
 @keyframes skeleton-shimmer {
   to {
     background-position: -220% 0;
+  }
+}
+
+@keyframes page-section-arrive {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
   }
 }
 

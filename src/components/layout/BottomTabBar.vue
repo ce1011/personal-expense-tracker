@@ -22,6 +22,26 @@ const tabs = [
 ]
 
 const activeName = computed(() => route.name?.toString() ?? '')
+const activeTabIndex = computed(() => {
+  const directIndex = tabs.findIndex(
+    (tab) => tab.action !== 'quick-add' && tab.name === activeName.value,
+  )
+
+  if (directIndex >= 0) {
+    return directIndex
+  }
+
+  const sectionByRoute: Record<string, number> = {
+    'import-transactions': 1,
+    budgets: 3,
+    categories: 3,
+    'fixed-expenses': 4,
+    trips: 4,
+    'monthly-snapshot': 4,
+  }
+
+  return sectionByRoute[activeName.value] ?? -1
+})
 
 function isActive(tabName: string): boolean {
   return activeName.value === tabName
@@ -45,12 +65,16 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
     :inert="isOverlayOpen"
     aria-label="主要導航"
   >
-    <div class="mx-auto flex max-w-md items-end justify-around">
+    <div
+      class="bottom-tab__items mx-auto flex max-w-md items-end justify-around"
+      :style="{ '--active-tab-index': activeTabIndex }"
+    >
+      <span v-if="activeTabIndex >= 0" class="bottom-tab__indicator" aria-hidden="true" />
       <button
         v-for="tab in tabs"
         :key="tab.name"
         type="button"
-        class="tab-item group flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5"
+        class="tab-item group z-[1] flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5"
         :class="
           tab.action === 'quick-add'
             ? 'tab-item--quick relative -top-3 mb-1 rounded-full bg-primary px-3 text-white'
@@ -65,11 +89,6 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
           :is="tab.icon"
           class="size-6 transition"
           :class="tab.action === 'quick-add' ? 'size-7' : ''"
-          aria-hidden="true"
-        />
-        <span
-          v-if="isActive(tab.name) && tab.action !== 'quick-add'"
-          class="tab-item__dot"
           aria-hidden="true"
         />
         <span
@@ -106,6 +125,48 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
     visibility 0s linear 240ms;
 }
 
+.bottom-tab__items {
+  position: relative;
+}
+
+.bottom-tab__indicator {
+  position: absolute;
+  top: 0.1rem;
+  bottom: 0.1rem;
+  left: 0;
+  width: 20%;
+  pointer-events: none;
+  transform: translateX(calc(var(--active-tab-index) * 100%));
+  transition: transform 460ms cubic-bezier(0.22, 1.35, 0.36, 1);
+}
+
+.bottom-tab__indicator::before {
+  position: absolute;
+  inset: 0 0.25rem;
+  border: 1px solid rgb(124 58 237 / 10%);
+  border-radius: 0.95rem;
+  background:
+    radial-gradient(circle at 50% 20%, rgb(255 255 255 / 82%), transparent 52%),
+    linear-gradient(180deg, rgb(124 58 237 / 13%), rgb(124 58 237 / 4%));
+  box-shadow:
+    0 8px 20px rgb(91 33 182 / 10%),
+    inset 0 1px 0 rgb(255 255 255 / 75%);
+  content: '';
+}
+
+.bottom-tab__indicator::after {
+  position: absolute;
+  right: calc(50% - 0.18rem);
+  bottom: 0.18rem;
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px rgb(124 58 237 / 10%);
+  content: '';
+  animation: indicator-pulse 2.4s ease-in-out infinite;
+}
+
 .tab-item {
   position: relative;
   border-radius: 0.9rem;
@@ -120,7 +181,7 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
 }
 
 .tab-item--active {
-  background: linear-gradient(180deg, rgb(124 58 237 / 8%), transparent);
+  text-shadow: 0 1px 14px rgb(124 58 237 / 20%);
 }
 
 .tab-item--active :deep(svg) {
@@ -148,16 +209,6 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
   transform: scale(0.92);
 }
 
-.tab-item__dot {
-  position: absolute;
-  bottom: 0;
-  width: 0.25rem;
-  height: 0.25rem;
-  border-radius: 999px;
-  background: var(--color-primary);
-  animation: dot-arrive 360ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 @keyframes tab-arrive {
   0% {
     transform: translateY(4px) scale(0.76) rotate(-8deg);
@@ -167,10 +218,10 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
   }
 }
 
-@keyframes dot-arrive {
-  from {
-    opacity: 0;
-    transform: scale(0);
+@keyframes indicator-pulse {
+  50% {
+    box-shadow: 0 0 0 7px rgb(124 58 237 / 0%);
+    transform: scale(0.82);
   }
 }
 </style>

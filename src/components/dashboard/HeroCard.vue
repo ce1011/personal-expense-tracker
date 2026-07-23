@@ -54,6 +54,29 @@ function animateRemaining(target: number): void {
   animationFrame = window.requestAnimationFrame(step)
 }
 
+function updateSpotlight(event: PointerEvent): void {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    return
+  }
+
+  const card = event.currentTarget as HTMLElement | null
+  if (!card) {
+    return
+  }
+
+  const bounds = card.getBoundingClientRect()
+  const x = ((event.clientX - bounds.left) / bounds.width) * 100
+  const y = ((event.clientY - bounds.top) / bounds.height) * 100
+  card.style.setProperty('--spotlight-x', `${x}%`)
+  card.style.setProperty('--spotlight-y', `${y}%`)
+}
+
+function resetSpotlight(event: PointerEvent): void {
+  const card = event.currentTarget as HTMLElement | null
+  card?.style.setProperty('--spotlight-x', '72%')
+  card?.style.setProperty('--spotlight-y', '24%')
+}
+
 watch(
   () => props.remainingBudget,
   (value) => animateRemaining(value),
@@ -68,7 +91,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <BaseCard variant="primary" class="hero-card relative overflow-hidden">
+  <BaseCard
+    variant="primary"
+    class="hero-card relative overflow-hidden"
+    @pointermove="updateSpotlight"
+    @pointerleave="resetSpotlight"
+  >
+    <div class="hero-card__spotlight" aria-hidden="true" />
     <div class="hero-card__orbit hero-card__orbit--one" aria-hidden="true" />
     <div class="hero-card__orbit hero-card__orbit--two" aria-hidden="true" />
     <button
@@ -111,12 +140,33 @@ onUnmounted(() => {
 
 <style scoped>
 .hero-card {
+  --spotlight-x: 72%;
+  --spotlight-y: 24%;
+
   min-height: 13rem;
   background:
     linear-gradient(135deg, rgb(255 255 255 / 82%), rgb(243 232 255 / 72%)), var(--color-surface);
   box-shadow:
     0 24px 60px rgb(91 33 182 / 12%),
     inset 0 1px 0 white;
+}
+
+.hero-card__spotlight {
+  position: absolute;
+  inset: -35%;
+  background: radial-gradient(
+    circle at var(--spotlight-x) var(--spotlight-y),
+    rgb(255 255 255 / 88%) 0,
+    rgb(196 181 253 / 22%) 12%,
+    transparent 34%
+  );
+  opacity: 0.58;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
+
+.hero-card:hover .hero-card__spotlight {
+  opacity: 0.95;
 }
 
 .hero-card__orbit {
