@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useAttrs } from 'vue'
+import { computed, useAttrs, useSlots } from 'vue'
 
 defineOptions({
   inheritAttrs: false,
@@ -25,6 +25,7 @@ const emit = defineEmits<{
 }>()
 
 const attrs = useAttrs()
+const slots = useSlots()
 
 const inputId = computed(
   () => props.id ?? props.name ?? `base-input-${Math.random().toString(36).slice(2, 9)}`,
@@ -52,7 +53,11 @@ const inputValue = computed<string | number>({
   },
 })
 
-const inputClasses = computed(() => ['input-base', props.error ? 'input-base-error' : ''])
+const inputClasses = computed(() => [
+  'input-base',
+  props.error ? 'input-base-error' : '',
+  slots.suffix ? 'pr-12' : '',
+])
 </script>
 
 <template>
@@ -60,19 +65,27 @@ const inputClasses = computed(() => ['input-base', props.error ? 'input-base-err
     <label v-if="label" :for="inputId" class="mb-1.5 block text-sm font-medium text-text-2">
       {{ label }}
     </label>
-    <input
-      :id="inputId"
-      v-model="inputValue"
-      v-bind="attrs"
-      :type="type ?? 'text'"
-      :name="name"
-      :placeholder="placeholder"
-      :autocomplete="autocomplete"
-      :inputmode="inputmode"
-      :disabled="disabled"
-      :autofocus="autofocus"
-      :class="inputClasses"
-    />
+    <div class="relative">
+      <input
+        :id="inputId"
+        v-model="inputValue"
+        v-bind="attrs"
+        :type="type ?? 'text'"
+        :name="name"
+        :placeholder="placeholder"
+        :autocomplete="autocomplete"
+        :inputmode="inputmode"
+        :disabled="disabled"
+        :autofocus="autofocus"
+        :class="inputClasses"
+      />
+      <div
+        v-if="slots.suffix"
+        class="absolute inset-y-0 right-1.5 grid place-items-center text-text-3"
+      >
+        <slot name="suffix" />
+      </div>
+    </div>
     <p v-if="error" class="mt-1.5 text-sm text-danger">{{ error }}</p>
   </div>
 </template>

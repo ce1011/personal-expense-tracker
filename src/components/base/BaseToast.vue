@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onUnmounted, ref, watch } from 'vue'
+import { Check } from 'lucide-vue-next'
 
 const props = defineProps<{
   message: string
@@ -51,11 +52,56 @@ onUnmounted(() => {
   >
     <div
       v-if="visible"
-      class="fixed bottom-24 left-4 right-4 z-50 mx-auto max-w-sm rounded-xl border border-primary/20 bg-surface px-4 py-3 text-center text-body-sm font-semibold text-primary shadow-lg sm:bottom-8 sm:right-4 sm:left-auto sm:translate-x-0"
+      class="toast fixed bottom-24 left-4 right-4 z-50 mx-auto max-w-sm overflow-hidden rounded-2xl border border-primary/20 bg-surface px-4 py-3 text-body-sm font-semibold text-primary shadow-lg sm:bottom-8 sm:right-4 sm:left-auto sm:translate-x-0"
       role="status"
       aria-live="polite"
     >
-      {{ message }}
+      <span class="flex items-center justify-center gap-2">
+        <span
+          class="toast__icon grid size-6 place-items-center rounded-full bg-success/10 text-success"
+        >
+          <Check class="size-3.5" aria-hidden="true" />
+        </span>
+        {{ message }}
+      </span>
+      <span class="toast__timer" :style="{ animationDuration: `${duration ?? 2400}ms` }" />
     </div>
   </Transition>
 </template>
+
+<style scoped>
+.toast {
+  box-shadow:
+    0 18px 50px rgb(67 40 119 / 18%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
+  backdrop-filter: blur(18px);
+}
+
+.toast__icon {
+  animation: toast-check 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast__timer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-success), var(--color-primary));
+  transform-origin: left;
+  animation: toast-timer linear forwards;
+}
+
+@keyframes toast-check {
+  from {
+    opacity: 0;
+    transform: rotate(-24deg) scale(0.4);
+  }
+}
+
+@keyframes toast-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+</style>

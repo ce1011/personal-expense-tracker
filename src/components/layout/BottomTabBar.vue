@@ -36,7 +36,7 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
 
 <template>
   <nav
-    class="safe-bottom fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-8px_24px_rgba(91,33,182,0.08)] backdrop-blur"
+    class="bottom-tab safe-bottom fixed bottom-0 left-0 right-0 z-30 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2"
     aria-label="主要導航"
   >
     <div class="mx-auto flex max-w-md items-end justify-around">
@@ -44,12 +44,12 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
         v-for="tab in tabs"
         :key="tab.name"
         type="button"
-        class="group flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition"
+        class="tab-item group flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5"
         :class="
           tab.action === 'quick-add'
-            ? 'relative -top-3 mb-1 rounded-full bg-primary px-3 text-white shadow-md hover:bg-primary-2'
+            ? 'tab-item--quick relative -top-3 mb-1 rounded-full bg-primary px-3 text-white'
             : isActive(tab.name)
-              ? 'text-primary'
+              ? 'tab-item--active text-primary'
               : 'text-text-3 hover:text-text-2'
         "
         :aria-label="tab.label"
@@ -62,6 +62,11 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
           aria-hidden="true"
         />
         <span
+          v-if="isActive(tab.name) && tab.action !== 'quick-add'"
+          class="tab-item__dot"
+          aria-hidden="true"
+        />
+        <span
           class="text-[10px] font-medium leading-tight"
           :class="tab.action === 'quick-add' ? 'font-semibold' : ''"
         >
@@ -71,3 +76,80 @@ function handleTabClick(tab: (typeof tabs)[number]): void {
     </div>
   </nav>
 </template>
+
+<style scoped>
+.bottom-tab {
+  border-top: 1px solid rgb(233 221 255 / 78%);
+  background: color-mix(in srgb, white 88%, transparent);
+  box-shadow: 0 -12px 40px rgb(67 40 119 / 9%);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+
+.tab-item {
+  position: relative;
+  border-radius: 0.9rem;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-item:not(.tab-item--quick):active {
+  transform: scale(0.92);
+}
+
+.tab-item--active {
+  background: linear-gradient(180deg, rgb(124 58 237 / 8%), transparent);
+}
+
+.tab-item--active :deep(svg) {
+  animation: tab-arrive 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 4px 8px rgb(124 58 237 / 18%));
+}
+
+.tab-item--quick {
+  box-shadow:
+    0 12px 26px rgb(91 33 182 / 28%),
+    inset 0 1px 0 rgb(255 255 255 / 28%);
+  transition:
+    background-color 180ms ease,
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms ease;
+}
+
+.tab-item--quick:hover {
+  background: var(--color-primary-2);
+  box-shadow: 0 16px 32px rgb(91 33 182 / 34%);
+  transform: translateY(-2px);
+}
+
+.tab-item--quick:active {
+  transform: scale(0.92);
+}
+
+.tab-item__dot {
+  position: absolute;
+  bottom: 0;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  animation: dot-arrive 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tab-arrive {
+  0% {
+    transform: translateY(4px) scale(0.76) rotate(-8deg);
+  }
+  70% {
+    transform: translateY(-1px) scale(1.06);
+  }
+}
+
+@keyframes dot-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+</style>

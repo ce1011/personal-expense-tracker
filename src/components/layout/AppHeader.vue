@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ChevronDown, Plane } from 'lucide-vue-next'
+import { useRoute } from 'vue-router'
 
+import SyncPulse from '@/components/layout/SyncPulse.vue'
 import { useAppData } from '@/composables/useAppData'
 import { getCycleWindow } from '@/lib/budgetCycle'
 import type { BudgetCycle, TripStatus } from '@/types/app-data'
@@ -12,7 +14,9 @@ const props = defineProps<{
 }>()
 
 const appData = useAppData()
+const route = useRoute()
 const showTripMenu = ref(false)
+const pageTitle = computed(() => String(route.meta.title ?? '總覽'))
 
 const cycleLabel = computed(() => {
   if (!props.currentCycle) {
@@ -62,20 +66,20 @@ function closeTripMenu(): void {
 </script>
 
 <template>
-  <header
-    class="safe-top sticky top-0 z-20 border-b border-border bg-accent/95 px-4 py-3 backdrop-blur"
-  >
+  <header class="app-header safe-top sticky top-0 z-20 px-4 py-3">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
       <div class="min-w-0">
-        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary-2">個人理財</p>
-        <h1 class="mt-0.5 text-lg font-bold tracking-tight text-text">個人收支追蹤</h1>
+        <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-2">
+          個人收支追蹤
+        </p>
+        <h1 class="mt-0.5 truncate text-lg font-bold tracking-tight text-text">{{ pageTitle }}</h1>
+        <p class="mt-0.5 hidden truncate text-[11px] font-medium text-text-3 sm:block">
+          {{ cycleLabel }}
+        </p>
       </div>
 
       <div class="flex items-center gap-2">
-        <div class="text-right">
-          <p class="text-xs font-medium text-text-2">{{ cycleLabel }}</p>
-          <p v-if="loading" class="text-xs text-text-3">載入中</p>
-        </div>
+        <SyncPulse :page-loading="loading" />
 
         <div v-if="hasTrips" class="relative">
           <button
@@ -144,5 +148,56 @@ function closeTripMenu(): void {
       aria-hidden="true"
       @click="closeTripMenu"
     />
+    <span class="app-header__rail" :class="{ 'app-header__rail--active': loading }" />
   </header>
 </template>
+
+<style scoped>
+.app-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 9%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 86%, transparent);
+  box-shadow: 0 8px 30px rgb(67 40 119 / 5%);
+  backdrop-filter: blur(22px) saturate(135%);
+}
+
+.app-header__rail {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.app-header__rail::after {
+  position: absolute;
+  width: 35%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-primary),
+    var(--color-info),
+    transparent
+  );
+  content: '';
+  transform: translateX(-120%);
+}
+
+.app-header__rail--active {
+  opacity: 1;
+}
+
+.app-header__rail--active::after {
+  animation: sync-rail 1.25s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes sync-rail {
+  to {
+    transform: translateX(385%);
+  }
+}
+</style>

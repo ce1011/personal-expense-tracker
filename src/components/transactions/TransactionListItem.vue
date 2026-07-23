@@ -42,11 +42,11 @@ function handleClick(): void {
 <template>
   <button
     type="button"
-    class="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 text-left transition hover:bg-accent/50"
+    class="transaction-row grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 text-left"
     @click="handleClick"
   >
     <div
-      class="grid size-11 place-items-center rounded-full"
+      class="transaction-row__icon grid size-11 place-items-center rounded-full"
       :style="{ backgroundColor: withHash(category?.color_code ?? 'd6d0c4') }"
     >
       <ArrowUpRight v-if="item.kind === 'expense'" class="size-5 text-white" aria-hidden="true" />
@@ -69,9 +69,34 @@ function handleClick(): void {
     </div>
 
     <div class="text-right">
-      <p class="text-base font-bold" :class="isIncome ? 'text-primary' : 'text-text'">
+      <p class="money-figure text-base font-bold" :class="isIncome ? 'text-primary' : 'text-text'">
         {{ sign }}{{ formatCurrency(item.amount, currency) }}
       </p>
     </div>
   </button>
 </template>
+
+<style scoped>
+.transaction-row {
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.transaction-row__icon {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 28%);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.transaction-row:hover {
+  background: color-mix(in srgb, var(--color-accent) 62%, transparent);
+}
+
+.transaction-row:hover .transaction-row__icon {
+  transform: rotate(-6deg) scale(1.07);
+}
+
+.transaction-row:active {
+  transform: scale(0.992);
+}
+</style>

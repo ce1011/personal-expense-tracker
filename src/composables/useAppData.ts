@@ -102,6 +102,8 @@ const context = shallowRef<AppContext>(EMPTY_CONTEXT)
 
 const loading = shallowRef(false)
 const error = shallowRef('')
+const pendingActions = shallowRef(0)
+const lastSyncedAt = shallowRef<number | undefined>(undefined)
 /** Bumped on every successful mutation; pages watch their relevant scope. */
 const contextVersion = shallowRef(0)
 const mutationVersions = {
@@ -135,6 +137,8 @@ export function clearAppContext(): void {
   context.value = EMPTY_CONTEXT
   recoverySnapshots.value = []
   loading.value = false
+  pendingActions.value = 0
+  lastSyncedAt.value = undefined
   error.value = ''
 }
 
@@ -213,6 +217,8 @@ async function refreshAppContext(): Promise<void> {
             : undefined
       if (failure !== undefined) {
         error.value = failure instanceof Error ? failure.message : 'Unable to load app data'
+      } else {
+        lastSyncedAt.value = Date.now()
       }
     } catch (caught) {
       if (generation === contextGeneration) {
@@ -258,10 +264,6 @@ export function useAppData() {
     await refreshContext()
   }
 
-  async function resolveActiveTrip(): Promise<string> {
-    return (await getActiveTripId()) ?? ''
-  }
-
   /**
    * Run a mutation, then notify open pages to re-fetch their own aggregates.
    * Most mutations only bump `contextVersion`; ones that can change the shared
@@ -272,21 +274,26 @@ export function useAppData() {
     options: { reloadContext?: boolean; scopes?: AppDataScope[] } = {},
   ): Promise<void> {
     error.value = ''
+    pendingActions.value += 1
 
     try {
       await action()
+
+      contextVersion.value += 1
+      for (const scope of options.scopes ?? []) {
+        mutationVersions[scope].value += 1
+      }
+
+      if (options.reloadContext) {
+        await refreshContext()
+      }
+
+      lastSyncedAt.value = Date.now()
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Unable to save changes'
       throw caught
-    }
-
-    contextVersion.value += 1
-    for (const scope of options.scopes ?? []) {
-      mutationVersions[scope].value += 1
-    }
-
-    if (options.reloadContext) {
-      await refreshContext()
+    } finally {
+      pendingActions.value = Math.max(0, pendingActions.value - 1)
     }
   }
 
@@ -318,6 +325,8 @@ export function useAppData() {
     // State.
     loading: readonly(loading),
     error: readonly(error),
+    pendingActions: readonly(pendingActions),
+    lastSyncedAt: readonly(lastSyncedAt),
     contextVersion: readonly(contextVersion),
     mutationVersion: (scope: AppDataScope) => readonly(mutationVersions[scope]),
     recoverySnapshots: readonly(recoverySnapshots),
@@ -423,7 +432,10 @@ export function useAppData() {
 
     // Trips (reload context; header + quick-add read trips/active trip).
     addTrip: (draft: TripDraft) =>
-      withAction(() => saveTrip(draft), { reloadContext: true, scopes: ['dashboard', 'transactions', 'trips'] }),
+      withAction(() => saveTrip(draft), {
+        reloadContext: true,
+        scopes: ['dashboard', 'transactions', 'trips'],
+      }),
     updateTrip: (tripId: string, draft: TripDraft) => {
       const trip = requireTrip(tripId)
       return withAction(

@@ -57,11 +57,19 @@ async function addSaving(draft: SavingDraft): Promise<void> {
 
 <template>
   <!-- Auth pages render bare (no app chrome / quick-add). -->
-  <RouterView v-if="route.meta.public" />
+  <RouterView v-if="route.meta.public" v-slot="{ Component, route: activeRoute }">
+    <Transition name="auth-page" mode="out-in">
+      <component :is="Component" :key="activeRoute.fullPath" />
+    </Transition>
+  </RouterView>
 
   <template v-else>
     <AppShell :current-cycle="currentCycle" :loading="loading" @quick-add="openQuickAdd">
-      <RouterView />
+      <RouterView v-slot="{ Component, route: activeRoute }">
+        <Transition name="page-shift" mode="out-in">
+          <component :is="Component" :key="activeRoute.name ?? activeRoute.path" />
+        </Transition>
+      </RouterView>
     </AppShell>
 
     <QuickAddSheet

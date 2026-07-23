@@ -15,22 +15,60 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(_to, _from, savedPosition) {
+    if (import.meta.env.MODE === 'test') {
+      return false
+    }
+
+    return savedPosition ?? { top: 0 }
+  },
   routes: [
-    { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
-    { path: '/', name: 'dashboard', component: DashboardView },
-    { path: '/transactions', name: 'transactions', component: TransactionsView },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+      meta: { public: true, title: '登入' },
+    },
+    { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '總覽' } },
+    {
+      path: '/transactions',
+      name: 'transactions',
+      component: TransactionsView,
+      meta: { title: '交易' },
+    },
     {
       path: '/import-transactions',
       name: 'import-transactions',
       component: ImportTransactionsView,
+      meta: { title: '匯入交易' },
     },
-    { path: '/budgets', name: 'budgets', component: BudgetsView },
-    { path: '/category-budget', name: 'category-budget', component: CategoryBudgetView },
-    { path: '/categories', name: 'categories', component: CategoriesView },
-    { path: '/fixed-expenses', name: 'fixed-expenses', component: FixedExpensesView },
-    { path: '/trips', name: 'trips', component: TripsView },
-    { path: '/monthly-snapshot', name: 'monthly-snapshot', component: MonthlySnapshotView },
-    { path: '/settings', name: 'settings', component: SettingsView },
+    { path: '/budgets', name: 'budgets', component: BudgetsView, meta: { title: '預算週期' } },
+    {
+      path: '/category-budget',
+      name: 'category-budget',
+      component: CategoryBudgetView,
+      meta: { title: '分類預算' },
+    },
+    {
+      path: '/categories',
+      name: 'categories',
+      component: CategoriesView,
+      meta: { title: '分類管理' },
+    },
+    {
+      path: '/fixed-expenses',
+      name: 'fixed-expenses',
+      component: FixedExpensesView,
+      meta: { title: '固定開支' },
+    },
+    { path: '/trips', name: 'trips', component: TripsView, meta: { title: '旅程' } },
+    {
+      path: '/monthly-snapshot',
+      name: 'monthly-snapshot',
+      component: MonthlySnapshotView,
+      meta: { title: '每月快照' },
+    },
+    { path: '/settings', name: 'settings', component: SettingsView, meta: { title: '更多' } },
   ],
 })
 

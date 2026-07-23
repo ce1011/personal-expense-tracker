@@ -116,7 +116,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="grid gap-4">
+  <div class="dashboard-flow grid gap-4">
     <section v-if="loading" class="grid gap-4">
       <SkeletonCard :lines="3" />
       <div class="grid grid-cols-2 gap-3">
@@ -126,7 +126,10 @@ onBeforeUnmount(() => {
       <SkeletonCard :lines="2" />
     </section>
 
-    <section v-else-if="!isTripMode && dashboard" class="grid gap-4">
+    <section
+      v-else-if="!isTripMode && dashboard"
+      class="dashboard-sequence dashboard-sequence--primary grid gap-4"
+    >
       <HeroCard
         :remaining-budget="dashboard.remainingBudget"
         :income-total="dashboard.cycleIncomeTotal"
@@ -164,7 +167,10 @@ onBeforeUnmount(() => {
       <SkeletonList :rows="3" />
     </section>
 
-    <section v-else-if="!isTripMode && dashboard" class="grid gap-4">
+    <section
+      v-else-if="!isTripMode && dashboard"
+      class="dashboard-sequence dashboard-sequence--secondary grid gap-4"
+    >
       <QuickAddShortcuts
         :suggestions="dashboard.quickAddSuggestions"
         :expense-categories="dashboard.activeExpenseCategories"
@@ -191,7 +197,7 @@ onBeforeUnmount(() => {
       <CategoryAlertsList :alerts="dashboard.categoryAlerts" :currency="currency" />
     </section>
 
-    <section v-else-if="isTripMode" class="grid gap-4">
+    <section v-else-if="isTripMode" class="dashboard-sequence grid gap-4">
       <BaseCard variant="primary">
         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary-2">旅程模式</p>
         <h2 class="mt-1 text-xl font-bold text-text">{{ activeTrip?.name }}</h2>
@@ -205,7 +211,7 @@ onBeforeUnmount(() => {
       </BaseCard>
     </section>
 
-    <section class="grid gap-3">
+    <section class="dashboard-sequence dashboard-sequence--recent grid gap-3">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-text">
           {{ isTripMode ? '旅程最近交易' : '最近交易' }}
@@ -222,7 +228,7 @@ onBeforeUnmount(() => {
 
       <SkeletonList v-if="loading" :rows="5" />
       <BaseCard v-else-if="recentTransactions.length" class="overflow-hidden p-0">
-        <div class="divide-y divide-border">
+        <TransitionGroup name="transaction-stagger" tag="div" class="divide-y divide-border">
           <TransactionListItem
             v-for="transaction in recentTransactions"
             :key="`${transaction.kind}-${transaction.id}`"
@@ -232,7 +238,7 @@ onBeforeUnmount(() => {
             :currency="currency"
             @select="goToTransactions"
           />
-        </div>
+        </TransitionGroup>
       </BaseCard>
       <EmptyState
         v-else
@@ -256,3 +262,42 @@ onBeforeUnmount(() => {
     <BaseToast v-if="toastMessage" :message="toastMessage" :duration="2400" @close="clearToast" />
   </div>
 </template>
+
+<style scoped>
+.dashboard-sequence {
+  animation: dashboard-arrive 520ms backwards cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard-sequence--secondary {
+  animation-delay: 90ms;
+}
+
+.dashboard-sequence--recent {
+  animation-delay: 160ms;
+}
+
+.transaction-stagger-enter-active,
+.transaction-stagger-leave-active,
+.transaction-stagger-move {
+  transition:
+    opacity 240ms ease,
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.transaction-stagger-enter-from {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.transaction-stagger-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+@keyframes dashboard-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+</style>
