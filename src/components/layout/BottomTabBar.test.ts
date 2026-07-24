@@ -1,9 +1,10 @@
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { DrawerProvider } from 'reka-ui'
+import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, describe, expect, test } from 'vitest'
 
-import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import UiBottomSheet from '@/components/ui/UiBottomSheet.vue'
 import BottomTabBar from '@/components/layout/BottomTabBar.vue'
 
 describe('BottomTabBar', () => {
@@ -23,8 +24,24 @@ describe('BottomTabBar', () => {
     const navigation = mount(BottomTabBar, {
       global: { plugins: [router] },
     })
-    const sheet = mount(BaseBottomSheet, {
-      props: { show: false, title: '修改支出' },
+    const SheetHost = defineComponent({
+      props: {
+        show: { type: Boolean, default: false },
+      },
+      setup(props) {
+        return () =>
+          h(DrawerProvider, null, {
+            default: () =>
+              h(UiBottomSheet, {
+                show: props.show,
+                title: '修改支出',
+              }),
+          })
+      },
+    })
+
+    const sheet = mount(SheetHost, {
+      props: { show: false },
       attachTo: document.body,
     })
 

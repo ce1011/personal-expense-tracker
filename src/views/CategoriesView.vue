@@ -24,6 +24,7 @@ import {
 import type { Component } from 'vue'
 
 import BaseButton from '@/components/base/BaseButton.vue'
+import UiTabs from '@/components/ui/UiTabs.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
@@ -148,28 +149,13 @@ function deleteCategory(categoryId: string): void {
       <p class="mt-1 text-body-sm text-text-2">新增與管理支出、收入分類，包含顏色與圖示預覽。</p>
     </header>
 
-    <div class="inline-flex rounded-xl border border-border bg-accent p-1">
-      <button
-        type="button"
-        class="min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition"
-        :class="
-          activeTab === 'expense' ? 'bg-surface text-text shadow-sm' : 'text-text-2 hover:text-text'
-        "
-        @click="activeTab = 'expense'"
-      >
-        支出
-      </button>
-      <button
-        type="button"
-        class="min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition"
-        :class="
-          activeTab === 'income' ? 'bg-surface text-text shadow-sm' : 'text-text-2 hover:text-text'
-        "
-        @click="activeTab = 'income'"
-      >
-        收入
-      </button>
-    </div>
+    <UiTabs
+      v-model="activeTab"
+      :items="[
+        { value: 'expense', label: '支出' },
+        { value: 'income', label: '收入' },
+      ]"
+    />
 
     <div v-if="appData.loading.value" class="grid gap-4">
       <SkeletonCard :lines="5" />

@@ -3,6 +3,7 @@ import { SearchX } from 'lucide-vue-next'
 import { computed, shallowRef } from 'vue'
 
 import BaseInput from '@/components/base/BaseInput.vue'
+import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonList from '@/components/base/SkeletonList.vue'
@@ -15,6 +16,16 @@ import type { CombinedTransaction, ExpenseDraft, IncomeDraft, SavingDraft } from
 const appData = useAppData()
 const query = useTransactionsQuery()
 const { filters } = query
+
+const filterDateRange = computed({
+  get() {
+    return { start: filters.fromDate, end: filters.toDate }
+  },
+  set(value: { start: string; end: string }) {
+    filters.fromDate = value.start
+    filters.toDate = value.end
+  },
+})
 
 const selectedTransaction = shallowRef<CombinedTransaction | undefined>()
 const showFilters = shallowRef(false)
@@ -240,15 +251,8 @@ function setCategoryFilter(categoryId: string): void {
           </button>
         </div>
 
-        <div v-if="filters.datePreset === 'custom'" class="grid gap-3 sm:grid-cols-2">
-          <label class="grid gap-1.5 text-xs font-medium text-text-2">
-            開始日期
-            <BaseInput v-model="filters.fromDate" type="date" />
-          </label>
-          <label class="grid gap-1.5 text-xs font-medium text-text-2">
-            結束日期
-            <BaseInput v-model="filters.toDate" type="date" />
-          </label>
+        <div v-if="filters.datePreset === 'custom'">
+          <UiDateRangePicker v-model="filterDateRange" label="自訂日期範圍" />
         </div>
 
         <div v-if="query.trips.value.length" class="grid gap-1.5">

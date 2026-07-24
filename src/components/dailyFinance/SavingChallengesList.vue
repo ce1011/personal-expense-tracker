@@ -3,7 +3,9 @@ import { Pause, Play, Plus, Trash2 } from 'lucide-vue-next'
 import { computed, shallowRef } from 'vue'
 
 import BaseCard from '@/components/base/BaseCard.vue'
-import ProgressBar from '@/components/common/ProgressBar.vue'
+import UiNumberField from '@/components/ui/UiNumberField.vue'
+import UiProgress from '@/components/ui/UiProgress.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import EmptyState from '@/components/base/EmptyState.vue'
 import type { ChallengeProgress } from '@/lib/dailyFinance/savingChallenges'
 import { formatCurrency } from '@/lib/formatters'
@@ -14,6 +16,8 @@ defineProps<{
   currency: string
 }>()
 
+const { confirmDanger } = useConfirmDialog()
+
 const emit = defineEmits<{
   create: [name: string, target_amount: number]
   updateStatus: [challengeId: string, status: SavingChallenge['status']]
@@ -23,6 +27,17 @@ const emit = defineEmits<{
 const isCreating = shallowRef(false)
 const newName = shallowRef('')
 const newTarget = shallowRef('')
+
+const newTargetNumber = computed({
+  get() {
+    const parsed = Number(newTarget.value)
+    return Number.isFinite(parsed) ? parsed : 0
+  },
+  set(value: number) {
+    newTarget.value = String(value || '')
+  },
+})
+
 
 const canCreate = computed(() => newName.value.trim() !== '' && Number(newTarget.value) > 0)
 
@@ -50,8 +65,13 @@ function toggleStatus(challenge: ChallengeProgress): void {
   emit('updateStatus', challenge.challenge_id, next)
 }
 
-function confirmDelete(challengeId: string): void {
-  if (confirm('確定要刪除這個儲蓄挑戰嗎？相關紀錄將一併移除。')) {
+async function confirmDelete(challengeId: string): Promise<void> {
+  const confirmed = await confirmDanger({
+    title: '刪除儲蓄挑戰',
+    description: '確定要刪除這個儲蓄挑戰嗎？相關紀錄將一併移除。',
+    confirmLabel: '刪除',
+  })
+  if (confirmed) {
     emit('delete', challengeId)
   }
 }
@@ -123,18 +143,12 @@ function statusLabel(status: SavingChallenge['status']): string {
           placeholder="例如：旅行基金"
         />
       </div>
-      <div>
-        <label for="challenge-target" class="block text-xs font-medium text-text-2">目標金額</label>
-        <input
-          id="challenge-target"
-          v-model="newTarget"
-          type="number"
-          min="1"
-          step="1"
-          class="input-base mt-1"
-          placeholder="0"
-        />
-      </div>
+      <UiNumberField
+        v-model="newTargetNumber"
+        label="目標金額"
+        :min="1"
+        :step="1"
+      />
       <div class="flex items-center justify-end gap-2">
         <button
           type="button"
@@ -183,7 +197,7 @@ function statusLabel(status: SavingChallenge['status']): string {
           </div>
         </div>
 
-        <ProgressBar
+        <UiProgress
           :percentage="challenge.percentage"
           :color-class="statusColorClass(challenge.status)"
         />

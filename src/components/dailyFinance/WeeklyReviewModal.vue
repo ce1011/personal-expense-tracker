@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TrendingDown, TrendingUp } from 'lucide-vue-next'
 
-import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import UiBottomSheet from '@/components/ui/UiBottomSheet.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import type { WeeklyReview } from '@/lib/dailyFinance/weeklyReview'
@@ -33,7 +33,7 @@ function close(): void {
 </script>
 
 <template>
-  <BaseBottomSheet
+  <UiBottomSheet
     title="上週回顧"
     :subtitle="`${formatDate(review.weekStart)} – ${formatDate(review.weekEnd)}`"
     show
@@ -101,5 +101,5 @@ function close(): void {
       </div>
       <p v-else class="mt-2 text-body-sm text-text-2">沒有前一週資料可比較</p>
     </BaseCard>
-  </BaseBottomSheet>
+  </UiBottomSheet>
 </template>

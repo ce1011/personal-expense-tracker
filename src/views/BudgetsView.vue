@@ -5,6 +5,7 @@ import { CalendarDays, Info, Plus } from 'lucide-vue-next'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
+import UiNumberField from '@/components/ui/UiNumberField.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import TargetLimitEditor from '@/components/budgets/TargetLimitEditor.vue'
@@ -149,15 +150,15 @@ function saveCycle(): void {
             inputmode="numeric"
             autocomplete="off"
           />
-          <BaseInput
-            v-model.number="form.income_day"
+          <UiNumberField
+            v-model="form.income_day"
             label="入糧日"
-            type="number"
-            min="1"
-            max="31"
+            :min="1"
+            :max="31"
+            :step="1"
           />
-          <BaseInput v-model.number="form.income" label="固定收入" type="number" min="0" />
-          <BaseInput v-model.number="form.saving_target" label="儲蓄目標" type="number" min="0" />
+          <UiNumberField v-model="form.income" label="固定收入" :min="0" :step="0.01" />
+          <UiNumberField v-model="form.saving_target" label="儲蓄目標" :min="0" :step="0.01" />
         </div>
 
         <BaseCard variant="primary" class="mt-4">

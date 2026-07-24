@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, shallowRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight } from 'lucide-vue-next'
 
 import BaseCard from '@/components/base/BaseCard.vue'
-import BaseToast from '@/components/base/BaseToast.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import SkeletonList from '@/components/base/SkeletonList.vue'
@@ -22,6 +21,7 @@ import WeeklyReviewModal from '@/components/dailyFinance/WeeklyReviewModal.vue'
 import TransactionListItem from '@/components/transactions/TransactionListItem.vue'
 import { useAppData } from '@/composables/useAppData'
 import { useDashboardData } from '@/composables/useDashboardData'
+import { useToast } from '@/composables/useToast'
 import { formatDate } from '@/lib/formatters'
 import type { ExpenseDraft, IncomeDraft, SavingDraft } from '@/types/app-data'
 
@@ -29,8 +29,7 @@ const appData = useAppData()
 const { dashboard, isTripMode, loading, error } = useDashboardData()
 const router = useRouter()
 const isWeeklyReviewOpen = shallowRef(false)
-const toastMessage = shallowRef('')
-let toastTimeout: ReturnType<typeof setTimeout> | undefined
+const { toast } = useToast()
 
 const cycleLabel = computed(() => dashboard.value?.currentWindow?.label)
 const currency = computed(() => dashboard.value?.currency ?? appData.currency.value)
@@ -46,40 +45,28 @@ function closeWeeklyReview(): void {
   isWeeklyReviewOpen.value = false
 }
 
-async function showToast(message: string): Promise<void> {
-  clearTimeout(toastTimeout)
-  toastMessage.value = ''
-  await nextTick()
-  toastMessage.value = message
-
-  toastTimeout = setTimeout(() => {
-    toastMessage.value = ''
-  }, 2600)
-}
-
-function clearToast(): void {
-  toastMessage.value = ''
-  clearTimeout(toastTimeout)
+function showToast(message: string): void {
+  toast({ description: message, duration: 2400 })
 }
 
 async function addExpense(draft: ExpenseDraft): Promise<void> {
   await appData.addExpense(draft)
-  await showToast('已新增支出')
+  showToast('已新增支出')
 }
 
 async function addIncome(draft: IncomeDraft): Promise<void> {
   await appData.addIncome(draft)
-  await showToast('已新增收入')
+  showToast('已新增收入')
 }
 
 async function addSaving(draft: SavingDraft): Promise<void> {
   await appData.addSaving(draft)
-  await showToast('已新增儲蓄')
+  showToast('已新增儲蓄')
 }
 
 async function createSavingChallenge(name: string, target_amount: number): Promise<void> {
   await appData.addSavingChallenge(name, target_amount)
-  await showToast('已新增儲蓄挑戰')
+  showToast('已新增儲蓄挑戰')
 }
 
 async function updateSavingChallengeStatus(
@@ -103,16 +90,13 @@ async function updateSavingChallengeStatus(
 
 async function deleteSavingChallenge(challengeId: string): Promise<void> {
   await appData.deleteSavingChallenge(challengeId)
-  await showToast('已刪除儲蓄挑戰')
+  showToast('已刪除儲蓄挑戰')
 }
 
 function goToTransactions(): void {
   void router.push('/transactions')
 }
 
-onBeforeUnmount(() => {
-  clearTimeout(toastTimeout)
-})
 </script>
 
 <template>
@@ -259,7 +243,6 @@ onBeforeUnmount(() => {
       @close="closeWeeklyReview"
     />
 
-    <BaseToast v-if="toastMessage" :message="toastMessage" :duration="2400" @close="clearToast" />
   </div>
 </template>
 

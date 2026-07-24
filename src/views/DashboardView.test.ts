@@ -169,8 +169,7 @@ function mountDashboard(
         WeeklyCashflowCard: { template: '<div data-testid="weekly-brief">WeeklyBrief</div>' },
         UnusualExpenseAlertsList: { template: '<div data-testid="unusual">Unusual</div>' },
         WeeklyReviewModal: true,
-        BaseToast: true,
-      },
+              },
     },
   })
 }

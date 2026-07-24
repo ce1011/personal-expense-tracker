@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { ConfigProvider, DrawerProvider } from 'reka-ui'
 import { computed, shallowRef } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 
 import AppShell from '@/components/AppShell.vue'
+import UiAlertDialogHost from '@/components/ui/UiAlertDialogHost.vue'
+import UiToastHost from '@/components/ui/UiToastHost.vue'
 import QuickAddSheet from '@/components/transactions/QuickAddSheet.vue'
 import { useAppData } from '@/composables/useAppData'
 import { useShellData } from '@/composables/useShellData'
@@ -42,34 +45,42 @@ async function addSaving(draft: SavingDraft): Promise<void> {
 </script>
 
 <template>
-  <!-- Auth pages render bare (no app chrome / quick-add). -->
-  <RouterView v-if="route.meta.public" v-slot="{ Component, route: activeRoute }">
-    <Transition name="auth-page" mode="out-in">
-      <component :is="Component" :key="activeRoute.fullPath" />
-    </Transition>
-  </RouterView>
+  <ConfigProvider locale="zh-HK">
+    <DrawerProvider>
+      <UiToastHost>
+        <!-- Auth pages render bare (no app chrome / quick-add). -->
+        <RouterView v-if="route.meta.public" v-slot="{ Component, route: activeRoute }">
+          <Transition name="auth-page" mode="out-in">
+            <component :is="Component" :key="activeRoute.fullPath" />
+          </Transition>
+        </RouterView>
 
-  <template v-else>
-    <AppShell :current-cycle="currentCycle" :loading="loading" @quick-add="openQuickAdd">
-      <RouterView v-slot="{ Component, route: activeRoute }">
-        <Transition name="page-shift" mode="out-in">
-          <component :is="Component" :key="activeRoute.name ?? activeRoute.path" />
-        </Transition>
-      </RouterView>
-    </AppShell>
+        <template v-else>
+          <AppShell :current-cycle="currentCycle" :loading="loading" @quick-add="openQuickAdd">
+            <RouterView v-slot="{ Component, route: activeRoute }">
+              <Transition name="page-shift" mode="out-in">
+                <component :is="Component" :key="activeRoute.name ?? activeRoute.path" />
+              </Transition>
+            </RouterView>
+          </AppShell>
 
-    <QuickAddSheet
-      v-model="isQuickAddOpen"
-      :expense-categories="appData.activeExpenseCategories.value"
-      :income-categories="appData.activeIncomeCategories.value"
-      :saving-challenges="appData.savingChallenges.value"
-      :trip-options="appData.trips.value"
-      :default-trip-id="appData.activeTripId.value || undefined"
-      :fx-rate-map="appData.fxRateMap.value"
-      :latest-fx-date="appData.latestFxDate.value"
-      @create-expense="addExpense"
-      @create-income="addIncome"
-      @create-saving="addSaving"
-    />
-  </template>
+          <QuickAddSheet
+            v-model="isQuickAddOpen"
+            :expense-categories="appData.activeExpenseCategories.value"
+            :income-categories="appData.activeIncomeCategories.value"
+            :saving-challenges="appData.savingChallenges.value"
+            :trip-options="appData.trips.value"
+            :default-trip-id="appData.activeTripId.value || undefined"
+            :fx-rate-map="appData.fxRateMap.value"
+            :latest-fx-date="appData.latestFxDate.value"
+            @create-expense="addExpense"
+            @create-income="addIncome"
+            @create-saving="addSaving"
+          />
+        </template>
+
+        <UiAlertDialogHost />
+      </UiToastHost>
+    </DrawerProvider>
+  </ConfigProvider>
 </template>

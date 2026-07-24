@@ -2,6 +2,7 @@
 import { computed, shallowRef } from 'vue'
 
 import BaseCard from '@/components/base/BaseCard.vue'
+import UiCheckbox from '@/components/ui/UiCheckbox.vue'
 import {
   calculateSpareChange,
   parseQuickAddText,
@@ -193,18 +194,13 @@ function submit(): void {
         <p v-if="categoryHint" class="mt-1 text-warning">{{ categoryHint }}</p>
       </div>
 
-      <label
+      <UiCheckbox
         v-if="spareChange && spareChange.spareChange > 0"
-        class="flex items-center gap-2 text-sm font-medium text-text"
+        v-model="isSpareChangeEnabled"
       >
-        <input
-          v-model="isSpareChangeEnabled"
-          type="checkbox"
-          class="size-5 rounded border-border text-primary focus:ring-primary"
-        />
         零頭儲蓄：入帳 {{ formatCurrency(spareChange.roundedAmount, currency) }}，儲蓄
         {{ formatCurrency(spareChange.spareChange, currency) }}
-      </label>
+      </UiCheckbox>
     </form>
   </BaseCard>
 </template>

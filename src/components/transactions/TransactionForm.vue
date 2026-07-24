@@ -4,7 +4,10 @@ import { Trash2 } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
-import BaseSelect from '@/components/base/BaseSelect.vue'
+import UiCheckbox from '@/components/ui/UiCheckbox.vue'
+import UiDatePicker from '@/components/ui/UiDatePicker.vue'
+import UiNumberField from '@/components/ui/UiNumberField.vue'
+import UiSelect from '@/components/ui/UiSelect.vue'
 import { fromDateInputValue, toDateInputValue } from '@/lib/date'
 import { convertToHkd } from '@/lib/fx'
 import { formatCurrency } from '@/lib/formatters'
@@ -301,14 +304,11 @@ function removeTransaction(): void {
       :autofocus="true"
     />
 
-    <BaseInput
-      v-model.number="form.amount"
+    <UiNumberField
+      v-model="form.amount"
       label="金額"
-      type="number"
-      inputmode="decimal"
-      placeholder="0"
-      min="0"
-      step="0.01"
+      :min="0"
+      :step="0.01"
     />
 
     <div class="grid gap-1.5">
@@ -337,11 +337,11 @@ function removeTransaction(): void {
     </div>
 
     <div class="grid grid-cols-2 gap-3">
-      <BaseSelect v-model="form.currency_code" label="幣別" :options="currencyOptions" />
-      <BaseInput v-model="form.date" label="日期" type="date" />
+      <UiSelect v-model="form.currency_code" label="幣別" :options="currencyOptions" />
+      <UiDatePicker v-model="form.date" label="日期" />
     </div>
 
-    <BaseSelect
+    <UiSelect
       v-if="tripOptions.length"
       v-model="form.trip_id"
       label="旅程"
@@ -353,32 +353,26 @@ function removeTransaction(): void {
       class="rounded-xl border border-border transition-colors"
       :class="form.recurring ? 'bg-accent/50' : 'bg-surface'"
     >
-      <label class="flex items-center gap-3 px-4 py-3">
-        <input
-          v-model="form.recurring"
-          type="checkbox"
-          class="size-5 rounded border-border text-primary focus:ring-primary"
-        />
-        <span class="text-sm font-medium text-text">定期支出</span>
-      </label>
+      <div class="px-4 py-3">
+        <UiCheckbox v-model="form.recurring" label="定期支出" />
+      </div>
 
       <div
         v-if="form.recurring"
         class="grid grid-cols-2 gap-3 border-t border-border px-4 pb-4 pt-3"
       >
-        <BaseSelect v-model="form.recurring_frequency" label="週期" :options="recurringOptions" />
-        <BaseInput
-          v-model.number="form.recurring_day"
+        <UiSelect v-model="form.recurring_frequency" label="週期" :options="recurringOptions" />
+        <UiNumberField
+          v-model="form.recurring_day"
           label="到期日"
-          type="number"
-          inputmode="numeric"
-          min="1"
-          max="31"
+          :min="1"
+          :max="31"
+          :step="1"
         />
       </div>
     </div>
 
-    <BaseSelect
+    <UiSelect
       v-if="form.kind === 'saving'"
       v-model="form.challenge_id"
       label="儲蓄挑戰"

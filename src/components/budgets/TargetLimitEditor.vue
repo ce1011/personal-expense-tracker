@@ -4,7 +4,7 @@ import { Target } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
-import BaseInput from '@/components/base/BaseInput.vue'
+import UiNumberField from '@/components/ui/UiNumberField.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import { formatCurrency, withHash } from '@/lib/formatters'
 import type { BudgetCycle, ExpenseCategory, TargetExpenseLimit } from '@/types/app-data'
@@ -87,14 +87,12 @@ function save(categoryId: string): void {
           </BaseButton>
         </div>
 
-        <BaseInput
-          :model-value="amounts[category.category_id] ?? 0"
+        <UiNumberField
           class="mt-3"
-          type="number"
-          min="0"
-          step="100"
-          placeholder="0"
-          @update:model-value="amounts[category.category_id] = $event as number"
+          :model-value="amounts[category.category_id] ?? 0"
+          :min="0"
+          :step="100"
+          @update:model-value="amounts[category.category_id] = $event"
         />
       </div>
     </div>

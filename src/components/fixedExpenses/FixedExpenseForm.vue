@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 
-import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import UiBottomSheet from '@/components/ui/UiBottomSheet.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
-import BaseSelect from '@/components/base/BaseSelect.vue'
+import UiNumberField from '@/components/ui/UiNumberField.vue'
+import UiSelect from '@/components/ui/UiSelect.vue'
 import type { ExpenseCategory, ExpenseDraft, ExpenseTransaction } from '@/types/app-data'
 
 const props = defineProps<{
@@ -143,7 +144,7 @@ function close(): void {
 </script>
 
 <template>
-  <BaseBottomSheet
+  <UiBottomSheet
     :show="show"
     :title="isEditing ? '修改固定開支' : '新增固定開支'"
     :subtitle="isEditing ? '更新這筆固定開支的內容' : '建立一筆會定期發生的開支'"
@@ -158,17 +159,15 @@ function close(): void {
         autocomplete="off"
       />
 
-      <BaseInput
-        v-model.number="form.amount"
-        label="金額 ({{ currency }})"
-        type="number"
-        min="0.01"
-        step="0.01"
-        placeholder="0.00"
+      <UiNumberField
+        v-model="form.amount"
+        :label="`金額 (${currency})`"
+        :min="0.01"
+        :step="0.01"
         :error="errors.amount"
       />
 
-      <BaseSelect
+      <UiSelect
         v-model="form.category_id"
         label="分類"
         :options="categoryOptions"
@@ -176,22 +175,22 @@ function close(): void {
       />
 
       <div class="grid gap-4 md:grid-cols-2">
-        <BaseSelect v-model="form.recurring_frequency" label="週期" :options="frequencyOptions" />
+        <UiSelect v-model="form.recurring_frequency" label="週期" :options="frequencyOptions" />
 
-        <BaseSelect
+        <UiSelect
           v-if="form.recurring_frequency === 'weekly'"
           v-model.number="form.recurring_day"
           label="星期"
           :options="weeklyDayOptions"
           :error="errors.recurring_day"
         />
-        <BaseInput
+        <UiNumberField
           v-else
-          v-model.number="form.recurring_day"
+          v-model="form.recurring_day"
           label="到期日"
-          type="number"
           :min="dayMin"
           :max="dayMax"
+          :step="1"
           :error="errors.recurring_day"
         />
       </div>
@@ -201,5 +200,5 @@ function close(): void {
         <BaseButton type="submit">{{ isEditing ? '儲存修改' : '新增固定開支' }}</BaseButton>
       </div>
     </form>
-  </BaseBottomSheet>
+  </UiBottomSheet>
 </template>

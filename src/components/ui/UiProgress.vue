@@ -1,30 +1,42 @@
 <script setup lang="ts">
-defineProps<{
-  percentage: number
-  colorClass?: string
-  colorStyle?: string
-  size?: 'sm' | 'md'
-  label?: string
-}>()
+import { ProgressIndicator, ProgressRoot } from 'reka-ui'
+import { computed } from 'vue'
+
+const props = withDefaults(
+  defineProps<{
+    percentage: number
+    colorClass?: string
+    colorStyle?: string
+    size?: 'sm' | 'md'
+    label?: string
+  }>(),
+  {
+    size: 'sm',
+  },
+)
+
+const clamped = computed(() => Math.min(Math.max(props.percentage, 0), 100))
 </script>
 
 <template>
   <div class="w-full">
     <div v-if="label" class="mb-1 text-xs text-text-2">{{ label }}</div>
-    <div
+    <ProgressRoot
+      :model-value="clamped"
+      :max="100"
       class="progress-track w-full overflow-hidden rounded-full"
       :class="size === 'md' ? 'h-3' : 'h-2'"
-      role="progressbar"
-      :aria-valuenow="Math.min(percentage, 100)"
-      aria-valuemin="0"
-      aria-valuemax="100"
     >
-      <div
-        class="progress-fill h-full rounded-full"
+      <ProgressIndicator
+        class="progress-fill h-full rounded-full transition-[width,transform] duration-700 ease-out"
         :class="colorClass"
-        :style="{ width: `${Math.min(percentage, 100)}%`, backgroundColor: colorStyle }"
+        :style="{
+          width: `${clamped}%`,
+          backgroundColor: colorStyle,
+          transform: 'translateZ(0)',
+        }"
       />
-    </div>
+    </ProgressRoot>
   </div>
 </template>
 
@@ -37,7 +49,6 @@ defineProps<{
 .progress-fill {
   position: relative;
   overflow: hidden;
-  transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .progress-fill::after {

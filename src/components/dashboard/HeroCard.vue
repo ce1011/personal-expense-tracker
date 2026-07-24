@@ -3,7 +3,7 @@ import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { History } from 'lucide-vue-next'
 
 import BaseCard from '@/components/base/BaseCard.vue'
-import ProgressBar from '@/components/common/ProgressBar.vue'
+import UiProgress from '@/components/ui/UiProgress.vue'
 import { formatCurrency } from '@/lib/formatters'
 
 const props = defineProps<{
@@ -127,7 +127,7 @@ onUnmounted(() => {
       <p v-if="cycleLabel" class="mt-1 text-xs text-text-3">{{ cycleLabel }}</p>
 
       <div class="mt-4">
-        <ProgressBar
+        <UiProgress
           :percentage="spendingPercentage"
           color-class="bg-primary"
           size="md"

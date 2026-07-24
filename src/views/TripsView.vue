@@ -2,11 +2,14 @@
 import { computed, reactive, shallowRef, watch } from 'vue'
 import { CheckCircle2, ChevronDown, Globe, MapPinned, PenLine, Plus, Route } from 'lucide-vue-next'
 
-import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import UiBottomSheet from '@/components/ui/UiBottomSheet.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
-import BaseSelect from '@/components/base/BaseSelect.vue'
+import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
+import UiDropdownMenu from '@/components/ui/UiDropdownMenu.vue'
+import UiNumberField from '@/components/ui/UiNumberField.vue'
+import UiSelect from '@/components/ui/UiSelect.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonList from '@/components/base/SkeletonList.vue'
 import TripBudgetHelperCard from '@/components/trips/TripBudgetHelperCard.vue'
@@ -22,7 +25,6 @@ const { trips, activeTripId, activeTrip, tripBudgetHelper, spentInTrip, currency
 
 const isSheetOpen = shallowRef(false)
 const selectedTripId = shallowRef('')
-const isModeDropdownOpen = shallowRef(false)
 const form = reactive({
   name: '',
   destination: '',
@@ -32,6 +34,16 @@ const form = reactive({
   budgetCurrency: 'HKD' as SupportedCurrency,
   status: 'planned' as TripStatus,
   notes: '',
+})
+
+const tripDateRange = computed({
+  get() {
+    return { start: form.startDate, end: form.endDate }
+  },
+  set(value: { start: string; end: string }) {
+    form.startDate = value.start
+    form.endDate = value.end
+  },
 })
 
 const selectedTrip = computed(() =>
@@ -55,7 +67,7 @@ const statusOptions = [
 ]
 
 const modeOptions = computed(() => [
-  { value: '', label: '一般模式' },
+  { value: 'all', label: '一般模式' },
   ...trips.value.map((trip) => ({
     value: trip.trip_id,
     label: `${trip.name} · ${trip.destination}`,
@@ -209,8 +221,7 @@ function statusHint(trip: TripSession): string {
 }
 
 function selectMode(tripId: string): void {
-  setTripMode(tripId || undefined)
-  isModeDropdownOpen.value = false
+  setTripMode(tripId === 'all' ? undefined : tripId)
 }
 </script>
 
@@ -225,37 +236,21 @@ function selectMode(tripId: string): void {
         </p>
       </div>
 
-      <div class="relative">
-        <button
-          type="button"
-          class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-body-sm font-semibold text-text"
-          @click="isModeDropdownOpen = !isModeDropdownOpen"
-        >
-          <Route class="size-4 text-primary" aria-hidden="true" />
-          {{ activeTrip?.name ?? '一般模式' }}
-          <ChevronDown
-            class="size-4 text-text-3 transition"
-            :class="isModeDropdownOpen ? 'rotate-180' : ''"
-            aria-hidden="true"
-          />
-        </button>
-
-        <div
-          v-if="isModeDropdownOpen"
-          class="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-border bg-surface p-1 shadow-xl"
-        >
+      <UiDropdownMenu
+        :items="modeOptions.map((option) => ({ key: option.value, label: option.label }))"
+        @select="selectMode"
+      >
+        <template #trigger>
           <button
-            v-for="option in modeOptions"
-            :key="option.value"
             type="button"
-            class="w-full rounded-lg px-3 py-2 text-left text-body-sm transition hover:bg-accent"
-            :class="activeTripId === option.value ? 'bg-primary/5 text-primary' : 'text-text'"
-            @click="selectMode(option.value)"
+            class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-body-sm font-semibold text-text"
           >
-            {{ option.label }}
+            <Route class="size-4 text-primary" aria-hidden="true" />
+            {{ activeTrip?.name ?? '一般模式' }}
+            <ChevronDown class="size-4 text-text-3" aria-hidden="true" />
           </button>
-        </div>
-      </div>
+        </template>
+      </UiDropdownMenu>
     </header>
 
     <BaseButton class="w-full sm:w-auto" @click="openCreate">
@@ -331,7 +326,7 @@ function selectMode(tripId: string): void {
       </template>
     </EmptyState>
 
-    <BaseBottomSheet
+    <UiBottomSheet
       :show="isSheetOpen"
       :title="isEditing ? '編輯旅程' : '新增旅程'"
       :subtitle="
@@ -346,16 +341,20 @@ function selectMode(tripId: string): void {
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
-          <BaseInput v-model="form.startDate" label="開始日期" type="date" />
-          <BaseInput v-model="form.endDate" label="結束日期" type="date" />
+          <div class="sm:col-span-2">
+            <UiDateRangePicker
+              v-model="tripDateRange"
+              label="旅程期間"
+            />
+          </div>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
-          <BaseInput v-model.number="form.budgetAmount" label="預算金額" type="number" min="0" />
-          <BaseSelect v-model="form.budgetCurrency" label="預算幣別" :options="tripOptions" />
+          <UiNumberField v-model="form.budgetAmount" label="預算金額" :min="0" :step="0.01" />
+          <UiSelect v-model="form.budgetCurrency" label="預算幣別" :options="tripOptions" />
         </div>
 
-        <BaseSelect v-model="form.status" label="狀態" :options="statusOptions" />
+        <UiSelect v-model="form.status" label="狀態" :options="statusOptions" />
 
         <label class="grid gap-1 text-sm font-medium text-text-2">
           備註
@@ -394,6 +393,6 @@ function selectMode(tripId: string): void {
           </BaseButton>
         </div>
       </form>
-    </BaseBottomSheet>
+    </UiBottomSheet>
   </div>
 </template>

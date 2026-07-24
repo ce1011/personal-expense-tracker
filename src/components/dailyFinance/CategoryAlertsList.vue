@@ -3,7 +3,7 @@ import { computed } from 'vue'
 
 import BaseCard from '@/components/base/BaseCard.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
-import ProgressBar from '@/components/common/ProgressBar.vue'
+import UiProgress from '@/components/ui/UiProgress.vue'
 import { formatCurrency } from '@/lib/formatters'
 import type { CategoryAlert } from '@/lib/dailyFinance/categoryAlerts'
 import { AlertTriangle } from 'lucide-vue-next'
@@ -78,7 +78,7 @@ function severityTextClass(severity: CategoryAlert['severity']): string {
           </div>
         </div>
 
-        <ProgressBar
+        <UiProgress
           :percentage="alert.percentage"
           :color-class="severityColorClass(alert.severity)"
         />

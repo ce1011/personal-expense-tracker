@@ -4,6 +4,7 @@ import { computed } from 'vue'
 
 import BaseCard from '@/components/base/BaseCard.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { getFrequencyLabel, getRecurringDayLabel } from '@/lib/dailyFinance/recurringExpenses'
 import { formatCurrency } from '@/lib/formatters'
 import type { ExpenseCategory, ExpenseTransaction } from '@/types/app-data'
@@ -13,6 +14,8 @@ const props = defineProps<{
   expenseCategories: readonly ExpenseCategory[]
   currency: string
 }>()
+
+const { confirmDanger } = useConfirmDialog()
 
 const emit = defineEmits<{
   edit: [transaction: ExpenseTransaction]
@@ -32,8 +35,13 @@ function getCategory(transaction: ExpenseTransaction): ExpenseCategory | undefin
   return categoryMap.value.get(transaction.category_id)
 }
 
-function confirmDelete(transaction: ExpenseTransaction): void {
-  if (confirm(`確定要刪除「${transaction.name}」這個固定開支嗎？`)) {
+async function confirmDelete(transaction: ExpenseTransaction): Promise<void> {
+  const confirmed = await confirmDanger({
+    title: '刪除固定開支',
+    description: `確定要刪除「${transaction.name}」這個固定開支嗎？`,
+    confirmLabel: '刪除',
+  })
+  if (confirmed) {
     emit('delete', transaction.transaction_id)
   }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import BaseBottomSheet from '@/components/base/BaseBottomSheet.vue'
+import UiBottomSheet from '@/components/ui/UiBottomSheet.vue'
 import TransactionForm from '@/components/transactions/TransactionForm.vue'
 import type {
   CombinedTransaction,
@@ -89,7 +89,7 @@ function handleCancelEdit(): void {
 </script>
 
 <template>
-  <BaseBottomSheet :show="modelValue" :title="title" :subtitle="subtitle" @close="close">
+  <UiBottomSheet :show="modelValue" :title="title" :subtitle="subtitle" @close="close">
     <TransactionForm
       :expense-categories="expenseCategories"
       :income-categories="incomeCategories"
@@ -108,5 +108,5 @@ function handleCancelEdit(): void {
       @delete-transaction="handleDeleteTransaction"
       @cancel-edit="handleCancelEdit"
     />
-  </BaseBottomSheet>
+  </UiBottomSheet>
 </template>

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { ChevronDown, Plane } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 
 import SyncPulse from '@/components/layout/SyncPulse.vue'
+import UiDropdownMenu from '@/components/ui/UiDropdownMenu.vue'
 import { useAppData } from '@/composables/useAppData'
 import { getCycleWindow } from '@/lib/budgetCycle'
 import type { BudgetCycle, TripStatus } from '@/types/app-data'
@@ -15,7 +16,6 @@ const props = defineProps<{
 
 const appData = useAppData()
 const route = useRoute()
-const showTripMenu = ref(false)
 const pageTitle = computed(() => String(route.meta.title ?? '總覽'))
 
 const cycleLabel = computed(() => {
@@ -42,8 +42,6 @@ const tripSummaryLabel = computed(() => {
 })
 
 function handleTripSelection(tripId: string): void {
-  showTripMenu.value = false
-
   if (tripId === 'all') {
     void appData.clearActiveTrip()
     return
@@ -52,17 +50,23 @@ function handleTripSelection(tripId: string): void {
   void appData.setActiveTrip(tripId)
 }
 
+const tripMenuItems = computed(() => [
+  {
+    key: 'all',
+    label: '一般模式',
+    description: '查看全部收支',
+  },
+  ...appData.trips.value.map((trip) => ({
+    key: trip.trip_id,
+    label: `${trip.name}｜${trip.destination}`,
+    description: getTripStatusLabel(trip.status),
+  })),
+])
+
 function getTripStatusLabel(status: TripStatus): string {
   return status === 'planned' ? '規劃中' : status === 'active' ? '進行中' : '已完成'
 }
 
-function toggleTripMenu(): void {
-  showTripMenu.value = !showTripMenu.value
-}
-
-function closeTripMenu(): void {
-  showTripMenu.value = false
-}
 </script>
 
 <template>
@@ -81,73 +85,33 @@ function closeTripMenu(): void {
       <div class="flex items-center gap-2">
         <SyncPulse :page-loading="loading" />
 
-        <div v-if="hasTrips" class="relative">
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1.5 text-xs font-medium text-text-2 shadow-sm transition hover:bg-surface"
-            aria-label="切換旅程模式"
-            @click="toggleTripMenu"
-          >
-            <Plane class="size-3.5 text-primary" aria-hidden="true" />
-            <span class="hidden sm:inline">{{ tripModeLabel }}</span>
-            <ChevronDown class="size-3.5 text-text-3" aria-hidden="true" />
-          </button>
-
-          <Transition
-            enter-active-class="transition duration-150 ease-out"
-            enter-from-class="opacity-0 translate-y-1"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition duration-100 ease-in"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-1"
-          >
-            <div
-              v-if="showTripMenu"
-              class="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-border bg-surface p-2 shadow-xl"
+        <UiDropdownMenu
+          v-if="hasTrips"
+          :items="tripMenuItems"
+          @select="handleTripSelection"
+        >
+          <template #trigger>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1.5 text-xs font-medium text-text-2 shadow-sm transition hover:bg-surface"
+              aria-label="切換旅程模式"
             >
-              <div class="px-2 py-1.5">
-                <p class="text-xs font-semibold uppercase tracking-[0.12em] text-text-3">
-                  旅程模式
-                </p>
-                <p class="mt-1 text-sm font-semibold text-text">{{ tripModeLabel }}</p>
-                <p class="text-xs text-text-2">{{ tripSummaryLabel }}</p>
-              </div>
-              <hr class="my-1 border-border" />
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-text-2 transition hover:bg-accent"
-                :class="{ 'bg-accent text-text': !appData.activeTripId.value }"
-                @click="handleTripSelection('all')"
-              >
-                <span class="size-2 rounded-full bg-border" />
-                一般模式
-              </button>
-              <button
-                v-for="trip in appData.trips.value"
-                :key="trip.trip_id"
-                type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-text-2 transition hover:bg-accent"
-                :class="{ 'bg-accent text-text': appData.activeTripId.value === trip.trip_id }"
-                @click="handleTripSelection(trip.trip_id)"
-              >
-                <span
-                  class="size-2 rounded-full"
-                  :class="trip.status === 'active' ? 'bg-primary' : 'bg-text-3'"
-                />
-                {{ trip.name }}｜{{ trip.destination }}
-              </button>
+              <Plane class="size-3.5 text-primary" aria-hidden="true" />
+              <span class="hidden sm:inline">{{ tripModeLabel }}</span>
+              <ChevronDown class="size-3.5 text-text-3" aria-hidden="true" />
+            </button>
+          </template>
+          <template #header>
+            <div class="px-2 py-1.5">
+              <p class="text-xs font-semibold uppercase tracking-[0.12em] text-text-3">旅程模式</p>
+              <p class="mt-1 text-sm font-semibold text-text">{{ tripModeLabel }}</p>
+              <p class="text-xs text-text-2">{{ tripSummaryLabel }}</p>
             </div>
-          </Transition>
-        </div>
+          </template>
+        </UiDropdownMenu>
       </div>
     </div>
 
-    <div
-      v-if="showTripMenu"
-      class="fixed inset-0 z-20 bg-transparent"
-      aria-hidden="true"
-      @click="closeTripMenu"
-    />
     <span class="app-header__rail" :class="{ 'app-header__rail--active': loading }" />
   </header>
 </template>

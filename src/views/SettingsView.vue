@@ -19,9 +19,11 @@ import BaseCard from '@/components/base/BaseCard.vue'
 import RecoveryHistoryCard from '@/components/settings/RecoveryHistoryCard.vue'
 import RestoreImpactCard from '@/components/settings/RestoreImpactCard.vue'
 import { useAppData } from '@/composables/useAppData'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useAuthStore } from '@/stores/auth'
 
 const appData = useAppData()
+const { confirmDanger } = useConfirmDialog()
 const auth = useAuthStore()
 const router = useRouter()
 
@@ -105,9 +107,11 @@ async function restoreBackup(): Promise<void> {
       return
     }
 
-    const confirmed = window.confirm(
-      `將覆蓋 ${preview.impact?.expenses ?? 0} 筆支出、${preview.impact?.expenseCategories ?? 0} 個支出分類、${preview.impact?.cycles ?? 0} 個預算週期。確定繼續？`,
-    )
+    const confirmed = await confirmDanger({
+      title: '還原備份',
+      description: `將覆蓋 ${preview.impact?.expenses ?? 0} 筆支出、${preview.impact?.expenseCategories ?? 0} 個支出分類、${preview.impact?.cycles ?? 0} 個預算週期。確定繼續？`,
+      confirmLabel: '還原',
+    })
 
     if (!confirmed) {
       restoreStatus.value = '已取消還原。'
@@ -128,7 +132,11 @@ async function restoreSnapshot(snapshotId: string): Promise<void> {
   isRestoringSnapshotId.value = snapshotId
 
   try {
-    const confirmed = window.confirm('還原此版本前，系統會先保存目前資料作保護快照。確定繼續？')
+    const confirmed = await confirmDanger({
+      title: '還原版本',
+      description: '還原此版本前，系統會先保存目前資料作保護快照。確定繼續？',
+      confirmLabel: '還原',
+    })
 
     if (!confirmed) {
       return
