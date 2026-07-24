@@ -21,12 +21,7 @@ import type {
   IncomeTransaction,
   LoginBody,
   MonthlySnapshotSummary,
-  PasskeyCredentialSummary,
-  PasskeyLoginOptionsBody,
-  PasskeyRegisterVerifyBody,
   RegisterBody,
-  WebAuthnAuthenticationResponse,
-  WebAuthnRegistrationResponse,
   SavingBody,
   SavingChallenge,
   SavingRecord,
@@ -161,25 +156,6 @@ export const api = {
     login: (body: LoginBody) => request<AuthResponse>(http.auth.login.post(body)),
     me: () => request<{ user: { id: string; email: string } }>(http.auth.me.get()),
     logout: () => request<{ ok: boolean }>(http.auth.logout.post()),
-    passkey: {
-      loginOptions: (body: PasskeyLoginOptionsBody = {}) =>
-        request<Record<string, unknown>>(http.auth.passkey.login.options.post(body)),
-      loginVerify: (body: WebAuthnAuthenticationResponse) =>
-        request<AuthResponse>(http.auth.passkey.login.verify.post(body)),
-      registerOptions: () =>
-        request<Record<string, unknown>>(http.auth.passkey.register.options.post()),
-      registerVerify: (body: PasskeyRegisterVerifyBody) =>
-        request<PasskeyCredentialSummary>(http.auth.passkey.register.verify.post(body)),
-    },
-    passkeys: {
-      list: () => request<PasskeyCredentialSummary[]>(http.auth.passkeys.get()),
-      rename: (credentialId: string, friendly_name: string) =>
-        request<PasskeyCredentialSummary>(
-          http.auth.passkeys({ credentialId }).patch({ friendly_name }),
-        ),
-      remove: (credentialId: string) =>
-        request<{ ok: boolean }>(http.auth.passkeys({ credentialId }).delete()),
-    },
   },
   categories: {
     expenses: {

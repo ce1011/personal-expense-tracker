@@ -50,30 +50,6 @@ export interface RegisterBody {
   name?: string
 }
 
-
-export interface PasskeyCredentialSummary {
-  id: string
-  friendly_name: string
-  device_type: string
-  backed_up: boolean
-  transports: string[]
-  created_at: number
-  last_used_at: number | null
-}
-
-/** Opaque browser WebAuthn JSON returned by @simplewebauthn/browser. */
-export type WebAuthnRegistrationResponse = Record<string, unknown>
-export type WebAuthnAuthenticationResponse = Record<string, unknown>
-
-export interface PasskeyRegisterVerifyBody {
-  response: WebAuthnRegistrationResponse
-  friendly_name?: string
-}
-
-export interface PasskeyLoginOptionsBody {
-  email?: string
-}
-
 /** Shared multi-currency fields accepted by every transaction mutation. */
 export interface MoneyBody {
   amount: number
