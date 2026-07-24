@@ -1,7 +1,14 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import {
+  browserSupportsWebAuthn,
+  browserSupportsWebAuthnAutofill,
+  startAuthentication,
+  startRegistration,
+} from '@simplewebauthn/browser'
 
 import { api, ApiError } from '@/api/client'
+import type { PasskeyCredentialSummary } from '@/api/types'
 import { clearAppContext } from '@/composables/useAppData'
 import { clearToken, getToken, onUnauthorized, setToken } from '@/api/tokenStore'
 import type { AuthUser } from '@/api/types'
@@ -22,6 +29,13 @@ export const useAuthStore = defineStore('auth', () => {
   const hasToken = ref(getToken() !== null)
 
   const isAuthenticated = computed(() => hasToken.value)
+  const supportsPasskeys = computed(() => {
+    try {
+      return browserSupportsWebAuthn()
+    } catch {
+      return false
+    }
+  })
 
   /** Restore the session from the persisted token (called once on boot). */
   async function restore(): Promise<void> {
@@ -49,8 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function login(email: string, password: string): Promise<void> {
-    const response = await api.auth.login({ email, password })
+  function applyAuthResponse(response: { user: AuthUser; accessToken: string }): void {
     // Prevent a successful account switch from retaining the previous user's
     // context while the app watcher initializes the new session.
     clearAppContext()
@@ -59,12 +72,65 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = response.user
   }
 
+  async function login(email: string, password: string): Promise<void> {
+    const response = await api.auth.login({ email, password })
+    applyAuthResponse(response)
+  }
+
   async function register(email: string, password: string, name?: string): Promise<void> {
     const response = await api.auth.register({ email, password, name })
-    clearAppContext()
-    setToken(response.accessToken)
-    hasToken.value = true
-    user.value = response.user
+    applyAuthResponse(response)
+  }
+
+  /**
+   * Complete a WebAuthn authentication ceremony and store the resulting JWT.
+   * When `email` is provided, options are scoped to that account; otherwise a
+   * discoverable (usernameless) ceremony is requested.
+   */
+  async function loginWithPasskey(options?: {
+    email?: string
+    useBrowserAutofill?: boolean
+  }): Promise<void> {
+    const optionsJSON = await api.auth.passkey.loginOptions(
+      options?.email ? { email: options.email } : {},
+    )
+    const assertion = await startAuthentication({
+      optionsJSON: optionsJSON as never,
+      useBrowserAutofill: options?.useBrowserAutofill === true,
+    })
+    const response = await api.auth.passkey.loginVerify(assertion as never)
+    applyAuthResponse(response)
+  }
+
+  async function registerPasskey(friendlyName?: string): Promise<PasskeyCredentialSummary> {
+    const optionsJSON = await api.auth.passkey.registerOptions()
+    const attestation = await startRegistration({
+      optionsJSON: optionsJSON as never,
+    })
+    return api.auth.passkey.registerVerify({
+      response: attestation as never,
+      friendly_name: friendlyName,
+    })
+  }
+
+  async function listPasskeys(): Promise<PasskeyCredentialSummary[]> {
+    return api.auth.passkeys.list()
+  }
+
+  async function renamePasskey(credentialId: string, friendlyName: string): Promise<PasskeyCredentialSummary> {
+    return api.auth.passkeys.rename(credentialId, friendlyName)
+  }
+
+  async function removePasskey(credentialId: string): Promise<void> {
+    await api.auth.passkeys.remove(credentialId)
+  }
+
+  async function supportsPasskeyAutofill(): Promise<boolean> {
+    try {
+      return await browserSupportsWebAuthnAutofill()
+    } catch {
+      return false
+    }
   }
 
   async function logout(): Promise<void> {
@@ -108,9 +174,16 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     ready,
     isAuthenticated,
+    supportsPasskeys,
     restore,
     login,
     register,
+    loginWithPasskey,
+    registerPasskey,
+    listPasskeys,
+    renamePasskey,
+    removePasskey,
+    supportsPasskeyAutofill,
     logout,
     handleUnauthorized,
     _resetReady,

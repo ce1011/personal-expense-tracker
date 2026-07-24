@@ -8,10 +8,12 @@ import {
   CloudOff,
   Eye,
   EyeOff,
+  Fingerprint,
   LockKeyhole,
   Smartphone,
   Sparkles,
 } from 'lucide-vue-next'
+import { WebAuthnAbortService, WebAuthnError } from '@simplewebauthn/browser'
 
 import { ApiError } from '@/api/client'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -32,8 +34,13 @@ const submitting = shallowRef(false)
 const errorMessage = shallowRef('')
 const showPassword = shallowRef(false)
 const isOnline = shallowRef(true)
+const passkeySubmitting = shallowRef(false)
+const passkeySupported = shallowRef(false)
 
 const isRegister = computed(() => mode.value === 'register')
+const showPasskeyLogin = computed(
+  () => !isRegister.value && passkeySupported.value && isOnline.value,
+)
 const pageTitle = computed(() => (isRegister.value ? '建立你的同步帳戶' : '歡迎回來'))
 const pageDescription = computed(() =>
   isRegister.value
@@ -64,10 +71,122 @@ function toggleMode(): void {
   mode.value = isRegister.value ? 'login' : 'register'
   confirmPassword.value = ''
   errorMessage.value = ''
+  WebAuthnAbortService.cancelCeremony()
+  if (!isRegister.value) {
+    void startConditionalPasskey()
+  }
 }
 
 function togglePasswordVisibility(): void {
   showPassword.value = !showPassword.value
+}
+
+
+function isBenignWebAuthnError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const name = error instanceof WebAuthnError ? error.name : error.name
+  const message = error.message.toLowerCase()
+  return (
+    name === 'NotAllowedError' ||
+    name === 'AbortError' ||
+    message.includes('the operation either timed out or was not allowed') ||
+    message.includes('abort')
+  )
+}
+
+function mapPasskeyError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401) {
+      return '找不到可用的 Passkey，或驗證已失效。請改用密碼登入，或先在設定新增 Passkey。'
+    }
+    if (error.status === 400) {
+      return error.message || 'Passkey 驗證失敗，請再試一次。'
+    }
+    return error.message || '未能完成 Passkey 登入，請稍後再試。'
+  }
+  if (isBenignWebAuthnError(error)) {
+    return ''
+  }
+  if (error instanceof Error && error.message) {
+    return 'Passkey 登入已取消或失敗，請再試一次。'
+  }
+  return '未能完成 Passkey 登入，請稍後再試。'
+}
+
+async function finishLoginRedirect(): Promise<void> {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+  await router.replace(redirect)
+}
+
+async function loginWithPasskey(useEmailFallback = false): Promise<void> {
+  if (!showPasskeyLogin.value || passkeySubmitting.value || submitting.value) {
+    return
+  }
+
+  errorMessage.value = ''
+  passkeySubmitting.value = true
+  WebAuthnAbortService.cancelCeremony()
+
+  try {
+    const emailValue = email.value.trim()
+    await auth.loginWithPasskey({
+      email: useEmailFallback && emailValue ? emailValue : undefined,
+    })
+    await finishLoginRedirect()
+  } catch (caught) {
+    // Discoverable ceremony failed and the user typed an email — retry scoped.
+    if (
+      !useEmailFallback &&
+      email.value.trim() &&
+      caught instanceof ApiError &&
+      caught.status === 401
+    ) {
+      passkeySubmitting.value = false
+      await loginWithPasskey(true)
+      return
+    }
+
+    if (
+      !useEmailFallback &&
+      email.value.trim() &&
+      caught instanceof Error &&
+      !isBenignWebAuthnError(caught)
+    ) {
+      try {
+        await auth.loginWithPasskey({ email: email.value.trim() })
+        await finishLoginRedirect()
+        return
+      } catch (retryError) {
+        const mapped = mapPasskeyError(retryError)
+        if (mapped) errorMessage.value = mapped
+        return
+      }
+    }
+
+    const mapped = mapPasskeyError(caught)
+    if (mapped) errorMessage.value = mapped
+  } finally {
+    passkeySubmitting.value = false
+  }
+}
+
+async function startConditionalPasskey(): Promise<void> {
+  if (!showPasskeyLogin.value) return
+  if (!(await auth.supportsPasskeyAutofill())) return
+
+  try {
+    await auth.loginWithPasskey({ useBrowserAutofill: true })
+    await finishLoginRedirect()
+  } catch (caught) {
+    // Conditional UI is best-effort; ignore cancellation / unsupported cases.
+    if (!isBenignWebAuthnError(caught)) {
+      // Keep silent unless it is an unexpected API failure after assertion.
+      if (caught instanceof ApiError) {
+        const mapped = mapPasskeyError(caught)
+        if (mapped) errorMessage.value = mapped
+      }
+    }
+  }
 }
 
 async function submit(): Promise<void> {
@@ -99,8 +218,7 @@ async function submit(): Promise<void> {
       await auth.login(email.value, password.value)
     }
 
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    await router.replace(redirect)
+    await finishLoginRedirect()
   } catch (caught) {
     if (caught instanceof ApiError) {
       if (caught.status === 401) {
@@ -122,11 +240,14 @@ async function submit(): Promise<void> {
 
 onMounted(() => {
   updateOnlineStatus()
+  passkeySupported.value = auth.supportsPasskeys
   window.addEventListener('online', updateOnlineStatus)
   window.addEventListener('offline', updateOnlineStatus)
+  void startConditionalPasskey()
 })
 
 onUnmounted(() => {
+  WebAuthnAbortService.cancelCeremony()
   window.removeEventListener('online', updateOnlineStatus)
   window.removeEventListener('offline', updateOnlineStatus)
 })
@@ -232,7 +353,7 @@ onUnmounted(() => {
               name="email"
               type="email"
               inputmode="email"
-              autocomplete="email"
+              :autocomplete="isRegister ? 'email' : 'username webauthn'"
               placeholder="you@example.com"
               required
             />
@@ -301,12 +422,31 @@ onUnmounted(() => {
               type="submit"
               class="mt-1 w-full"
               :loading="submitting"
-              :disabled="!isOnline"
+              :disabled="!isOnline || passkeySubmitting"
             >
               {{ isRegister ? '建立帳戶並開始同步' : '登入並接續記錄' }}
               <ArrowRight v-if="!submitting" class="size-4" aria-hidden="true" />
             </BaseButton>
           </form>
+
+          <div v-if="showPasskeyLogin" class="mt-4 grid gap-3">
+            <div class="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-3">
+              <span class="h-px flex-1 bg-border/80" />
+              或
+              <span class="h-px flex-1 bg-border/80" />
+            </div>
+            <BaseButton
+              type="button"
+              class="w-full"
+              variant="secondary"
+              :loading="passkeySubmitting"
+              :disabled="submitting || !isOnline"
+              @click="loginWithPasskey(false)"
+            >
+              <Fingerprint class="size-4" aria-hidden="true" />
+              使用 Passkey 登入
+            </BaseButton>
+          </div>
 
           <div class="mt-5 border-t border-border/70 pt-4 text-center">
             <button

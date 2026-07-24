@@ -3,19 +3,26 @@ import {
   CalendarDays,
   Download,
   FileText,
+  Fingerprint,
   Globe,
   LayoutGrid,
   LogOut,
+  Pencil,
   Receipt,
   RefreshCw,
   Tag,
+  Trash2,
   Upload,
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { computed, onMounted, shallowRef } from 'vue'
+import { WebAuthnError } from '@simplewebauthn/browser'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import type { PasskeyCredentialSummary } from '@/api/types'
+import { ApiError } from '@/api/client'
 import RecoveryHistoryCard from '@/components/settings/RecoveryHistoryCard.vue'
 import RestoreImpactCard from '@/components/settings/RestoreImpactCard.vue'
 import { useAppData } from '@/composables/useAppData'
@@ -48,6 +55,15 @@ const menuItems = [
 
 const restoreText = shallowRef('')
 const restoreErrors = shallowRef<string[]>([])
+
+const passkeys = shallowRef<PasskeyCredentialSummary[]>([])
+const passkeysLoading = shallowRef(false)
+const passkeyBusy = shallowRef(false)
+const passkeyError = shallowRef('')
+const passkeyStatus = shallowRef('')
+const newPasskeyName = shallowRef('')
+const renamingId = shallowRef<string | null>(null)
+const renameValue = shallowRef('')
 const restoreStatus = shallowRef('')
 const restoreImpact = shallowRef<{
   cycles: number
@@ -68,6 +84,7 @@ const restoreIntegrityErrors = computed(() => restoreErrors.value)
 
 onMounted(() => {
   void appData.loadRecoverySnapshots()
+  void loadPasskeys()
 })
 
 async function exportBackup(): Promise<void> {
@@ -154,6 +171,120 @@ function refreshAppVersion(): void {
   const url = new URL(window.location.href)
   url.searchParams.set('refresh', String(Date.now()))
   window.location.replace(url.toString())
+}
+
+function formatPasskeyDate(value: number | null | undefined): string {
+  if (!value) return '尚未使用'
+  return new Date(value).toLocaleString('zh-HK', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+async function loadPasskeys(): Promise<void> {
+  if (!auth.isAuthenticated) {
+    passkeys.value = []
+    return
+  }
+
+  passkeysLoading.value = true
+  passkeyError.value = ''
+  try {
+    passkeys.value = await auth.listPasskeys()
+  } catch (caught) {
+    passkeyError.value =
+      caught instanceof ApiError
+        ? caught.message || '無法載入 Passkey 列表。'
+        : '無法載入 Passkey 列表。'
+  } finally {
+    passkeysLoading.value = false
+  }
+}
+
+async function addPasskey(): Promise<void> {
+  if (passkeyBusy.value) return
+  passkeyBusy.value = true
+  passkeyError.value = ''
+  passkeyStatus.value = ''
+  try {
+    const created = await auth.registerPasskey(newPasskeyName.value.trim() || undefined)
+    newPasskeyName.value = ''
+    passkeyStatus.value = `已新增 Passkey「${created.friendly_name}」。`
+    await loadPasskeys()
+  } catch (caught) {
+    if (caught instanceof WebAuthnError && caught.name === 'NotAllowedError') {
+      passkeyError.value = '已取消 Passkey 註冊。'
+    } else if (caught instanceof ApiError) {
+      passkeyError.value = caught.message || '新增 Passkey 失敗。'
+    } else if (caught instanceof Error && /not allowed|abort/i.test(caught.message)) {
+      passkeyError.value = '已取消 Passkey 註冊。'
+    } else {
+      passkeyError.value = '新增 Passkey 失敗，請確認裝置支援後再試。'
+    }
+  } finally {
+    passkeyBusy.value = false
+  }
+}
+
+function beginRename(passkey: PasskeyCredentialSummary): void {
+  renamingId.value = passkey.id
+  renameValue.value = passkey.friendly_name
+  passkeyError.value = ''
+  passkeyStatus.value = ''
+}
+
+function cancelRename(): void {
+  renamingId.value = null
+  renameValue.value = ''
+}
+
+async function saveRename(credentialId: string): Promise<void> {
+  if (passkeyBusy.value) return
+  const name = renameValue.value.trim()
+  if (!name) {
+    passkeyError.value = '請輸入 Passkey 名稱。'
+    return
+  }
+
+  passkeyBusy.value = true
+  passkeyError.value = ''
+  try {
+    await auth.renamePasskey(credentialId, name)
+    cancelRename()
+    passkeyStatus.value = '已更新 Passkey 名稱。'
+    await loadPasskeys()
+  } catch (caught) {
+    passkeyError.value =
+      caught instanceof ApiError ? caught.message || '重新命名失敗。' : '重新命名失敗。'
+  } finally {
+    passkeyBusy.value = false
+  }
+}
+
+async function deletePasskey(passkey: PasskeyCredentialSummary): Promise<void> {
+  const confirmed = await confirmDanger({
+    title: '移除 Passkey',
+    description: `確定移除「${passkey.friendly_name}」？此裝置將不能再用它登入。`,
+    confirmLabel: '移除',
+  })
+  if (!confirmed) return
+
+  passkeyBusy.value = true
+  passkeyError.value = ''
+  passkeyStatus.value = ''
+  try {
+    await auth.removePasskey(passkey.id)
+    passkeyStatus.value = '已移除 Passkey。'
+    await loadPasskeys()
+  } catch (caught) {
+    passkeyError.value =
+      caught instanceof ApiError ? caught.message || '移除失敗。' : '移除失敗。'
+  } finally {
+    passkeyBusy.value = false
+  }
 }
 
 async function logout(): Promise<void> {
@@ -308,7 +439,7 @@ async function logout(): Promise<void> {
     <BaseCard>
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-2">
-          <LogOut class="size-5 text-danger" aria-hidden="true" />
+          <Fingerprint class="size-5 text-primary" aria-hidden="true" />
           <div>
             <h2 class="text-h3 font-semibold text-text">帳戶</h2>
             <p class="text-body-sm text-text-2">
@@ -317,7 +448,123 @@ async function logout(): Promise<void> {
           </div>
         </div>
       </div>
-      <BaseButton class="mt-4" variant="secondary" @click="logout">
+
+      <div class="mt-5 border-t border-border/70 pt-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-body font-semibold text-text">Passkeys</h3>
+            <p class="mt-1 text-body-sm text-text-2">
+              用 Face ID、Touch ID 或裝置鎖定快速登入。密碼登入仍然可用。
+            </p>
+          </div>
+        </div>
+
+        <p v-if="passkeysLoading" class="mt-3 text-body-sm text-text-3">載入中…</p>
+
+        <ul v-else-if="passkeys.length" class="mt-3 grid gap-2">
+          <li
+            v-for="passkey in passkeys"
+            :key="passkey.id"
+            class="rounded-xl border border-border/80 bg-surface px-3 py-3"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <template v-if="renamingId === passkey.id">
+                  <BaseInput
+                    v-model="renameValue"
+                    label="名稱"
+                    name="passkey-name"
+                    autocomplete="off"
+                  />
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <BaseButton
+                     
+                      :disabled="passkeyBusy"
+                      @click="saveRename(passkey.id)"
+                    >
+                      儲存
+                    </BaseButton>
+                    <BaseButton variant="ghost" :disabled="passkeyBusy" @click="cancelRename">
+                      取消
+                    </BaseButton>
+                  </div>
+                </template>
+                <template v-else>
+                  <p class="truncate font-semibold text-text">{{ passkey.friendly_name }}</p>
+                  <p class="mt-1 text-caption text-text-3">
+                    {{ passkey.backed_up ? '已同步' : '此裝置' }}
+                    · 建立於 {{ formatPasskeyDate(passkey.created_at) }}
+                    · 最近使用 {{ formatPasskeyDate(passkey.last_used_at) }}
+                  </p>
+                </template>
+              </div>
+              <div v-if="renamingId !== passkey.id" class="flex shrink-0 gap-1">
+                <BaseButton
+                 
+                  variant="ghost"
+                  :disabled="passkeyBusy"
+                  :aria-label="`重新命名 ${passkey.friendly_name}`"
+                  @click="beginRename(passkey)"
+                >
+                  <Pencil class="size-4" aria-hidden="true" />
+                </BaseButton>
+                <BaseButton
+                 
+                  variant="ghost"
+                  :disabled="passkeyBusy"
+                  :aria-label="`移除 ${passkey.friendly_name}`"
+                  @click="deletePasskey(passkey)"
+                >
+                  <Trash2 class="size-4 text-danger" aria-hidden="true" />
+                </BaseButton>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <p v-else class="mt-3 rounded-xl bg-accent/50 px-3 py-2 text-body-sm text-text-2">
+          尚未新增 Passkey。新增後，登入頁可一鍵使用生物辨識。
+        </p>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <BaseInput
+            v-model="newPasskeyName"
+            label="新 Passkey 名稱（選填）"
+            name="new-passkey-name"
+            autocomplete="off"
+            placeholder="例如：iPhone、MacBook"
+            :disabled="passkeyBusy || !auth.supportsPasskeys"
+          />
+          <BaseButton
+            class="sm:mb-0.5"
+            :loading="passkeyBusy"
+            :disabled="!auth.supportsPasskeys"
+            @click="addPasskey"
+          >
+            <Fingerprint class="size-4" aria-hidden="true" />
+            新增 Passkey
+          </BaseButton>
+        </div>
+
+        <p v-if="!auth.supportsPasskeys" class="mt-2 text-caption text-text-3">
+          此瀏覽器不支援 Passkey。
+        </p>
+        <p
+          v-if="passkeyError"
+          class="mt-3 rounded-xl border border-danger/20 bg-danger/5 p-3 text-body-sm text-danger"
+          role="alert"
+        >
+          {{ passkeyError }}
+        </p>
+        <p
+          v-if="passkeyStatus"
+          class="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-body-sm text-primary"
+        >
+          {{ passkeyStatus }}
+        </p>
+      </div>
+
+      <BaseButton class="mt-5" variant="secondary" @click="logout">
         <LogOut class="size-4" aria-hidden="true" />
         登出
       </BaseButton>

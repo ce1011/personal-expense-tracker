@@ -19,6 +19,7 @@
     "@elysiajs/eden": "^1.4.9",
     "@internationalized/date": "^3.12.2",
     "@internationalized/number": "^3.6.7",
+    "@simplewebauthn/browser": "^13.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "dexie": "^4.4.3",
     "lucide-vue-next": "^1.0.0",
