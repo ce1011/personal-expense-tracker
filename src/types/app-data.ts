@@ -10,6 +10,8 @@ export interface AppDataPayload {
   trips?: TripSession[]
   fxRates?: FxRateRecord[]
   savingChallenges?: SavingChallenge[]
+  assetAccounts?: AssetAccount[]
+  accountBalances?: AccountBalance[]
 }
 
 export type TripStatus = 'planned' | 'active' | 'completed'
@@ -73,6 +75,11 @@ export interface ExpenseTransaction {
   recurring?: boolean
   recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
   recurring_day?: number
+  spending_nature?: SpendingNature
+  payment_method?: string
+  merchant?: string
+  tags?: string[]
+  subcategory?: string
 }
 
 export interface IncomeTransaction {
@@ -123,6 +130,39 @@ export interface SavingChallenge {
   updated_at: number
 }
 
+export type SpendingNature = 'need' | 'want'
+
+export type AccountKind = 'cash' | 'investment' | 'liability'
+
+export interface AssetAccount {
+  account_id: string
+  name: string
+  kind: AccountKind
+  created_at: number
+  updated_at: number
+  archived?: boolean
+}
+
+export interface AccountBalance {
+  balance_id: string
+  account_id: string
+  amount: number
+  date: number
+  note?: string
+}
+
+export interface AccountDraft {
+  name: string
+  kind: AccountKind
+}
+
+export interface AccountBalanceDraft {
+  account_id: string
+  amount: number
+  date: number
+  note?: string
+}
+
 export interface AppSetting {
   setting_id: string
   name: string
@@ -163,6 +203,11 @@ export interface CombinedTransaction {
   recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
   recurring_day?: number
   challenge_id?: string
+  spending_nature?: SpendingNature
+  payment_method?: string
+  merchant?: string
+  tags?: string[]
+  subcategory?: string
 }
 
 export interface ExpenseDraft {
@@ -176,6 +221,11 @@ export interface ExpenseDraft {
   recurring?: boolean
   recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
   recurring_day?: number
+  spending_nature?: SpendingNature
+  payment_method?: string
+  merchant?: string
+  tags?: string[]
+  subcategory?: string
 }
 
 export interface IncomeDraft {

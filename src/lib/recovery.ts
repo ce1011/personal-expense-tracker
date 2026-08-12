@@ -20,6 +20,8 @@ export interface RestoreImpactSummary {
   trips: number
   fxRates: number
   savingChallenges: number
+  assetAccounts: number
+  accountBalances: number
 }
 
 export interface IntegrityValidationResult {
@@ -74,6 +76,8 @@ export function summarizeRestoreImpact(payload: AppDataPayload): RestoreImpactSu
     trips: payload.trips?.length ?? 0,
     fxRates: payload.fxRates?.length ?? 0,
     savingChallenges: payload.savingChallenges?.length ?? 0,
+    assetAccounts: payload.assetAccounts?.length ?? 0,
+    accountBalances: payload.accountBalances?.length ?? 0,
   }
 }
 

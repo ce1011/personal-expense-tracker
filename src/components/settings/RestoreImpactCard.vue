@@ -13,6 +13,8 @@ export interface RestoreImpactSummary {
   trips: number
   fxRates: number
   savingChallenges: number
+  assetAccounts?: number
+  accountBalances?: number
 }
 
 defineProps<{

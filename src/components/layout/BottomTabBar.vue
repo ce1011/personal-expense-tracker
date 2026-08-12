@@ -38,6 +38,7 @@ const activeTabIndex = computed(() => {
     'fixed-expenses': 4,
     trips: 4,
     'monthly-snapshot': 4,
+    'history-review': 4,
   }
 
   return sectionByRoute[activeName.value] ?? -1

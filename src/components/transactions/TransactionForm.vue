@@ -12,6 +12,7 @@ import { fromDateInputValue, toDateInputValue } from '@/lib/date'
 import { convertToHkd } from '@/lib/fx'
 import { formatCurrency } from '@/lib/formatters'
 import { savingCategories } from '@/lib/savingCategories'
+import { PAYMENT_METHOD_OPTIONS, SUGGESTED_TAGS } from '@/lib/historyReview'
 import type {
   CombinedTransaction,
   ExpenseCategory,
@@ -20,6 +21,7 @@ import type {
   IncomeDraft,
   SavingChallenge,
   SavingDraft,
+  SpendingNature,
   SupportedCurrency,
   TransactionKind,
   TripSession,
@@ -61,6 +63,12 @@ const form = reactive({
   recurring: false,
   recurring_frequency: 'monthly' as 'weekly' | 'monthly' | 'yearly',
   recurring_day: 1,
+  spending_nature: '' as '' | SpendingNature,
+  payment_method: '',
+  merchant: '',
+  subcategory: '',
+  tagInput: '',
+  tags: [] as string[],
 })
 
 const supportedCurrencies: SupportedCurrency[] = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB']
@@ -126,6 +134,32 @@ const recurringOptions = [
   { value: 'yearly', label: '每年' },
 ]
 
+const paymentOptions = [
+  { value: '', label: '未指定' },
+  ...PAYMENT_METHOD_OPTIONS.map((option) => ({ value: option.value, label: option.label })),
+]
+
+const natureOptions: Array<{ value: '' | SpendingNature; label: string }> = [
+  { value: '', label: '自動' },
+  { value: 'need', label: '必要' },
+  { value: 'want', label: '想要' },
+]
+
+function addTag(tag: string): void {
+  const next = tag.trim()
+  if (!next || form.tags.includes(next)) {
+    form.tagInput = ''
+    return
+  }
+
+  form.tags.push(next)
+  form.tagInput = ''
+}
+
+function removeTag(tag: string): void {
+  form.tags = form.tags.filter((entry) => entry !== tag)
+}
+
 function normalizeTripId(tripId?: string): string {
   return tripId && availableTripIds.value.has(tripId) ? tripId : ''
 }
@@ -150,6 +184,12 @@ watch(
     form.recurring_frequency =
       transaction.kind === 'expense' ? (transaction.recurring_frequency ?? 'monthly') : 'monthly'
     form.recurring_day = transaction.kind === 'expense' ? (transaction.recurring_day ?? 1) : 1
+    form.spending_nature = transaction.kind === 'expense' ? (transaction.spending_nature ?? '') : ''
+    form.payment_method = transaction.kind === 'expense' ? (transaction.payment_method ?? '') : ''
+    form.merchant = transaction.kind === 'expense' ? (transaction.merchant ?? '') : ''
+    form.subcategory = transaction.kind === 'expense' ? (transaction.subcategory ?? '') : ''
+    form.tags = transaction.kind === 'expense' ? [...(transaction.tags ?? [])] : []
+    form.tagInput = ''
   },
   { immediate: true },
 )
@@ -211,6 +251,11 @@ function submitForm(): void {
       recurring: form.recurring,
       recurring_frequency: form.recurring ? form.recurring_frequency : undefined,
       recurring_day: form.recurring ? form.recurring_day : undefined,
+      spending_nature: form.spending_nature || undefined,
+      payment_method: form.payment_method || undefined,
+      merchant: form.merchant.trim() || undefined,
+      tags: form.tags.length ? form.tags : undefined,
+      subcategory: form.subcategory.trim() || undefined,
     }
 
     if (props.transaction) {
@@ -258,6 +303,12 @@ function resetForm(): void {
   form.recurring = false
   form.recurring_frequency = 'monthly'
   form.recurring_day = 1
+  form.spending_nature = ''
+  form.payment_method = ''
+  form.merchant = ''
+  form.subcategory = ''
+  form.tags = []
+  form.tagInput = ''
 }
 
 function cancelEdit(): void {
@@ -369,6 +420,60 @@ function removeTransaction(): void {
           :max="31"
           :step="1"
         />
+      </div>
+    </div>
+
+    <div v-if="form.kind === 'expense'" class="grid gap-3 rounded-xl border border-border p-4">
+      <p class="text-sm font-semibold text-text">消費標記</p>
+      <p class="text-caption text-text-3">用來拆解必要／想要、支付方式與自訂標籤，讓歷史回顧更準。</p>
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="option in natureOptions"
+          :key="option.value || 'auto'"
+          type="button"
+          class="min-h-11 rounded-xl text-sm font-semibold"
+          :class="
+            form.spending_nature === option.value
+              ? 'bg-primary text-white'
+              : 'border border-border bg-surface text-text-2'
+          "
+          @click="form.spending_nature = option.value"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+      <UiSelect v-model="form.payment_method" label="支付方式" :options="paymentOptions" />
+      <BaseInput v-model="form.merchant" label="商家（可留空，預設用名稱）" placeholder="例如：星巴克" />
+      <BaseInput v-model="form.subcategory" label="子類別" placeholder="例如：午餐、訂閱" />
+      <div class="grid gap-2">
+        <BaseInput
+          v-model="form.tagInput"
+          label="自訂標籤"
+          placeholder="輸入後按 Enter"
+          @keydown.enter.prevent="addTag(form.tagInput)"
+        />
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="tag in SUGGESTED_TAGS"
+            :key="tag"
+            type="button"
+            class="rounded-full border border-border px-3 py-1 text-caption text-text-2"
+            @click="addTag(tag)"
+          >
+            {{ tag }}
+          </button>
+        </div>
+        <div v-if="form.tags.length" class="flex flex-wrap gap-2">
+          <button
+            v-for="tag in form.tags"
+            :key="tag"
+            type="button"
+            class="rounded-full bg-primary/10 px-3 py-1 text-caption font-semibold text-primary"
+            @click="removeTag(tag)"
+          >
+            {{ tag }} ×
+          </button>
+        </div>
       </div>
     </div>
 

@@ -5,6 +5,7 @@ import CategoryBudgetView from '@/views/CategoryBudgetView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import FixedExpensesView from '@/views/FixedExpensesView.vue'
+import HistoryReviewView from '@/views/HistoryReviewView.vue'
 import ImportTransactionsView from '@/views/ImportTransactionsView.vue'
 import LoginView from '@/views/LoginView.vue'
 import MonthlySnapshotView from '@/views/MonthlySnapshotView.vue'
@@ -67,6 +68,12 @@ const router = createRouter({
       name: 'monthly-snapshot',
       component: MonthlySnapshotView,
       meta: { title: '每月快照' },
+    },
+    {
+      path: '/history-review',
+      name: 'history-review',
+      component: HistoryReviewView,
+      meta: { title: '歷史回顧' },
     },
     { path: '/settings', name: 'settings', component: SettingsView, meta: { title: '更多' } },
   ],

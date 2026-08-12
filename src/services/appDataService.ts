@@ -18,6 +18,8 @@ import type {
   SupportedCurrency,
   TripDraft,
   TripSession,
+  AccountDraft,
+  AccountBalanceDraft,
 } from '@/types/app-data'
 
 /**
@@ -177,6 +179,11 @@ export async function createExpense(draft: ExpenseDraft): Promise<void> {
     recurring: draft.recurring,
     recurring_frequency: draft.recurring_frequency,
     recurring_day: draft.recurring_day,
+    spending_nature: draft.spending_nature,
+    payment_method: draft.payment_method,
+    merchant: draft.merchant,
+    tags: draft.tags,
+    subcategory: draft.subcategory,
   })
 }
 
@@ -234,6 +241,11 @@ export async function updateExpense(transactionId: string, draft: ExpenseDraft):
     recurring: draft.recurring,
     recurring_frequency: draft.recurring_frequency,
     recurring_day: draft.recurring_day,
+    spending_nature: draft.spending_nature,
+    payment_method: draft.payment_method,
+    merchant: draft.merchant,
+    tags: draft.tags,
+    subcategory: draft.subcategory,
   })
 }
 
@@ -423,6 +435,34 @@ export async function softDeleteIncomeCategory(categoryId: string): Promise<void
 export async function syncFxRatesIfNeeded(): Promise<void> {
   // FX rates are synced by the backend (see `GET /data/sync` / `POST
   // /fx-rates/refresh`). No client-side fetching is required anymore.
+}
+
+export async function createAssetAccount(draft: AccountDraft): Promise<void> {
+  await api.accounts.create({ name: draft.name.trim(), kind: draft.kind })
+}
+
+export async function updateAssetAccount(
+  accountId: string,
+  draft: AccountDraft & { archived?: boolean },
+): Promise<void> {
+  await api.accounts.update(accountId, {
+    name: draft.name.trim(),
+    kind: draft.kind,
+    archived: draft.archived,
+  })
+}
+
+export async function deleteAssetAccount(accountId: string): Promise<void> {
+  await api.accounts.remove(accountId)
+}
+
+export async function createAccountBalance(draft: AccountBalanceDraft): Promise<void> {
+  await api.accounts.createBalance({
+    account_id: draft.account_id,
+    amount: draft.amount,
+    date: draft.date,
+    note: draft.note,
+  })
 }
 
 // ---------------------------------------------------------------------------

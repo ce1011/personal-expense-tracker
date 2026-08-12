@@ -358,6 +358,11 @@ describe('transactions', () => {
       recurring: true,
       recurring_frequency: 'monthly',
       recurring_day: 5,
+      spending_nature: undefined,
+      payment_method: undefined,
+      merchant: undefined,
+      tags: undefined,
+      subcategory: undefined,
     })
   })
 

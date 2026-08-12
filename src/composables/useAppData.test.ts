@@ -28,10 +28,13 @@ vi.mock('@/services/appDataService', () => ({
   createIncome: vi.fn(),
   createSaving: vi.fn(),
   createSavingChallenge: vi.fn(),
+  createAssetAccount: vi.fn(),
+  createAccountBalance: vi.fn(),
   deleteExpense: vi.fn(),
   deleteIncome: vi.fn(),
   deleteSaving: vi.fn(),
   deleteSavingChallenge: vi.fn(),
+  deleteAssetAccount: vi.fn(),
   exportBackup: vi.fn(),
   getRecoverySnapshotSummaries: mockGetRecoverySnapshotSummaries,
   getRestorePreview: vi.fn(),
@@ -50,6 +53,7 @@ vi.mock('@/services/appDataService', () => ({
   updateIncome: vi.fn(),
   updateSaving: vi.fn(),
   updateSavingChallenge: vi.fn(),
+  updateAssetAccount: vi.fn(),
 }))
 
 function makeCategory(overrides: Partial<ExpenseCategory> = {}): ExpenseCategory {

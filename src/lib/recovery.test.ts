@@ -163,6 +163,8 @@ describe('recovery helpers', () => {
       trips: 1,
       fxRates: 0,
       savingChallenges: 1,
+      assetAccounts: 0,
+      accountBalances: 0,
     })
   })
 

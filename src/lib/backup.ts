@@ -76,6 +76,17 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
       errors,
     )
     requireOptionalNumber(transaction, 'recurring_day', `expenses[${index}]`, errors)
+    requireOptionalEnum(
+      transaction,
+      'spending_nature',
+      SPENDING_NATURES,
+      `expenses[${index}]`,
+      errors,
+    )
+    requireOptionalString(transaction, 'payment_method', `expenses[${index}]`, errors)
+    requireOptionalString(transaction, 'merchant', `expenses[${index}]`, errors)
+    requireOptionalString(transaction, 'subcategory', `expenses[${index}]`, errors)
+    requireOptionalStringArray(transaction, 'tags', `expenses[${index}]`, errors)
   })
 
   payload.incomes.forEach((transaction, index) => {
@@ -172,6 +183,37 @@ export function validateAppDataPayload(_payload: unknown): ValidationResult {
     }
   }
 
+  if (payload.assetAccounts !== undefined) {
+    if (!Array.isArray(payload.assetAccounts)) {
+      errors.push('assetAccounts must be an array')
+    } else {
+      payload.assetAccounts.forEach((account, index) => {
+        requireString(account, 'account_id', `assetAccounts[${index}]`, errors)
+        requireString(account, 'name', `assetAccounts[${index}]`, errors)
+        requireOptionalEnum(account, 'kind', ACCOUNT_KINDS, `assetAccounts[${index}]`, errors)
+        if (isRecord(account) && account.kind === undefined) {
+          errors.push(`assetAccounts[${index}].kind must be one of ${ACCOUNT_KINDS.join(', ')}`)
+        }
+        requireNumber(account, 'created_at', `assetAccounts[${index}]`, errors)
+        requireNumber(account, 'updated_at', `assetAccounts[${index}]`, errors)
+      })
+    }
+  }
+
+  if (payload.accountBalances !== undefined) {
+    if (!Array.isArray(payload.accountBalances)) {
+      errors.push('accountBalances must be an array')
+    } else {
+      payload.accountBalances.forEach((balance, index) => {
+        requireString(balance, 'balance_id', `accountBalances[${index}]`, errors)
+        requireString(balance, 'account_id', `accountBalances[${index}]`, errors)
+        requireNumber(balance, 'amount', `accountBalances[${index}]`, errors)
+        requireNumber(balance, 'date', `accountBalances[${index}]`, errors)
+        requireOptionalString(balance, 'note', `accountBalances[${index}]`, errors)
+      })
+    }
+  }
+
   return {
     ok: errors.length === 0,
     errors,
@@ -246,6 +288,16 @@ function requireOptionalBoolean(value: unknown, key: string, path: string, error
   }
 }
 
+function requireOptionalStringArray(value: unknown, key: string, path: string, errors: string[]): void {
+  if (!isRecord(value) || value[key] === undefined) {
+    return
+  }
+
+  if (!Array.isArray(value[key]) || value[key].some((entry) => typeof entry !== 'string')) {
+    errors.push(`${path}.${key} must be an array of strings`)
+  }
+}
+
 function requireOptionalEnum<T extends string>(
   value: unknown,
   key: string,
@@ -262,6 +314,8 @@ const SUPPORTED_CURRENCIES = ['HKD', 'USD', 'CNY', 'JPY', 'TWD', 'THB'] as const
 const TRIP_STATUSES = ['planned', 'active', 'completed'] as const
 const RECURRING_FREQUENCIES = ['weekly', 'monthly', 'yearly'] as const
 const CHALLENGE_STATUSES = ['active', 'completed', 'paused'] as const
+const SPENDING_NATURES = ['need', 'want'] as const
+const ACCOUNT_KINDS = ['cash', 'investment', 'liability'] as const
 
 function requireSupportedCurrency(
   value: unknown,

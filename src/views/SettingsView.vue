@@ -4,6 +4,7 @@ import {
   Download,
   FileText,
   Globe,
+  History,
   LayoutGrid,
   LogOut,
   Receipt,
@@ -39,6 +40,12 @@ const menuItems = [
     color: 'bg-primary/10 text-primary',
   },
   {
+    label: '歷史回顧',
+    to: '/history-review',
+    icon: History,
+    color: 'bg-info/10 text-info',
+  },
+  {
     label: 'JSON 匯入',
     to: '/import-transactions',
     icon: Upload,
@@ -61,6 +68,8 @@ const restoreImpact = shallowRef<{
   trips: number
   fxRates: number
   savingChallenges: number
+  assetAccounts?: number
+  accountBalances?: number
 }>()
 const isPreviewingRestore = shallowRef(false)
 const isRestoringSnapshotId = shallowRef('')

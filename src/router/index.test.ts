@@ -50,6 +50,7 @@ describe('router', () => {
     { path: '/fixed-expenses', name: 'fixed-expenses' },
     { path: '/trips', name: 'trips' },
     { path: '/monthly-snapshot', name: 'monthly-snapshot' },
+    { path: '/history-review', name: 'history-review' },
     { path: '/settings', name: 'settings' },
   ])('resolves $path to route $name when authenticated', async ({ path, name }) => {
     useAuthStore()._setAuthenticated()

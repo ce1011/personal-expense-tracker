@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 
+import { realpathSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 
 import vue from '@vitejs/plugin-vue'
@@ -11,6 +12,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 // and proxies them to the Elysia server so no CORS config or absolute URL is
 // needed. The backend continues to mount its routes at the root (`/auth`, ...).
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000'
+const configDir = fileURLToPath(new URL('.', import.meta.url))
+const realConfigDir = realpathSync(configDir)
 
 const apiProxy = {
   '/api': {
@@ -70,6 +73,9 @@ export default defineConfig({
   },
   server: {
     proxy: apiProxy,
+    fs: {
+      allow: [configDir, realConfigDir],
+    },
   },
   test: {
     environment: 'jsdom',

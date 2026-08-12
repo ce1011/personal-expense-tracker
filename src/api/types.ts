@@ -1,5 +1,7 @@
 import type {
+  AccountBalance,
   AppDataPayload,
+  AssetAccount,
   BudgetCycle,
   CategoryDraft,
   CombinedTransaction,
@@ -65,6 +67,11 @@ export interface ExpenseBody extends MoneyBody {
   recurring?: boolean
   recurring_frequency?: 'weekly' | 'monthly' | 'yearly'
   recurring_day?: number
+  spending_nature?: 'need' | 'want'
+  payment_method?: string
+  merchant?: string
+  tags?: string[]
+  subcategory?: string
 }
 
 export interface IncomeBody extends MoneyBody {
@@ -398,4 +405,16 @@ export interface TripsSummary {
 export interface MonthlySnapshotSummary {
   monthlySnapshot: MonthlySnapshot
   currency: string
+}
+
+export interface HistoryReviewSummary {
+  currency: string
+  expenses: CombinedTransaction[]
+  incomes: CombinedTransaction[]
+  savings: CombinedTransaction[]
+  categories: ExpenseCategory[]
+  cycles: BudgetCycle[]
+  targets: TargetExpenseLimit[]
+  accounts: AssetAccount[]
+  balances: AccountBalance[]
 }

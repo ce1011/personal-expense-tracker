@@ -6,10 +6,13 @@ import {
   createIncome,
   createSaving,
   createSavingChallenge,
+  createAssetAccount,
+  createAccountBalance,
   deleteExpense,
   deleteIncome,
   deleteSaving,
   deleteSavingChallenge,
+  deleteAssetAccount as removeAssetAccount,
   exportBackup,
   getDashboardContext,
   getRecoverySnapshotSummaries,
@@ -29,6 +32,7 @@ import {
   updateIncome,
   updateSaving,
   updateSavingChallenge,
+  updateAssetAccount as persistAssetAccount,
 } from '@/services/appDataService'
 import type { DashboardData } from '@/api/types'
 import type { ImportTransactionRecord } from '@/lib/transactionImport'
@@ -45,6 +49,8 @@ import type {
   SupportedCurrency,
   TripDraft,
   TripSession,
+  AccountDraft,
+  AccountBalanceDraft,
 } from '@/types/app-data'
 
 /**
@@ -109,6 +115,7 @@ const mutationVersions = {
   fixedExpenses: shallowRef(0),
   trips: shallowRef(0),
   monthlySnapshot: shallowRef(0),
+  historyReview: shallowRef(0),
 }
 
 export type AppDataScope = keyof typeof mutationVersions
@@ -320,16 +327,16 @@ export function useAppData() {
           'categoryBudget',
           'fixedExpenses',
           'trips',
-          'monthlySnapshot',
+          'monthlySnapshot', 'historyReview',
         ],
       }),
     addIncome: (draft: IncomeDraft) =>
       withAction(() => createIncome(draft), {
-        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot', 'historyReview'],
       }),
     addSaving: (draft: SavingDraft) =>
       withAction(() => createSaving(draft), {
-        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot', 'historyReview'],
       }),
     // Transaction mutations invalidate only aggregates that include transactions.
     updateExpense: (transactionId: string, draft: ExpenseDraft) =>
@@ -340,16 +347,16 @@ export function useAppData() {
           'categoryBudget',
           'fixedExpenses',
           'trips',
-          'monthlySnapshot',
+          'monthlySnapshot', 'historyReview',
         ],
       }),
     updateIncome: (transactionId: string, draft: IncomeDraft) =>
       withAction(() => updateIncome(transactionId, draft), {
-        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot', 'historyReview'],
       }),
     updateSaving: (transactionId: string, draft: SavingDraft) =>
       withAction(() => updateSaving(transactionId, draft), {
-        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot', 'historyReview'],
       }),
     deleteExpense: (transactionId: string) =>
       withAction(() => deleteExpense(transactionId), {
@@ -359,26 +366,26 @@ export function useAppData() {
           'categoryBudget',
           'fixedExpenses',
           'trips',
-          'monthlySnapshot',
+          'monthlySnapshot', 'historyReview',
         ],
       }),
     deleteIncome: (transactionId: string) =>
       withAction(() => deleteIncome(transactionId), {
-        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot', 'historyReview'],
       }),
     deleteSaving: (transactionId: string) =>
       withAction(() => deleteSaving(transactionId), {
-        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'trips', 'monthlySnapshot', 'historyReview'],
       }),
     importTransactions: (records: readonly ImportTransactionRecord[]) =>
       withAction(() => importTransactions(records), {
-        scopes: ['dashboard', 'transactions', 'categoryBudget', 'trips', 'monthlySnapshot'],
+        scopes: ['dashboard', 'transactions', 'categoryBudget', 'trips', 'monthlySnapshot', 'historyReview'],
       }),
 
     // Budget cycle / target limits.
     saveCycle: (draft: CycleDraft, cycleId?: string) =>
       withAction(() => saveCycle(draft, cycleId), {
-        scopes: ['dashboard', 'budgets', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot'],
+        scopes: ['dashboard', 'budgets', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot', 'historyReview'],
       }),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>
       withAction(() => saveTargetLimit(cycleId, categoryId, amount), {
@@ -395,7 +402,7 @@ export function useAppData() {
           'budgets',
           'categoryBudget',
           'fixedExpenses',
-          'monthlySnapshot',
+          'monthlySnapshot', 'historyReview',
         ],
       }),
     saveIncomeCategory: (draft: CategoryDraft, categoryId?: string) =>
@@ -412,7 +419,7 @@ export function useAppData() {
           'budgets',
           'categoryBudget',
           'fixedExpenses',
-          'monthlySnapshot',
+          'monthlySnapshot', 'historyReview',
         ],
       }),
     deleteIncomeCategory: (categoryId: string) =>
@@ -484,6 +491,15 @@ export function useAppData() {
         reloadContext: true,
         scopes: ['dashboard', 'transactions', 'trips'],
       }),
+
+    addAssetAccount: (draft: AccountDraft) =>
+      withAction(() => createAssetAccount(draft), { scopes: ['historyReview'] }),
+    updateAssetAccount: (accountId: string, draft: AccountDraft & { archived?: boolean }) =>
+      withAction(() => persistAssetAccount(accountId, draft), { scopes: ['historyReview'] }),
+    deleteAssetAccount: (accountId: string) =>
+      withAction(() => removeAssetAccount(accountId), { scopes: ['historyReview'] }),
+    addAccountBalance: (draft: AccountBalanceDraft) =>
+      withAction(() => createAccountBalance(draft), { scopes: ['historyReview'] }),
 
     // Settings: backup / recovery (the only place the full payload is used).
     exportBackupPayload: () => exportBackup(),

@@ -15,6 +15,7 @@ import type {
   ExpenseCategory,
   ExpenseTransaction,
   FixedExpensesSummary,
+  HistoryReviewSummary,
   ImportBody,
   IncomeBody,
   IncomeCategory,
@@ -35,7 +36,7 @@ import type {
   TripSession,
   TripsSummary,
 } from './types'
-import type { AppSetting, FxRateRecord } from '@/types/app-data'
+import type { AccountBalance, AccountKind, AppSetting, AssetAccount, FxRateRecord } from '@/types/app-data'
 
 /**
  * Eden Treaty client for the Elysia backend.
@@ -79,6 +80,8 @@ export const API_PREFIXES = [
   '/category-budget',
   '/fixed-expenses',
   '/monthly-snapshot',
+  '/history-review',
+  '/accounts',
 ] as const
 
 interface TreatyResult<T> {
@@ -313,6 +316,27 @@ export const api = {
         () => request<MonthlySnapshotSummary>(http['monthly-snapshot'].get()),
         { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['monthlySnapshot'] },
       ),
+  },
+  historyReview: {
+    get: () =>
+      cachedRequest(
+        'history-review',
+        () => request<HistoryReviewSummary>(http['history-review'].get()),
+        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['historyReview'] },
+      ),
+  },
+  accounts: {
+    list: () => request<AssetAccount[]>(http.accounts.get()),
+    create: (body: { name: string; kind: AccountKind; archived?: boolean }) =>
+      request<AssetAccount>(http.accounts.post(body)),
+    update: (id: string, body: { name: string; kind: AccountKind; archived?: boolean }) =>
+      request<AssetAccount>(http.accounts({ id }).put(body)),
+    remove: (id: string) => request<AssetAccount>(http.accounts({ id }).delete()),
+    listBalances: () => request<AccountBalance[]>(http.accounts.balances.get()),
+    createBalance: (body: { account_id: string; amount: number; date: number; note?: string }) =>
+      request<AccountBalance>(http.accounts.balances.post(body)),
+    removeBalance: (id: string) =>
+      request<AccountBalance>(http.accounts.balances({ id }).delete()),
   },
 }
 
