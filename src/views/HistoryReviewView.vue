@@ -17,6 +17,7 @@ import EmptyState from '@/components/base/EmptyState.vue'
 import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
 import TrendLineChart from '@/components/charts/TrendLineChart.vue'
+import UiDateRangePicker from '@/components/ui/UiDateRangePicker.vue'
 import UiNumberField from '@/components/ui/UiNumberField.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTabs from '@/components/ui/UiTabs.vue'
@@ -30,7 +31,8 @@ import {
 import type { AccountKind } from '@/types/app-data'
 
 const appData = useAppData()
-const { report, currency, accounts, range, loading, error } = useHistoryReviewData()
+const { report, currency, accounts, range, customRange, selectRange, loading, error } =
+  useHistoryReviewData()
 
 type ReviewTab = 'structure' | 'trend' | 'networth' | 'health' | 'wrapped'
 
@@ -44,6 +46,7 @@ const rangeItems: Array<{ value: HistoryRangePreset; label: string }> = [
   { value: '12m', label: '近 12 個月' },
   { value: 'ytd', label: '今年' },
   { value: 'all', label: '全部' },
+  { value: 'custom', label: '自訂' },
 ]
 
 const tabItems: Array<{ value: ReviewTab; label: string }> = [
@@ -144,21 +147,28 @@ function kindLabel(kind: AccountKind): string {
       </p>
     </header>
 
-    <div class="flex gap-2 overflow-x-auto pb-1">
-      <button
-        v-for="item in rangeItems"
-        :key="item.value"
-        type="button"
-        class="min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition"
-        :class="
-          range === item.value
-            ? 'bg-primary text-white'
-            : 'border border-border bg-surface text-text-2 hover:text-text'
-        "
-        @click="range = item.value"
-      >
-        {{ item.label }}
-      </button>
+    <div class="grid gap-3">
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <button
+          v-for="item in rangeItems"
+          :key="item.value"
+          type="button"
+          class="min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition"
+          :class="
+            range === item.value
+              ? 'bg-primary text-white'
+              : 'border border-border bg-surface text-text-2 hover:text-text'
+          "
+          @click="selectRange(item.value)"
+        >
+          {{ item.label }}
+        </button>
+      </div>
+      <UiDateRangePicker
+        v-if="range === 'custom'"
+        v-model="customRange"
+        label="自訂日期範圍"
+      />
     </div>
 
     <p v-if="error" class="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">{{ error }}</p>
@@ -194,6 +204,7 @@ function kindLabel(kind: AccountKind): string {
           <p class="mt-1 text-body font-bold text-primary">
             {{ formatCurrency(report.incomeTotal, currency) }}
           </p>
+          <p class="mt-1 text-[11px] text-text-3">含固定收入</p>
         </BaseCard>
         <BaseCard>
           <p class="text-caption text-text-3">支出</p>

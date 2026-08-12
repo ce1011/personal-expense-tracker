@@ -1,4 +1,5 @@
 import { getCycleWindow, isInCycleWindow } from '@/lib/budgetCycle'
+import { formatShortDate } from '@/lib/formatters'
 import type {
   AccountBalance,
   AccountKind,
@@ -10,7 +11,7 @@ import type {
   TargetExpenseLimit,
 } from '@/types/app-data'
 
-export type HistoryRangePreset = '6m' | '12m' | 'ytd' | 'all'
+export type HistoryRangePreset = '6m' | '12m' | 'ytd' | 'all' | 'custom'
 export type ShareDimension = 'category' | 'subcategory' | 'payment' | 'merchant' | 'tag'
 export type CostFlexibility = 'fixed' | 'variable'
 
@@ -208,6 +209,7 @@ export interface HistoryReviewInput {
   accounts?: readonly AssetAccount[]
   balances?: readonly AccountBalance[]
   range?: HistoryRangePreset
+  customRange?: { start: number; end: number }
   now?: number | Date
 }
 
@@ -283,7 +285,16 @@ export function resolveCostFlexibility(
 export function resolveRangeWindow(
   range: HistoryRangePreset,
   now: Date,
+  customRange?: { start: number; end: number },
 ): { start: number; end: number; label: string } {
+  if (range === 'custom' && customRange && customRange.end >= customRange.start) {
+    return {
+      start: customRange.start,
+      end: endOfLocalDay(customRange.end),
+      label: `${formatShortDate(customRange.start)} – ${formatShortDate(customRange.end)}`,
+    }
+  }
+
   const end = now.getTime()
 
   if (range === 'all') {
@@ -300,20 +311,65 @@ export function resolveRangeWindow(
   return { start, end, label: range === '12m' ? '近 12 個月' : '近 6 個月' }
 }
 
+function endOfLocalDay(timestamp: number): number {
+  const date = new Date(timestamp)
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).getTime()
+}
+
+export function sumCycleIncome(
+  cycles: readonly BudgetCycle[],
+  start: number,
+  end: number,
+): number {
+  return cycles.reduce((total, cycle) => {
+    const period = cycleCalendarPeriod(cycle)
+    if (!period) {
+      return total
+    }
+
+    return period.start <= end && period.end > start ? total + cycle.income : total
+  }, 0)
+}
+
+function cycleCalendarPeriod(cycle: BudgetCycle): { start: number; end: number; key: string } | null {
+  if (!/^\d{6}$/.test(cycle.cycle_code)) {
+    return null
+  }
+
+  const year = Number(cycle.cycle_code.slice(0, 4))
+  const monthIndex = Number(cycle.cycle_code.slice(4, 6)) - 1
+  if (monthIndex < 0 || monthIndex > 11) {
+    return null
+  }
+
+  return {
+    start: new Date(year, monthIndex, 1).getTime(),
+    end: new Date(year, monthIndex + 1, 1).getTime(),
+    key: `${year}-${String(monthIndex + 1).padStart(2, '0')}`,
+  }
+}
+
 export function buildHistoryReview(input: HistoryReviewInput): HistoryReviewReport {
   const nowDate = input.now instanceof Date ? input.now : new Date(input.now ?? Date.now())
   const range = input.range ?? '6m'
-  const window = resolveRangeWindow(range, nowDate)
+  const window = resolveRangeWindow(range, nowDate, input.customRange)
   const categories = input.categories
   const expenses = inRange(input.expenses, window.start, window.end)
   const incomes = inRange(input.incomes, window.start, window.end)
   const savings = inRange(input.savings, window.start, window.end)
-  const incomeTotal = sum(incomes)
+  const incomeTotal = sum(incomes) + sumCycleIncome(input.cycles, window.start, window.end)
   const expenseTotal = sum(expenses)
   const savingTotal = sum(savings)
   const needsWants = buildNeedsWants(expenses, savings, incomeTotal)
   const fixedVariable = buildFixedVariable(expenses, categories)
-  const cashflow = buildCashflow(input.expenses, input.incomes, input.savings, window.start, window.end)
+  const cashflow = buildCashflow(
+    input.expenses,
+    input.incomes,
+    input.savings,
+    window.start,
+    window.end,
+    input.cycles,
+  )
   const savingsHealth = buildSavingsHealth(
     cashflow,
     input.accounts ?? [],
@@ -374,8 +430,8 @@ export function buildHistoryReview(input: HistoryReviewInput): HistoryReviewRepo
     savingsHealth,
     outliers,
     insights,
-    wrappedMonth: buildWrapped('month', expenses, incomes, savings, categories, nowDate),
-    wrappedYear: buildWrapped('year', expenses, incomes, savings, categories, nowDate),
+    wrappedMonth: buildWrapped('month', expenses, incomes, savings, categories, nowDate, input.cycles),
+    wrappedYear: buildWrapped('year', expenses, incomes, savings, categories, nowDate, input.cycles),
   }
 }
 
@@ -652,12 +708,22 @@ export function buildCashflow(
   savings: readonly CombinedTransaction[],
   start: number,
   end: number,
+  cycles: readonly BudgetCycle[] = [],
 ): CashflowPoint[] {
   const months = enumerateMonths(start, end)
   return months.map((month) => {
-    const income = sum(inRange(incomes, month.start, month.end - 1))
-    const expense = sum(inRange(expenses, month.start, month.end - 1))
-    const saving = sum(inRange(savings, month.start, month.end - 1))
+    const sliceStart = Math.max(month.start, start)
+    const sliceEnd = Math.min(month.end - 1, end)
+    const recordedIncome = sum(inRange(incomes, sliceStart, sliceEnd))
+    const cycleIncome = cycles.reduce((total, cycle) => {
+      const period = cycleCalendarPeriod(cycle)
+      return period?.key === month.key && period.start <= end && period.end > start
+        ? total + cycle.income
+        : total
+    }, 0)
+    const income = recordedIncome + cycleIncome
+    const expense = sum(inRange(expenses, sliceStart, sliceEnd))
+    const saving = sum(inRange(savings, sliceStart, sliceEnd))
     return {
       monthKey: month.key,
       label: month.label,
@@ -1064,6 +1130,7 @@ export function buildWrapped(
   savings: readonly CombinedTransaction[],
   categories: readonly ExpenseCategory[],
   now: Date,
+  cycles: readonly BudgetCycle[] = [],
 ): WrappedReport {
   const start =
     kind === 'year'
@@ -1073,7 +1140,7 @@ export function buildWrapped(
   const periodExpenses = inRange(expenses, start, end)
   const periodIncomes = inRange(incomes, start, end)
   const periodSavings = inRange(savings, start, end)
-  const incomeTotal = sum(periodIncomes)
+  const incomeTotal = sum(periodIncomes) + sumCycleIncome(cycles, start, end)
   const expenseTotal = sum(periodExpenses)
   const savingTotal = sum(periodSavings)
   const largest = [...periodExpenses].sort((left, right) => right.amount - left.amount)[0]

@@ -19,7 +19,9 @@ import {
   buildShare,
   buildWrapped,
   resolveCostFlexibility,
+  resolveRangeWindow,
   resolveSpendingNature,
+  sumCycleIncome,
 } from './historyReview'
 
 const categories: ExpenseCategory[] = [
@@ -207,6 +209,34 @@ describe('buildPeriodComparison', () => {
   })
 })
 
+describe('resolveRangeWindow', () => {
+  test('keeps a custom range inclusive of the end date', () => {
+    const start = new Date(2026, 6, 10).getTime()
+    const end = new Date(2026, 6, 20).getTime()
+    const window = resolveRangeWindow('custom', new Date(2026, 7, 12), { start, end })
+
+    expect(window.start).toBe(start)
+    expect(window.end).toBe(new Date(2026, 6, 20, 23, 59, 59, 999).getTime())
+    expect(window.label).toContain('–')
+  })
+})
+
+describe('sumCycleIncome', () => {
+  test('counts budget-cycle salary for months that overlap the range', () => {
+    const cycles: BudgetCycle[] = [
+      { cycle_id: 'c1', cycle_code: '202607', income_day: 1, income: 18000, saving_target: 3000 },
+      { cycle_id: 'c2', cycle_code: '202608', income_day: 1, income: 18000, saving_target: 3000 },
+    ]
+
+    expect(
+      sumCycleIncome(cycles, new Date(2026, 6, 1).getTime(), new Date(2026, 6, 31, 23, 59, 59, 999).getTime()),
+    ).toBe(18000)
+    expect(
+      sumCycleIncome(cycles, new Date(2026, 6, 1).getTime(), new Date(2026, 7, 12).getTime()),
+    ).toBe(36000)
+  })
+})
+
 describe('buildCashflow', () => {
   test('nets income against expenses and savings by month', () => {
     const points = buildCashflow(
@@ -219,6 +249,20 @@ describe('buildCashflow', () => {
 
     expect(points).toHaveLength(1)
     expect(points[0]?.net).toBe(5000)
+  })
+
+  test('adds fixed cycle income to the matching month', () => {
+    const points = buildCashflow(
+      [expense({ amount: 3000, date: new Date(2026, 6, 8).getTime() })],
+      [],
+      [saving(2000, new Date(2026, 6, 20).getTime())],
+      new Date(2026, 6, 1).getTime(),
+      new Date(2026, 6, 31).getTime(),
+      [{ cycle_id: 'c1', cycle_code: '202607', income_day: 1, income: 18000, saving_target: 3000 }],
+    )
+
+    expect(points[0]?.income).toBe(18000)
+    expect(points[0]?.net).toBe(13000)
   })
 })
 
@@ -368,5 +412,34 @@ describe('buildHistoryReview', () => {
     expect(latest?.netWorth).toBe(90000)
     expect(latest?.assets).toBe(100000)
     expect(latest?.liabilities).toBe(10000)
+  })
+
+  test('includes fixed cycle income and respects a custom date range', () => {
+    const now = new Date(2026, 7, 12)
+    const report = buildHistoryReview({
+      now,
+      range: 'custom',
+      customRange: {
+        start: new Date(2026, 6, 10).getTime(),
+        end: new Date(2026, 6, 20).getTime(),
+      },
+      categories,
+      cycles: [
+        { cycle_id: 'c1', cycle_code: '202607', income_day: 1, income: 18000, saving_target: 3000 },
+        { cycle_id: 'c2', cycle_code: '202608', income_day: 1, income: 18000, saving_target: 3000 },
+      ],
+      targets: [],
+      expenses: [
+        expense({ amount: 100, date: new Date(2026, 6, 8).getTime() }),
+        expense({ amount: 400, date: new Date(2026, 6, 15).getTime() }),
+        expense({ amount: 900, date: new Date(2026, 6, 22).getTime() }),
+      ],
+      incomes: [income(500, new Date(2026, 6, 12).getTime())],
+      savings: [],
+    })
+
+    expect(report.expenseTotal).toBe(400)
+    expect(report.incomeTotal).toBe(18500)
+    expect(report.cashflow[0]?.income).toBe(18500)
   })
 })
