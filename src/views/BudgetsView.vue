@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, shallowRef, watch } from 'vue'
-import { CalendarDays, Info, Plus } from 'lucide-vue-next'
+import { CalendarDays, Copy, Info, Plus } from 'lucide-vue-next'
 
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
@@ -11,11 +11,13 @@ import SkeletonCard from '@/components/base/SkeletonCard.vue'
 import TargetLimitEditor from '@/components/budgets/TargetLimitEditor.vue'
 import { useAppData } from '@/composables/useAppData'
 import { useBudgetsData } from '@/composables/useBudgetsData'
-import { getCycleWindow } from '@/lib/budgetCycle'
+import { useToast } from '@/composables/useToast'
+import { getCycleWindow, getNextCycleCode } from '@/lib/budgetCycle'
 import type { CycleDraft } from '@/types/app-data'
 
 const appData = useAppData()
 const { cycles, targetExpenses, activeExpenseCategories, currency, loading } = useBudgetsData()
+const { toast } = useToast()
 const selectedCycleId = shallowRef('')
 const form = reactive<CycleDraft>({
   cycle_code: '',
@@ -35,6 +37,15 @@ const selectedWindowLabel = computed(() =>
     ? getCycleWindow(form.cycle_code, form.income_day).label
     : '',
 )
+const nextCycleCode = computed(() => {
+  const code = selectedCycle.value?.cycle_code
+  if (!code) return ''
+  try {
+    return getNextCycleCode(code)
+  } catch {
+    return ''
+  }
+})
 
 watch(
   cycles,
@@ -72,6 +83,20 @@ function saveCycle(): void {
 
   void appData.saveCycle({ ...form }, selectedCycle.value?.cycle_id)
 }
+
+async function copyToNextMonth(): Promise<void> {
+  if (!selectedCycle.value || appData.pendingActions.value > 0) {
+    return
+  }
+
+  try {
+    const created = await appData.copyCycleToNext(selectedCycle.value.cycle_id)
+    selectedCycleId.value = created.cycle_id
+    toast({ description: `已建立週期 ${created.cycle_code}` })
+  } catch {
+    // withAction already recorded the error for the sync indicator
+  }
+}
 </script>
 
 <template>
@@ -92,15 +117,26 @@ function saveCycle(): void {
 
     <template v-else>
       <BaseCard>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">
             <CalendarDays class="size-5 text-primary" aria-hidden="true" />
             <h2 class="text-h3 font-semibold text-text">選擇週期</h2>
           </div>
-          <BaseButton variant="ghost" aria-label="新增預算週期" @click="newCycle">
-            <Plus class="size-4" aria-hidden="true" />
-            新增
-          </BaseButton>
+          <div class="flex shrink-0 items-center gap-1">
+            <BaseButton
+              variant="ghost"
+              :disabled="!selectedCycle || appData.pendingActions.value > 0"
+              :aria-label="nextCycleCode ? `複製目前週期到 ${nextCycleCode}` : '複製目前週期到下一個月'"
+              @click="copyToNextMonth"
+            >
+              <Copy class="size-4" aria-hidden="true" />
+              {{ nextCycleCode ? `複製下月 ${nextCycleCode}` : '複製下月' }}
+            </BaseButton>
+            <BaseButton variant="ghost" aria-label="新增預算週期" @click="newCycle">
+              <Plus class="size-4" aria-hidden="true" />
+              新增
+            </BaseButton>
+          </div>
         </div>
 
         <div v-if="cycles.length" class="mt-4 flex gap-2 overflow-x-auto pb-2">

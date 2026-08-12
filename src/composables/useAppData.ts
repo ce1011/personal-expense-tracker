@@ -20,6 +20,7 @@ import {
   importTransactions,
   replaceAllDataWithSnapshot,
   restoreFromSnapshot,
+  copyCycleToNext,
   saveCycle,
   saveExpenseCategory,
   saveIncomeCategory,
@@ -244,15 +245,15 @@ export function useAppData() {
    * Most mutations only bump `contextVersion`; ones that can change the shared
    * context (categories, trips, challenges, active trip) also re-fetch it.
    */
-  async function withAction(
-    action: () => Promise<void>,
+  async function withAction<T>(
+    action: () => Promise<T>,
     options: { reloadContext?: boolean; scopes?: AppDataScope[] } = {},
-  ): Promise<void> {
+  ): Promise<T> {
     error.value = ''
     pendingActions.value += 1
 
     try {
-      await action()
+      const result = await action()
 
       const scopes = options.scopes
       if (scopes?.length) {
@@ -271,6 +272,7 @@ export function useAppData() {
       }
 
       lastSyncedAt.value = Date.now()
+      return result
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : 'Unable to save changes'
       throw caught
@@ -385,6 +387,10 @@ export function useAppData() {
     // Budget cycle / target limits.
     saveCycle: (draft: CycleDraft, cycleId?: string) =>
       withAction(() => saveCycle(draft, cycleId), {
+        scopes: ['dashboard', 'budgets', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot', 'historyReview'],
+      }),
+    copyCycleToNext: (cycleId: string) =>
+      withAction(() => copyCycleToNext(cycleId), {
         scopes: ['dashboard', 'budgets', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot', 'historyReview'],
       }),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>

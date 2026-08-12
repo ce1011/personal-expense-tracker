@@ -54,3 +54,23 @@ export function getRemainingCycleDays(window: CycleWindow, now = Date.now()): nu
 
   return Math.max(1, diffDays + 1)
 }
+
+/** Shift a `YYYYMM` or `YYYY-MM` cycle code by `deltaMonths`, preserving the original separator. */
+export function shiftCycleCode(cycleCode: string, deltaMonths: number): string {
+  const compact = cycleCode.replace('-', '')
+  const year = Number(compact.slice(0, 4))
+  const month = Number(compact.slice(4, 6))
+  const total = year * 12 + (month - 1) + deltaMonths
+  const nextYear = Math.floor(total / 12)
+  const nextMonth = (total % 12) + 1
+  const separator = cycleCode.includes('-') ? '-' : ''
+  return `${nextYear}${separator}${String(nextMonth).padStart(2, '0')}`
+}
+
+export function getPreviousCycleCode(cycleCode: string): string {
+  return shiftCycleCode(cycleCode, -1)
+}
+
+export function getNextCycleCode(cycleCode: string): string {
+  return shiftCycleCode(cycleCode, 1)
+}

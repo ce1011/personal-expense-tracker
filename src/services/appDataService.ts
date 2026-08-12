@@ -391,6 +391,10 @@ export async function saveCycle(draft: CycleDraft, cycleId?: string): Promise<vo
   })
 }
 
+export async function copyCycleToNext(cycleId: string): Promise<BudgetCycle> {
+  return api.cycles.copyNext(cycleId)
+}
+
 export async function saveTargetLimit(
   cycle_id: string,
   category_id: string,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { getCycleWindow, getRemainingCycleDays } from './budgetCycle'
+import { getCycleWindow, getNextCycleCode, getRemainingCycleDays } from './budgetCycle'
 
 describe('getCycleWindow', () => {
   test('groups a May cycle by the income day window', () => {
@@ -31,5 +31,19 @@ describe('getRemainingCycleDays', () => {
     const window = getCycleWindow('202605', 25)
 
     expect(getRemainingCycleDays(window, new Date(2026, 4, 24, 9, 0).getTime())).toBe(1)
+  })
+})
+
+describe('getNextCycleCode', () => {
+  test('increments the month and preserves YYYYMM', () => {
+    expect(getNextCycleCode('202608')).toBe('202609')
+  })
+
+  test('rolls over December to January of the next year', () => {
+    expect(getNextCycleCode('202612')).toBe('202701')
+  })
+
+  test('preserves a YYYY-MM separator', () => {
+    expect(getNextCycleCode('2026-12')).toBe('2027-01')
   })
 })

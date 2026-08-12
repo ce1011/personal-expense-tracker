@@ -30,6 +30,7 @@ const {
   mockCyclesList,
   mockCycleCreate,
   mockCycleUpdate,
+  mockCycleCopyNext,
   mockTargetUpsert,
   mockExpenseCategoryList,
   mockExpenseCategoryCreate,
@@ -69,6 +70,7 @@ const {
   mockCyclesList: vi.fn(),
   mockCycleCreate: vi.fn(),
   mockCycleUpdate: vi.fn(),
+  mockCycleCopyNext: vi.fn(),
   mockTargetUpsert: vi.fn(),
   mockExpenseCategoryList: vi.fn(),
   mockExpenseCategoryCreate: vi.fn(),
@@ -130,6 +132,7 @@ vi.mock('@/api/client', () => ({
       list: mockCyclesList,
       create: mockCycleCreate,
       update: mockCycleUpdate,
+      copyNext: mockCycleCopyNext,
     },
     targetExpenses: {
       upsert: mockTargetUpsert,
@@ -186,6 +189,7 @@ import {
   listTrips,
   replaceAllDataWithSnapshot,
   restoreFromSnapshot,
+  copyCycleToNext,
   saveCycle,
   saveExpenseCategory,
   saveIncomeCategory,
@@ -511,6 +515,22 @@ describe('cycles', () => {
 
     expect(mockCycleCreate).toHaveBeenCalledWith(expect.objectContaining({ cycle_code: '2026-08' }))
     expect(mockCycleUpdate).not.toHaveBeenCalled()
+  })
+
+  test('copies a cycle to the next period via the API', async () => {
+    mockCycleCopyNext.mockResolvedValue({
+      cycle_id: 'cycle-next',
+      cycle_code: '202609',
+      income_day: 25,
+      income: 50000,
+      saving_target: 8000,
+    })
+
+    const created = await copyCycleToNext('cycle-1')
+
+    expect(mockCycleCopyNext).toHaveBeenCalledWith('cycle-1')
+    expect(created.cycle_id).toBe('cycle-next')
+    expect(created.cycle_code).toBe('202609')
   })
 })
 

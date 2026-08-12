@@ -41,6 +41,7 @@ vi.mock('@/services/appDataService', () => ({
   importTransactions: vi.fn(),
   replaceAllDataWithSnapshot: vi.fn(),
   restoreFromSnapshot: vi.fn(),
+  copyCycleToNext: vi.fn(),
   saveCycle: vi.fn(),
   saveExpenseCategory: vi.fn(),
   saveIncomeCategory: vi.fn(),

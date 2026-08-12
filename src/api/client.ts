@@ -213,6 +213,8 @@ export const api = {
     create: (body: CycleBody) => request<BudgetCycle>(http.cycles.post(body)),
     update: (id: string, body: Partial<CycleBody>) =>
       request<BudgetCycle>(http.cycles({ id }).put(body)),
+    copyNext: (id: string) =>
+      request<BudgetCycle>(http.cycles({ id })['copy-next'].post()),
     remove: (id: string) => request<BudgetCycle>(http.cycles({ id }).delete()),
   },
   targetExpenses: {
