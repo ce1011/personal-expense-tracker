@@ -38,7 +38,6 @@ const newTargetNumber = computed({
   },
 })
 
-
 const canCreate = computed(() => newName.value.trim() !== '' && Number(newTarget.value) > 0)
 
 function startCreate(): void {
@@ -143,12 +142,7 @@ function statusLabel(status: SavingChallenge['status']): string {
           placeholder="例如：旅行基金"
         />
       </div>
-      <UiNumberField
-        v-model="newTargetNumber"
-        label="目標金額"
-        :min="1"
-        :step="1"
-      />
+      <UiNumberField v-model="newTargetNumber" label="目標金額" :min="1" :step="1" />
       <div class="flex items-center justify-end gap-2">
         <button
           type="button"

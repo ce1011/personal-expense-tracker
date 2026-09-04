@@ -342,10 +342,7 @@ function selectMode(tripId: string): void {
 
         <div class="grid gap-3 sm:grid-cols-2">
           <div class="sm:col-span-2">
-            <UiDateRangePicker
-              v-model="tripDateRange"
-              label="旅程期間"
-            />
+            <UiDateRangePicker v-model="tripDateRange" label="旅程期間" />
           </div>
         </div>
 

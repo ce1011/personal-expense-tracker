@@ -58,11 +58,10 @@ const value = computed({
       :format-options="formatOptions"
       class="relative"
     >
-      <NumberFieldInput
-        class="input-base pr-12"
-        :class="error ? 'input-base-error' : ''"
-      />
-      <div class="absolute inset-y-1.5 right-1.5 flex flex-col overflow-hidden rounded-lg border border-border bg-accent/40">
+      <NumberFieldInput class="input-base pr-12" :class="error ? 'input-base-error' : ''" />
+      <div
+        class="absolute inset-y-1.5 right-1.5 flex flex-col overflow-hidden rounded-lg border border-border bg-accent/40"
+      >
         <NumberFieldIncrement
           class="grid h-1/2 w-8 place-items-center text-text-2 transition hover:bg-accent disabled:opacity-40"
           aria-label="增加"

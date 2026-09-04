@@ -12,11 +12,7 @@ const toasts = shallowRef<ToastMessage[]>([])
 let toastSeq = 0
 
 export function useToast() {
-  function toast(input: {
-    title?: string
-    description: string
-    duration?: number
-  }): string {
+  function toast(input: { title?: string; description: string; duration?: number }): string {
     const id = `toast-${++toastSeq}-${Date.now()}`
     const next: ToastMessage = {
       id,

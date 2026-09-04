@@ -381,7 +381,11 @@ function setCategoryFilter(categoryId: string): void {
           @select="startEditing"
         />
         <div v-if="query.hasMore.value" class="flex justify-center pt-2">
-          <BaseButton variant="secondary" :loading="query.loadingMore.value" @click="query.loadMore">
+          <BaseButton
+            variant="secondary"
+            :loading="query.loadingMore.value"
+            @click="query.loadMore"
+          >
             載入更多
           </BaseButton>
         </div>

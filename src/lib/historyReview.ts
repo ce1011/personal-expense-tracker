@@ -316,11 +316,7 @@ function endOfLocalDay(timestamp: number): number {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).getTime()
 }
 
-export function sumCycleIncome(
-  cycles: readonly BudgetCycle[],
-  start: number,
-  end: number,
-): number {
+export function sumCycleIncome(cycles: readonly BudgetCycle[], start: number, end: number): number {
   return cycles.reduce((total, cycle) => {
     const period = cycleCalendarPeriod(cycle)
     if (!period) {
@@ -331,7 +327,9 @@ export function sumCycleIncome(
   }, 0)
 }
 
-function cycleCalendarPeriod(cycle: BudgetCycle): { start: number; end: number; key: string } | null {
+function cycleCalendarPeriod(
+  cycle: BudgetCycle,
+): { start: number; end: number; key: string } | null {
   if (!/^\d{6}$/.test(cycle.cycle_code)) {
     return null
   }
@@ -376,7 +374,12 @@ export function buildHistoryReview(input: HistoryReviewInput): HistoryReviewRepo
     input.balances ?? [],
     input.savings,
   )
-  const budgetVariance = buildBudgetVariance(input.cycles, input.targets, input.expenses, categories)
+  const budgetVariance = buildBudgetVariance(
+    input.cycles,
+    input.targets,
+    input.expenses,
+    categories,
+  )
   const outliers = buildOutliers(expenses, categories)
   const netWorthResult = buildNetWorth(
     input.accounts ?? [],
@@ -386,8 +389,18 @@ export function buildHistoryReview(input: HistoryReviewInput): HistoryReviewRepo
     window.end,
     nowDate,
   )
-  const mom = buildPeriodComparison(input.expenses, categories, monthWindow(nowDate, 0), monthWindow(nowDate, -1))
-  const yoy = buildPeriodComparison(input.expenses, categories, monthWindow(nowDate, 0), monthWindow(nowDate, -12))
+  const mom = buildPeriodComparison(
+    input.expenses,
+    categories,
+    monthWindow(nowDate, 0),
+    monthWindow(nowDate, -1),
+  )
+  const yoy = buildPeriodComparison(
+    input.expenses,
+    categories,
+    monthWindow(nowDate, 0),
+    monthWindow(nowDate, -12),
+  )
   const insights = buildInsights({
     expenses,
     categories,
@@ -430,8 +443,24 @@ export function buildHistoryReview(input: HistoryReviewInput): HistoryReviewRepo
     savingsHealth,
     outliers,
     insights,
-    wrappedMonth: buildWrapped('month', expenses, incomes, savings, categories, nowDate, input.cycles),
-    wrappedYear: buildWrapped('year', expenses, incomes, savings, categories, nowDate, input.cycles),
+    wrappedMonth: buildWrapped(
+      'month',
+      expenses,
+      incomes,
+      savings,
+      categories,
+      nowDate,
+      input.cycles,
+    ),
+    wrappedYear: buildWrapped(
+      'year',
+      expenses,
+      incomes,
+      savings,
+      categories,
+      nowDate,
+      input.cycles,
+    ),
   }
 }
 
@@ -448,7 +477,11 @@ function categoryName(categories: readonly ExpenseCategory[], categoryId: string
   return category?.name_tc || category?.name_en || categoryId
 }
 
-function categoryColor(categories: readonly ExpenseCategory[], categoryId: string, index: number): string {
+function categoryColor(
+  categories: readonly ExpenseCategory[],
+  categoryId: string,
+  index: number,
+): string {
   const category = categories.find((entry) => entry.category_id === categoryId)
   if (category?.color_code) {
     return category.color_code.startsWith('#') ? category.color_code : `#${category.color_code}`
@@ -471,7 +504,10 @@ export function buildShare(
     return []
   }
 
-  const totals = new Map<string, { label: string; amount: number; color: string; children: Map<string, number> }>()
+  const totals = new Map<
+    string,
+    { label: string; amount: number; color: string; children: Map<string, number> }
+  >()
 
   for (const expense of expenses) {
     const groups = dimensionKeys(expense, categories, dimension)
@@ -485,13 +521,19 @@ export function buildShare(
       }
       current.amount += expense.amount
       if (group.childKey) {
-        current.children.set(group.childKey, (current.children.get(group.childKey) ?? 0) + expense.amount)
+        current.children.set(
+          group.childKey,
+          (current.children.get(group.childKey) ?? 0) + expense.amount,
+        )
       }
       totals.set(group.key, current)
     }
   }
 
-  const total = dimension === 'tag' ? [...totals.values()].reduce((sumAmount, entry) => sumAmount + entry.amount, 0) : sum(expenses)
+  const total =
+    dimension === 'tag'
+      ? [...totals.values()].reduce((sumAmount, entry) => sumAmount + entry.amount, 0)
+      : sum(expenses)
 
   return [...totals.entries()]
     .map(([key, entry], index) => ({
@@ -627,7 +669,9 @@ export function buildFixedVariable(
   }
 
   const items = [...streams.values()].sort((left, right) => right.amount - left.amount)
-  const fixedAmount = items.filter((item) => item.flexibility === 'fixed').reduce((total, item) => total + item.amount, 0)
+  const fixedAmount = items
+    .filter((item) => item.flexibility === 'fixed')
+    .reduce((total, item) => total + item.amount, 0)
   const variableAmount = items
     .filter((item) => item.flexibility === 'variable')
     .reduce((total, item) => total + item.amount, 0)
@@ -642,7 +686,10 @@ export function buildFixedVariable(
   }
 }
 
-function monthWindow(now: Date, offsetMonths: number): { start: number; end: number; label: string } {
+function monthWindow(
+  now: Date,
+  offsetMonths: number,
+): { start: number; end: number; label: string } {
   const start = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1)
   const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
   return {
@@ -658,8 +705,12 @@ export function buildPeriodComparison(
   current: { start: number; end: number; label: string },
   previous: { start: number; end: number; label: string },
 ): PeriodComparison {
-  const currentItems = expenses.filter((item) => item.date >= current.start && item.date < current.end)
-  const previousItems = expenses.filter((item) => item.date >= previous.start && item.date < previous.end)
+  const currentItems = expenses.filter(
+    (item) => item.date >= current.start && item.date < current.end,
+  )
+  const previousItems = expenses.filter(
+    (item) => item.date >= previous.start && item.date < previous.end,
+  )
   const currentTotal = sum(currentItems)
   const previousTotal = sum(previousItems)
   const currentByCategory = totalsByCategory(currentItems)
@@ -676,7 +727,8 @@ export function buildPeriodComparison(
         currentAmount,
         previousAmount,
         delta,
-        deltaPercent: previousAmount > 0 ? (delta / previousAmount) * 100 : currentAmount > 0 ? 100 : 0,
+        deltaPercent:
+          previousAmount > 0 ? (delta / previousAmount) * 100 : currentAmount > 0 ? 100 : 0,
       }
     })
     .sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta))
@@ -735,7 +787,10 @@ export function buildCashflow(
   })
 }
 
-function enumerateMonths(start: number, end: number): Array<{ key: string; label: string; start: number; end: number }> {
+function enumerateMonths(
+  start: number,
+  end: number,
+): Array<{ key: string; label: string; start: number; end: number }> {
   const cursor = start > 0 ? new Date(start) : new Date(end)
   if (start > 0) {
     cursor.setDate(1)
@@ -788,7 +843,8 @@ export function buildSeasonalPeaks(expenses: readonly CombinedTransaction[]): Se
     monthIndex,
     averageAmount: amounts.reduce((total, amount) => total + amount, 0) / amounts.length,
   }))
-  const overallAverage = averages.reduce((total, entry) => total + entry.averageAmount, 0) / Math.max(1, averages.length)
+  const overallAverage =
+    averages.reduce((total, entry) => total + entry.averageAmount, 0) / Math.max(1, averages.length)
 
   return averages
     .filter((entry) => overallAverage > 0 && entry.averageAmount >= overallAverage * 1.2)
@@ -813,7 +869,10 @@ export function buildNetWorth(
 ): { points: NetWorthPoint[]; allocation: AllocationPoint[]; isProxy: boolean } {
   const activeAccounts = accounts.filter((account) => !account.archived)
   const isProxy = activeAccounts.length === 0
-  const months = enumerateMonths(start || new Date(now.getFullYear(), now.getMonth() - 11, 1).getTime(), end)
+  const months = enumerateMonths(
+    start || new Date(now.getFullYear(), now.getMonth() - 11, 1).getTime(),
+    end,
+  )
 
   if (isProxy) {
     let cumulative = 0
@@ -876,7 +935,11 @@ export function buildNetWorth(
   }
 }
 
-function latestBalance(accountId: string, balances: readonly AccountBalance[], asOf: number): number {
+function latestBalance(
+  accountId: string,
+  balances: readonly AccountBalance[],
+  asOf: number,
+): number {
   const matching = balances
     .filter((balance) => balance.account_id === accountId && balance.date <= asOf)
     .sort((left, right) => right.date - left.date)
@@ -902,7 +965,10 @@ export function buildBudgetVariance(
     const cycleExpenses = expenses.filter((expense) => isInCycleWindow(expense.date, window))
     const spentByCategory = totalsByCategory(cycleExpenses)
     const cycleTargets = targets.filter((target) => target.cycle_id === cycle.cycle_id)
-    const categoryIds = new Set([...cycleTargets.map((target) => target.category_id), ...spentByCategory.keys()])
+    const categoryIds = new Set([
+      ...cycleTargets.map((target) => target.category_id),
+      ...spentByCategory.keys(),
+    ])
 
     for (const categoryId of categoryIds) {
       const target = cycleTargets.find((entry) => entry.category_id === categoryId)?.amount ?? 0
@@ -953,7 +1019,9 @@ export function buildSavingsHealth(
   balances: readonly AccountBalance[],
   savings: readonly CombinedTransaction[],
 ): SavingsHealth {
-  const activeMonths = cashflow.filter((point) => point.income > 0 || point.expense > 0 || point.saving > 0)
+  const activeMonths = cashflow.filter(
+    (point) => point.income > 0 || point.expense > 0 || point.saving > 0,
+  )
   const incomeTotal = activeMonths.reduce((total, point) => total + point.income, 0)
   const savingTotal = activeMonths.reduce((total, point) => total + point.saving, 0)
   const expenseTotal = activeMonths.reduce((total, point) => total + point.expense, 0)
@@ -983,7 +1051,7 @@ export function buildOutliers(
     return []
   }
 
-  const amounts = [...expenses.map((expense) => expense.amount)].sort((left, right) => left - right)
+  const amounts = expenses.map((expense) => expense.amount).sort((left, right) => left - right)
   const q1 = percentile(amounts, 0.25)
   const q3 = percentile(amounts, 0.75)
   const iqr = q3 - q1
@@ -1055,7 +1123,11 @@ function buildInsights(input: {
 }): FinancialInsight[] {
   const insights: FinancialInsight[] = []
   const food = input.expenses.filter((expense) => expense.category_id === 'expense-food')
-  const delivery = food.filter((expense) => /外送|deliveroo|foodpanda|uber|keeta/i.test(`${expense.name} ${(expense.tags ?? []).join(' ')}`))
+  const delivery = food.filter((expense) =>
+    /外送|deliveroo|foodpanda|uber|keeta/i.test(
+      `${expense.name} ${(expense.tags ?? []).join(' ')}`,
+    ),
+  )
   const foodTotal = sum(food)
   const deliveryTotal = sum(delivery)
 
@@ -1080,13 +1152,22 @@ function buildInsights(input: {
 
   if (input.needsWants.incomeAmount > 0) {
     const parts = [
-      input.needsWants.rule50 ? '必要支出符合 50%' : `必要支出佔收入 ${Math.round(input.needsWants.needsShareOfIncome * 100)}%，高於 50% 原則`,
-      input.needsWants.rule30 ? '想要消費符合 30%' : `想要消費佔收入 ${Math.round(input.needsWants.wantsShareOfIncome * 100)}%`,
-      input.needsWants.rule20 ? '儲蓄達到 20%' : `儲蓄率 ${Math.round(input.needsWants.savingsShareOfIncome * 100)}%，低於 20% 目標`,
+      input.needsWants.rule50
+        ? '必要支出符合 50%'
+        : `必要支出佔收入 ${Math.round(input.needsWants.needsShareOfIncome * 100)}%，高於 50% 原則`,
+      input.needsWants.rule30
+        ? '想要消費符合 30%'
+        : `想要消費佔收入 ${Math.round(input.needsWants.wantsShareOfIncome * 100)}%`,
+      input.needsWants.rule20
+        ? '儲蓄達到 20%'
+        : `儲蓄率 ${Math.round(input.needsWants.savingsShareOfIncome * 100)}%，低於 20% 目標`,
     ]
     insights.push({
       id: '502030',
-      tone: input.needsWants.rule50 && input.needsWants.rule30 && input.needsWants.rule20 ? 'success' : 'warning',
+      tone:
+        input.needsWants.rule50 && input.needsWants.rule30 && input.needsWants.rule20
+          ? 'success'
+          : 'warning',
       text: `50/30/20 檢視：${parts.join('；')}。`,
     })
   }
@@ -1152,7 +1233,9 @@ export function buildWrapped(
     current.amount += expense.amount
     merchants.set(name, current)
   }
-  const topMerchantEntry = [...merchants.entries()].sort((left, right) => right[1].count - left[1].count)[0]
+  const topMerchantEntry = [...merchants.entries()].sort(
+    (left, right) => right[1].count - left[1].count,
+  )[0]
   const topCategory = buildShare(periodExpenses, categories, 'category')[0]
   const savingsRate = incomeTotal > 0 ? savingTotal / incomeTotal : 0
   const milestone =
@@ -1164,15 +1247,24 @@ export function buildWrapped(
 
   return {
     periodKind: kind,
-    periodLabel: kind === 'year' ? `${now.getFullYear()} 年回顧` : `${now.getFullYear()} 年 ${now.getMonth() + 1} 月回顧`,
+    periodLabel:
+      kind === 'year'
+        ? `${now.getFullYear()} 年回顧`
+        : `${now.getFullYear()} 年 ${now.getMonth() + 1} 月回顧`,
     incomeTotal,
     expenseTotal,
     savingTotal,
     savingsRate,
     transactionCount: periodExpenses.length + periodIncomes.length + periodSavings.length,
-    largestExpense: largest ? { name: largest.name, amount: largest.amount, date: largest.date } : null,
+    largestExpense: largest
+      ? { name: largest.name, amount: largest.amount, date: largest.date }
+      : null,
     topMerchant: topMerchantEntry
-      ? { name: topMerchantEntry[0], count: topMerchantEntry[1].count, amount: topMerchantEntry[1].amount }
+      ? {
+          name: topMerchantEntry[0],
+          count: topMerchantEntry[1].count,
+          amount: topMerchantEntry[1].amount,
+        }
       : null,
     topCategory: topCategory ? { name: topCategory.label, amount: topCategory.amount } : null,
     milestone,

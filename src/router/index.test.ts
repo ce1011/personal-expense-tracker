@@ -52,6 +52,7 @@ describe('router', () => {
     { path: '/monthly-snapshot', name: 'monthly-snapshot' },
     { path: '/history-review', name: 'history-review' },
     { path: '/settings', name: 'settings' },
+    { path: '/settings/api-keys', name: 'api-keys' },
   ])('resolves $path to route $name when authenticated', async ({ path, name }) => {
     useAuthStore()._setAuthenticated()
     await router.push(path)

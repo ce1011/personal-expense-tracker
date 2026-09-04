@@ -79,9 +79,7 @@ export function useTransactionsQuery() {
 
     return merged
   })
-  const latestFxDate = computed(
-    () => result.value?.latestFxDate || appData.latestFxDate.value,
-  )
+  const latestFxDate = computed(() => result.value?.latestFxDate || appData.latestFxDate.value)
 
   function todayWindow(): { start: number; end: number } {
     const now = new Date()

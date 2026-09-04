@@ -24,10 +24,7 @@ import UiTabs from '@/components/ui/UiTabs.vue'
 import { useAppData } from '@/composables/useAppData'
 import { useHistoryReviewData } from '@/composables/useHistoryReviewData'
 import { formatCurrency, formatDate, formatPercent } from '@/lib/formatters'
-import {
-  type HistoryRangePreset,
-  type ShareDimension,
-} from '@/lib/historyReview'
+import { type HistoryRangePreset, type ShareDimension } from '@/lib/historyReview'
 import type { AccountKind } from '@/types/app-data'
 
 const appData = useAppData()
@@ -164,11 +161,7 @@ function kindLabel(kind: AccountKind): string {
           {{ item.label }}
         </button>
       </div>
-      <UiDateRangePicker
-        v-if="range === 'custom'"
-        v-model="customRange"
-        label="自訂日期範圍"
-      />
+      <UiDateRangePicker v-if="range === 'custom'" v-model="customRange" label="自訂日期範圍" />
     </div>
 
     <p v-if="error" class="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">{{ error }}</p>
@@ -186,14 +179,19 @@ function kindLabel(kind: AccountKind): string {
             <p class="text-caption font-semibold uppercase tracking-[0.12em] text-text-3">
               財務健康分數 · {{ report.rangeLabel }}
             </p>
-            <p class="mt-1 text-amount-lg font-bold" :class="healthTone">{{ report.healthScore }}</p>
+            <p class="mt-1 text-amount-lg font-bold" :class="healthTone">
+              {{ report.healthScore }}
+            </p>
             <p class="mt-1 text-body-sm text-text-2">
               淨現金流 {{ formatCurrency(report.netCashflow, currency) }}
             </p>
           </div>
           <Sparkles class="size-5 text-primary" aria-hidden="true" />
         </div>
-        <p v-if="report.insights[0]" class="mt-4 rounded-xl bg-surface/80 p-3 text-body-sm text-text">
+        <p
+          v-if="report.insights[0]"
+          class="mt-4 rounded-xl bg-surface/80 p-3 text-body-sm text-text"
+        >
           {{ report.insights[0].text }}
         </p>
       </BaseCard>
@@ -273,17 +271,23 @@ function kindLabel(kind: AccountKind): string {
 
         <BaseCard>
           <h2 class="text-h3 font-semibold text-text">必要 vs 想要</h2>
-          <p class="mt-1 text-body-sm text-text-2">對照 50/30/20：必要 ≤50%、想要 ≤30%、儲蓄 ≥20%。</p>
+          <p class="mt-1 text-body-sm text-text-2">
+            對照 50/30/20：必要 ≤50%、想要 ≤30%、儲蓄 ≥20%。
+          </p>
           <div class="mt-4 grid gap-3">
             <div>
               <div class="flex justify-between text-body-sm">
                 <span>必要生存支出</span>
-                <span class="font-semibold">{{ formatPercent(report.needsWants.needsShareOfIncome) }}</span>
+                <span class="font-semibold">{{
+                  formatPercent(report.needsWants.needsShareOfIncome)
+                }}</span>
               </div>
               <div class="mt-2 h-3 overflow-hidden rounded-full bg-border">
                 <div
                   class="h-3 rounded-full bg-primary"
-                  :style="{ width: `${Math.min(report.needsWants.needsShareOfIncome * 100, 100)}%` }"
+                  :style="{
+                    width: `${Math.min(report.needsWants.needsShareOfIncome * 100, 100)}%`,
+                  }"
                 />
               </div>
               <p class="mt-1 text-caption text-text-3">
@@ -294,12 +298,16 @@ function kindLabel(kind: AccountKind): string {
             <div>
               <div class="flex justify-between text-body-sm">
                 <span>彈性慾望消費</span>
-                <span class="font-semibold">{{ formatPercent(report.needsWants.wantsShareOfIncome) }}</span>
+                <span class="font-semibold">{{
+                  formatPercent(report.needsWants.wantsShareOfIncome)
+                }}</span>
               </div>
               <div class="mt-2 h-3 overflow-hidden rounded-full bg-border">
                 <div
                   class="h-3 rounded-full bg-warning"
-                  :style="{ width: `${Math.min(report.needsWants.wantsShareOfIncome * 100, 100)}%` }"
+                  :style="{
+                    width: `${Math.min(report.needsWants.wantsShareOfIncome * 100, 100)}%`,
+                  }"
                 />
               </div>
               <p class="mt-1 text-caption text-text-3">
@@ -310,12 +318,16 @@ function kindLabel(kind: AccountKind): string {
             <div>
               <div class="flex justify-between text-body-sm">
                 <span>儲蓄</span>
-                <span class="font-semibold">{{ formatPercent(report.needsWants.savingsShareOfIncome) }}</span>
+                <span class="font-semibold">{{
+                  formatPercent(report.needsWants.savingsShareOfIncome)
+                }}</span>
               </div>
               <div class="mt-2 h-3 overflow-hidden rounded-full bg-border">
                 <div
                   class="h-3 rounded-full bg-success"
-                  :style="{ width: `${Math.min(report.needsWants.savingsShareOfIncome * 100, 100)}%` }"
+                  :style="{
+                    width: `${Math.min(report.needsWants.savingsShareOfIncome * 100, 100)}%`,
+                  }"
                 />
               </div>
               <p class="mt-1 text-caption text-text-3">
@@ -387,7 +399,10 @@ function kindLabel(kind: AccountKind): string {
           <p class="mt-2 text-body-sm text-text-2">
             {{ comparisonReport?.currentLabel }} vs {{ comparisonReport?.previousLabel }}
           </p>
-          <p class="mt-3 text-amount font-bold" :class="(comparisonReport?.delta ?? 0) > 0 ? 'text-danger' : 'text-primary'">
+          <p
+            class="mt-3 text-amount font-bold"
+            :class="(comparisonReport?.delta ?? 0) > 0 ? 'text-danger' : 'text-primary'"
+          >
             {{ signedPercent(comparisonReport?.deltaPercent ?? 0) }}
           </p>
           <ul class="mt-4 grid gap-2">
@@ -443,11 +458,17 @@ function kindLabel(kind: AccountKind): string {
         <BaseCard>
           <h2 class="text-h3 font-semibold text-text">淨資產成長</h2>
           <p class="mt-1 text-body-sm text-text-2">
-            {{ report.netWorthIsProxy ? '尚未建立帳戶，暫以累積儲蓄作為現金代理。' : '資產 − 負債的長期走勢。' }}
+            {{
+              report.netWorthIsProxy
+                ? '尚未建立帳戶，暫以累積儲蓄作為現金代理。'
+                : '資產 − 負債的長期走勢。'
+            }}
           </p>
           <TrendLineChart
             class="mt-3"
-            :points="report.netWorth.map((point) => ({ label: point.label, value: point.netWorth }))"
+            :points="
+              report.netWorth.map((point) => ({ label: point.label, value: point.netWorth }))
+            "
             color="var(--color-success)"
             :format-value="(value) => formatCurrency(value, currency)"
             fill
@@ -497,7 +518,9 @@ function kindLabel(kind: AccountKind): string {
               <UiSelect
                 v-model="selectedAccountId"
                 label="記錄餘額"
-                :options="accounts.map((account) => ({ value: account.account_id, label: account.name }))"
+                :options="
+                  accounts.map((account) => ({ value: account.account_id, label: account.name }))
+                "
               />
               <UiNumberField v-model="accountForm.amount" label="目前餘額" :min="0" :step="1" />
               <BaseButton variant="secondary" type="button" @click="recordBalance">
@@ -529,16 +552,26 @@ function kindLabel(kind: AccountKind): string {
             </div>
           </div>
           <p class="mt-3 text-body-sm text-text-2">
-            以歷史平均月支出 {{ formatCurrency(report.savingsHealth.averageMonthlyExpense, currency) }}
+            以歷史平均月支出
+            {{
+              formatCurrency(report.savingsHealth.averageMonthlyExpense, currency)
+            }}
             估算，流動資金約 {{ formatCurrency(report.savingsHealth.liquidBuffer, currency) }}。
           </p>
         </BaseCard>
 
         <BaseCard>
           <h2 class="text-h3 font-semibold text-text">預算差異</h2>
-          <div v-if="report.chronicOverspend.length" class="mt-3 rounded-xl bg-danger/5 p-3 text-body-sm text-danger">
+          <div
+            v-if="report.chronicOverspend.length"
+            class="mt-3 rounded-xl bg-danger/5 p-3 text-body-sm text-danger"
+          >
             經常超支：
-            {{ report.chronicOverspend.map((item) => `${item.name}（${item.months} 個週期）`).join('、') }}
+            {{
+              report.chronicOverspend
+                .map((item) => `${item.name}（${item.months} 個週期）`)
+                .join('、')
+            }}
           </div>
           <ul class="mt-4 grid gap-2">
             <li
@@ -562,7 +595,9 @@ function kindLabel(kind: AccountKind): string {
             <AlertTriangle class="size-5 text-warning" />
             <h2 class="text-h3 font-semibold text-text">異常大額支出</h2>
           </div>
-          <p class="mt-1 text-body-sm text-text-2">已從日常分析中隔離，避免買家電這類事件扭曲平均值。</p>
+          <p class="mt-1 text-body-sm text-text-2">
+            已從日常分析中隔離，避免買家電這類事件扭曲平均值。
+          </p>
           <ul v-if="report.outliers.length" class="mt-4 grid gap-2">
             <li
               v-for="item in report.outliers"
@@ -604,7 +639,9 @@ function kindLabel(kind: AccountKind): string {
         </div>
 
         <article v-if="wrapped" class="wrapped-card rounded-3xl p-5 text-white">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Financial Wrapped</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+            Financial Wrapped
+          </p>
           <h2 class="mt-2 text-2xl font-bold">{{ wrapped.periodLabel }}</h2>
           <p class="mt-6 text-sm text-white/70">總收入</p>
           <p class="text-3xl font-bold">{{ formatCurrency(wrapped.incomeTotal, currency) }}</p>
@@ -613,7 +650,11 @@ function kindLabel(kind: AccountKind): string {
               <p class="text-xs text-white/70">最大單筆</p>
               <p class="mt-1 font-semibold">{{ wrapped.largestExpense?.name ?? '—' }}</p>
               <p class="text-sm text-white/80">
-                {{ wrapped.largestExpense ? formatCurrency(wrapped.largestExpense.amount, currency) : '' }}
+                {{
+                  wrapped.largestExpense
+                    ? formatCurrency(wrapped.largestExpense.amount, currency)
+                    : ''
+                }}
               </p>
             </div>
             <div>

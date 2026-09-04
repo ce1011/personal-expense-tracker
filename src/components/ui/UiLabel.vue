@@ -7,10 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <Label
-    :for="for"
-    class="mb-1.5 block text-sm font-medium text-text-2"
-  >
+  <Label :for="for" class="mb-1.5 block text-sm font-medium text-text-2">
     <slot />
   </Label>
 </template>

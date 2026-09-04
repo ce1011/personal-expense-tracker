@@ -126,7 +126,9 @@ async function copyToNextMonth(): Promise<void> {
             <BaseButton
               variant="ghost"
               :disabled="!selectedCycle || appData.pendingActions.value > 0"
-              :aria-label="nextCycleCode ? `複製目前週期到 ${nextCycleCode}` : '複製目前週期到下一個月'"
+              :aria-label="
+                nextCycleCode ? `複製目前週期到 ${nextCycleCode}` : '複製目前週期到下一個月'
+              "
               @click="copyToNextMonth"
             >
               <Copy class="size-4" aria-hidden="true" />
@@ -186,13 +188,7 @@ async function copyToNextMonth(): Promise<void> {
             inputmode="numeric"
             autocomplete="off"
           />
-          <UiNumberField
-            v-model="form.income_day"
-            label="入糧日"
-            :min="1"
-            :max="31"
-            :step="1"
-          />
+          <UiNumberField v-model="form.income_day" label="入糧日" :min="1" :max="31" :step="1" />
           <UiNumberField v-model="form.income" label="固定收入" :min="0" :step="0.01" />
           <UiNumberField v-model="form.saving_target" label="儲蓄目標" :min="0" :step="0.01" />
         </div>

@@ -87,10 +87,7 @@ export function clearRequestCache(): void {
 }
 
 /** Deterministic cache key for flat query parameter objects. */
-export function requestCacheKey(
-  namespace: string,
-  params: object = {},
-): string {
+export function requestCacheKey(namespace: string, params: object = {}): string {
   const normalized = Object.entries(params)
     .filter(([, value]) => value !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))

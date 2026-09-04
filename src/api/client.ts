@@ -3,12 +3,15 @@ import { treaty } from '@elysiajs/eden'
 import { cachedRequest, requestCacheKey } from './requestCache'
 import { getToken, notifyUnauthorized } from './tokenStore'
 import type {
+  ApiKeyCreated,
+  ApiKeySummary,
   AppDataPayload,
   AuthResponse,
   BudgetCycle,
   BudgetsSummary,
   CategoryBudgetSummary,
   ChallengeBody,
+  CreateApiKeyBody,
   CycleBody,
   DashboardData,
   ExpenseBody,
@@ -36,7 +39,13 @@ import type {
   TripSession,
   TripsSummary,
 } from './types'
-import type { AccountBalance, AccountKind, AppSetting, AssetAccount, FxRateRecord } from '@/types/app-data'
+import type {
+  AccountBalance,
+  AccountKind,
+  AppSetting,
+  AssetAccount,
+  FxRateRecord,
+} from '@/types/app-data'
 
 /**
  * Eden Treaty client for the Elysia backend.
@@ -82,6 +91,7 @@ export const API_PREFIXES = [
   '/monthly-snapshot',
   '/history-review',
   '/accounts',
+  '/api-keys',
 ] as const
 
 interface TreatyResult<T> {
@@ -213,8 +223,7 @@ export const api = {
     create: (body: CycleBody) => request<BudgetCycle>(http.cycles.post(body)),
     update: (id: string, body: Partial<CycleBody>) =>
       request<BudgetCycle>(http.cycles({ id }).put(body)),
-    copyNext: (id: string) =>
-      request<BudgetCycle>(http.cycles({ id })['copy-next'].post()),
+    copyNext: (id: string) => request<BudgetCycle>(http.cycles({ id })['copy-next'].post()),
     remove: (id: string) => request<BudgetCycle>(http.cycles({ id }).delete()),
   },
   targetExpenses: {
@@ -265,11 +274,10 @@ export const api = {
   },
   dashboard: {
     get: () =>
-      cachedRequest(
-        'dashboard',
-        () => request<DashboardData>(http.dashboard.get()),
-        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['dashboard'] },
-      ),
+      cachedRequest('dashboard', () => request<DashboardData>(http.dashboard.get()), {
+        ttlMs: AGGREGATE_CACHE_TTL_MS,
+        tags: ['dashboard'],
+      }),
   },
   transactionsQuery: {
     list: (params: TransactionsQueryParams = {}) =>
@@ -281,11 +289,10 @@ export const api = {
   },
   budgets: {
     summary: () =>
-      cachedRequest(
-        'budgets-summary',
-        () => request<BudgetsSummary>(http.budgets.summary.get()),
-        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['budgets'] },
-      ),
+      cachedRequest('budgets-summary', () => request<BudgetsSummary>(http.budgets.summary.get()), {
+        ttlMs: AGGREGATE_CACHE_TTL_MS,
+        tags: ['budgets'],
+      }),
   },
   categoryBudget: {
     summary: () =>
@@ -305,11 +312,10 @@ export const api = {
   },
   tripsSummary: {
     get: () =>
-      cachedRequest(
-        'trips-summary',
-        () => request<TripsSummary>(http.trips.summary.get()),
-        { ttlMs: AGGREGATE_CACHE_TTL_MS, tags: ['trips'] },
-      ),
+      cachedRequest('trips-summary', () => request<TripsSummary>(http.trips.summary.get()), {
+        ttlMs: AGGREGATE_CACHE_TTL_MS,
+        tags: ['trips'],
+      }),
   },
   monthlySnapshot: {
     get: () =>
@@ -337,8 +343,12 @@ export const api = {
     listBalances: () => request<AccountBalance[]>(http.accounts.balances.get()),
     createBalance: (body: { account_id: string; amount: number; date: number; note?: string }) =>
       request<AccountBalance>(http.accounts.balances.post(body)),
-    removeBalance: (id: string) =>
-      request<AccountBalance>(http.accounts.balances({ id }).delete()),
+    removeBalance: (id: string) => request<AccountBalance>(http.accounts.balances({ id }).delete()),
+  },
+  apiKeys: {
+    list: () => request<ApiKeySummary[]>(http['api-keys'].get()),
+    create: (body: CreateApiKeyBody) => request<ApiKeyCreated>(http['api-keys'].post(body)),
+    revoke: (id: string) => request<{ revoked: true }>(http['api-keys']({ id }).delete()),
   },
 }
 

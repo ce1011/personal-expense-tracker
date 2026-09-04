@@ -288,7 +288,12 @@ function requireOptionalBoolean(value: unknown, key: string, path: string, error
   }
 }
 
-function requireOptionalStringArray(value: unknown, key: string, path: string, errors: string[]): void {
+function requireOptionalStringArray(
+  value: unknown,
+  key: string,
+  path: string,
+  errors: string[],
+): void {
   if (!isRecord(value) || value[key] === undefined) {
     return
   }

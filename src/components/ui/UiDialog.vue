@@ -76,7 +76,9 @@ onUnmounted(() => {
 <template>
   <DialogRoot v-model:open="isOpen">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 z-40 bg-text/40 backdrop-blur-sm data-[state=open]:animate-[ui-fade-in_200ms_ease] data-[state=closed]:animate-[ui-fade-out_150ms_ease]" />
+      <DialogOverlay
+        class="fixed inset-0 z-40 bg-text/40 backdrop-blur-sm data-[state=open]:animate-[ui-fade-in_200ms_ease] data-[state=closed]:animate-[ui-fade-out_150ms_ease]"
+      />
       <DialogContent
         class="fixed left-1/2 top-1/2 z-40 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface p-4 shadow-xl outline-none data-[state=open]:animate-[ui-dialog-in_220ms_var(--motion-out)] data-[state=closed]:animate-[ui-dialog-out_160ms_ease-in]"
         :class="maxWidthClass"

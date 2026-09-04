@@ -8,11 +8,12 @@ const { mockTransactionsList } = vi.hoisted(() => ({
 
 const appData = {
   currency: computed(() => 'HKD'),
-  fxRateMap: computed(() =>
-    new Map([
-      ['HKD', 1],
-      ['USD', 7.8],
-    ]),
+  fxRateMap: computed(
+    () =>
+      new Map([
+        ['HKD', 1],
+        ['USD', 7.8],
+      ]),
   ),
   latestFxDate: computed(() => '2026-07-20'),
   activeTripId: computed(() => ''),
@@ -149,10 +150,7 @@ describe('useTransactionsQuery', () => {
     expect(mockTransactionsList).toHaveBeenLastCalledWith(
       expect.objectContaining({ cursor: 'cursor-2', limit: 50 }),
     )
-    expect(query.groups.value[0]?.items.map((item) => item.id)).toEqual([
-      'expense-2',
-      'expense-1',
-    ])
+    expect(query.groups.value[0]?.items.map((item) => item.id)).toEqual(['expense-2', 'expense-1'])
     expect(query.hasMore.value).toBe(false)
   })
 })

@@ -34,7 +34,9 @@ const geometry = computed(() => {
     y: padding.top + ((max - value) / span) * innerHeight,
   }))
   const zeroY = padding.top + (max / span) * innerHeight
-  const line = mapped.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ')
+  const line = mapped
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`)
+    .join(' ')
   const area = mapped.length
     ? `${line} L${mapped[mapped.length - 1]?.x} ${zeroY} L${mapped[0]?.x} ${zeroY} Z`
     : ''
@@ -51,7 +53,13 @@ function niceTicks(min: number, max: number, count = 4): number[] {
   const magnitude = 10 ** Math.floor(Math.log10(Math.abs(rough) || 1))
   const residual = rough / magnitude
   const step =
-    residual >= 7.5 ? 10 * magnitude : residual >= 3.5 ? 5 * magnitude : residual >= 1.5 ? 2 * magnitude : magnitude
+    residual >= 7.5
+      ? 10 * magnitude
+      : residual >= 3.5
+        ? 5 * magnitude
+        : residual >= 1.5
+          ? 2 * magnitude
+          : magnitude
   const niceMin = Math.floor(min / step) * step
   const niceMax = Math.ceil(max / step) * step
   const ticks: number[] = []
@@ -69,13 +77,17 @@ function compactAxisLabel(value: number): string {
 
   if (abs >= 10_000) {
     const wan = abs / 10_000
-    const text = wan >= 10 || Number.isInteger(wan) ? String(Math.round(wan)) : wan.toFixed(1).replace(/\.0$/, '')
+    const text =
+      wan >= 10 || Number.isInteger(wan)
+        ? String(Math.round(wan))
+        : wan.toFixed(1).replace(/\.0$/, '')
     return `${sign}${text}萬`
   }
 
   if (abs >= 1000) {
     const k = abs / 1000
-    const text = k >= 10 || Number.isInteger(k) ? String(Math.round(k)) : k.toFixed(1).replace(/\.0$/, '')
+    const text =
+      k >= 10 || Number.isInteger(k) ? String(Math.round(k)) : k.toFixed(1).replace(/\.0$/, '')
     return `${sign}${text}k`
   }
 
@@ -88,7 +100,9 @@ function compactAxisLabel(value: number): string {
     :viewBox="`0 0 ${width} ${height}`"
     class="h-44 w-full"
     role="img"
-    :aria-label="points.length ? `最新 ${formatValue(points[points.length - 1]?.value ?? 0)}` : '趨勢圖'"
+    :aria-label="
+      points.length ? `最新 ${formatValue(points[points.length - 1]?.value ?? 0)}` : '趨勢圖'
+    "
   >
     <g v-for="tick in geometry.yTicks" :key="tick.value">
       <line

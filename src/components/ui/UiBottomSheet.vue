@@ -77,33 +77,20 @@ function handleOpenChange(value: boolean): void {
 </script>
 
 <template>
-  <DrawerRoot
-    :open="isOpen"
-    modal
-    swipe-direction="down"
-    @update:open="handleOpenChange"
-  >
+  <DrawerRoot :open="isOpen" modal swipe-direction="down" @update:open="handleOpenChange">
     <DrawerPortal>
       <DrawerOverlay class="ui-drawer-overlay fixed inset-0 z-[70] bg-text/40 backdrop-blur-sm" />
       <DrawerContent
         class="ui-drawer-content fixed inset-x-0 bottom-0 z-[70] flex max-h-[min(92dvh,52rem)] flex-col rounded-t-[1.75rem] border border-border bg-surface shadow-2xl outline-none sm:inset-x-4 sm:bottom-4 sm:max-w-lg sm:mx-auto sm:rounded-3xl"
       >
-        <DrawerHandle
-          class="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-border"
-        />
+        <DrawerHandle class="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-border" />
 
         <header class="flex items-start justify-between gap-3 px-4 pb-2 pt-4 sm:px-5">
           <div class="min-w-0">
-            <DrawerTitle
-              v-if="title"
-              class="text-xl font-semibold tracking-tight text-text"
-            >
+            <DrawerTitle v-if="title" class="text-xl font-semibold tracking-tight text-text">
               {{ title }}
             </DrawerTitle>
-            <DrawerDescription
-              v-if="subtitle"
-              class="mt-1 text-sm text-text-2"
-            >
+            <DrawerDescription v-if="subtitle" class="mt-1 text-sm text-text-2">
               {{ subtitle }}
             </DrawerDescription>
             <DrawerTitle v-else class="sr-only">面板</DrawerTitle>
@@ -117,7 +104,9 @@ function handleOpenChange(value: boolean): void {
           </DrawerClose>
         </header>
 
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5">
+        <div
+          class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5"
+        >
           <slot />
         </div>
       </DrawerContent>

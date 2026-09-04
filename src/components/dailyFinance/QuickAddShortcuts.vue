@@ -194,10 +194,7 @@ function submit(): void {
         <p v-if="categoryHint" class="mt-1 text-warning">{{ categoryHint }}</p>
       </div>
 
-      <UiCheckbox
-        v-if="spareChange && spareChange.spareChange > 0"
-        v-model="isSpareChangeEnabled"
-      >
+      <UiCheckbox v-if="spareChange && spareChange.spareChange > 0" v-model="isSpareChangeEnabled">
         零頭儲蓄：入帳 {{ formatCurrency(spareChange.roundedAmount, currency) }}，儲蓄
         {{ formatCurrency(spareChange.spareChange, currency) }}
       </UiCheckbox>

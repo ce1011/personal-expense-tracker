@@ -66,7 +66,6 @@ const tripMenuItems = computed(() => [
 function getTripStatusLabel(status: TripStatus): string {
   return status === 'planned' ? '規劃中' : status === 'active' ? '進行中' : '已完成'
 }
-
 </script>
 
 <template>
@@ -85,11 +84,7 @@ function getTripStatusLabel(status: TripStatus): string {
       <div class="flex items-center gap-2">
         <SyncPulse :page-loading="loading" />
 
-        <UiDropdownMenu
-          v-if="hasTrips"
-          :items="tripMenuItems"
-          @select="handleTripSelection"
-        >
+        <UiDropdownMenu v-if="hasTrips" :items="tripMenuItems" @select="handleTripSelection">
           <template #trigger>
             <button
               type="button"

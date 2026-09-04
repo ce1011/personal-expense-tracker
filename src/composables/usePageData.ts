@@ -63,7 +63,9 @@ export function usePageData<T>(
 
   // Re-fetch only for mutations that can affect this aggregate. Consumers that
   // omit a scope retain the old broad invalidation behavior for compatibility.
-  const invalidation = options.scope ? appData.mutationVersion(options.scope) : appData.contextVersion
+  const invalidation = options.scope
+    ? appData.mutationVersion(options.scope)
+    : appData.contextVersion
   watch(invalidation, () => {
     void load()
   })

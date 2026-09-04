@@ -5,6 +5,7 @@ import {
   FileText,
   Globe,
   History,
+  KeyRound,
   LayoutGrid,
   LogOut,
   Receipt,
@@ -315,18 +316,20 @@ async function logout(): Promise<void> {
     />
 
     <BaseCard>
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          <LogOut class="size-5 text-danger" aria-hidden="true" />
-          <div>
-            <h2 class="text-h3 font-semibold text-text">帳戶</h2>
-            <p class="text-body-sm text-text-2">
-              {{ auth.user?.email ? `目前已登入：${auth.user.email}` : '管理你的登入狀態。' }}
-            </p>
-          </div>
+      <div class="flex items-center gap-2">
+        <KeyRound class="size-5 text-primary" aria-hidden="true" />
+        <div>
+          <h2 class="text-h3 font-semibold text-text">帳戶</h2>
+          <p class="text-body-sm text-text-2">
+            {{ auth.user?.email ? `目前已登入：${auth.user.email}` : '管理你的登入狀態。' }}
+          </p>
         </div>
       </div>
-      <BaseButton class="mt-4" variant="secondary" @click="logout">
+      <BaseButton class="mt-4" variant="secondary" @click="router.push({ name: 'api-keys' })">
+        <KeyRound class="size-4" aria-hidden="true" />
+        API 金鑰
+      </BaseButton>
+      <BaseButton class="mt-3" variant="secondary" @click="logout">
         <LogOut class="size-4" aria-hidden="true" />
         登出
       </BaseButton>

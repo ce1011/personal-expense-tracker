@@ -96,7 +96,6 @@ async function deleteSavingChallenge(challengeId: string): Promise<void> {
 function goToTransactions(): void {
   void router.push('/transactions')
 }
-
 </script>
 
 <template>
@@ -132,7 +131,9 @@ function goToTransactions(): void {
         @click="router.push('/history-review')"
       >
         <div>
-          <p class="text-caption font-semibold uppercase tracking-[0.12em] text-primary">歷史回顧</p>
+          <p class="text-caption font-semibold uppercase tracking-[0.12em] text-primary">
+            歷史回顧
+          </p>
           <p class="mt-1 text-h3 font-semibold text-text">看結構、趨勢與財務健康</p>
           <p class="mt-1 text-body-sm text-text-2">必要 vs 想要、淨現金流、季節高峰與年度回顧。</p>
         </div>
@@ -255,7 +256,6 @@ function goToTransactions(): void {
       :currency="currency"
       @close="closeWeeklyReview"
     />
-
   </div>
 </template>
 

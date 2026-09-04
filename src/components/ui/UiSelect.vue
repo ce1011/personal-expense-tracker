@@ -69,11 +69,7 @@ const selectedLabel = computed(() => {
 <template>
   <div class="relative w-full">
     <UiLabel v-if="label" :for="selectId">{{ label }}</UiLabel>
-    <SelectRoot
-      v-model="stringValue"
-      :name="name"
-      :disabled="disabled"
-    >
+    <SelectRoot v-model="stringValue" :name="name" :disabled="disabled">
       <SelectTrigger
         :id="selectId"
         class="input-base flex w-full items-center justify-between gap-2 text-left disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-text-3"

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import ApiKeysView from '@/views/ApiKeysView.vue'
 import BudgetsView from '@/views/BudgetsView.vue'
 import CategoryBudgetView from '@/views/CategoryBudgetView.vue'
 import CategoriesView from '@/views/CategoriesView.vue'
@@ -76,6 +77,12 @@ const router = createRouter({
       meta: { title: '歷史回顧' },
     },
     { path: '/settings', name: 'settings', component: SettingsView, meta: { title: '更多' } },
+    {
+      path: '/settings/api-keys',
+      name: 'api-keys',
+      component: ApiKeysView,
+      meta: { title: 'API 金鑰' },
+    },
   ],
 })
 

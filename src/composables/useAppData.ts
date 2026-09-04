@@ -329,7 +329,8 @@ export function useAppData() {
           'categoryBudget',
           'fixedExpenses',
           'trips',
-          'monthlySnapshot', 'historyReview',
+          'monthlySnapshot',
+          'historyReview',
         ],
       }),
     addIncome: (draft: IncomeDraft) =>
@@ -349,7 +350,8 @@ export function useAppData() {
           'categoryBudget',
           'fixedExpenses',
           'trips',
-          'monthlySnapshot', 'historyReview',
+          'monthlySnapshot',
+          'historyReview',
         ],
       }),
     updateIncome: (transactionId: string, draft: IncomeDraft) =>
@@ -368,7 +370,8 @@ export function useAppData() {
           'categoryBudget',
           'fixedExpenses',
           'trips',
-          'monthlySnapshot', 'historyReview',
+          'monthlySnapshot',
+          'historyReview',
         ],
       }),
     deleteIncome: (transactionId: string) =>
@@ -381,17 +384,38 @@ export function useAppData() {
       }),
     importTransactions: (records: readonly ImportTransactionRecord[]) =>
       withAction(() => importTransactions(records), {
-        scopes: ['dashboard', 'transactions', 'categoryBudget', 'trips', 'monthlySnapshot', 'historyReview'],
+        scopes: [
+          'dashboard',
+          'transactions',
+          'categoryBudget',
+          'trips',
+          'monthlySnapshot',
+          'historyReview',
+        ],
       }),
 
     // Budget cycle / target limits.
     saveCycle: (draft: CycleDraft, cycleId?: string) =>
       withAction(() => saveCycle(draft, cycleId), {
-        scopes: ['dashboard', 'budgets', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot', 'historyReview'],
+        scopes: [
+          'dashboard',
+          'budgets',
+          'categoryBudget',
+          'fixedExpenses',
+          'monthlySnapshot',
+          'historyReview',
+        ],
       }),
     copyCycleToNext: (cycleId: string) =>
       withAction(() => copyCycleToNext(cycleId), {
-        scopes: ['dashboard', 'budgets', 'categoryBudget', 'fixedExpenses', 'monthlySnapshot', 'historyReview'],
+        scopes: [
+          'dashboard',
+          'budgets',
+          'categoryBudget',
+          'fixedExpenses',
+          'monthlySnapshot',
+          'historyReview',
+        ],
       }),
     saveTargetLimit: (cycleId: string, categoryId: string, amount: number) =>
       withAction(() => saveTargetLimit(cycleId, categoryId, amount), {
@@ -408,7 +432,8 @@ export function useAppData() {
           'budgets',
           'categoryBudget',
           'fixedExpenses',
-          'monthlySnapshot', 'historyReview',
+          'monthlySnapshot',
+          'historyReview',
         ],
       }),
     saveIncomeCategory: (draft: CategoryDraft, categoryId?: string) =>
@@ -425,7 +450,8 @@ export function useAppData() {
           'budgets',
           'categoryBudget',
           'fixedExpenses',
-          'monthlySnapshot', 'historyReview',
+          'monthlySnapshot',
+          'historyReview',
         ],
       }),
     deleteIncomeCategory: (categoryId: string) =>

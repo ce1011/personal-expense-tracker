@@ -175,7 +175,13 @@ describe('buildFixedVariable', () => {
     const now = new Date(2026, 7, 1).getTime()
     const split = buildFixedVariable(
       [
-        expense({ amount: 12000, date: now, name: '房租', recurring: true, category_id: 'expense-home' }),
+        expense({
+          amount: 12000,
+          date: now,
+          name: '房租',
+          recurring: true,
+          category_id: 'expense-home',
+        }),
         expense({ amount: 80, date: now, name: '咖啡' }),
       ],
       categories,
@@ -229,7 +235,11 @@ describe('sumCycleIncome', () => {
     ]
 
     expect(
-      sumCycleIncome(cycles, new Date(2026, 6, 1).getTime(), new Date(2026, 6, 31, 23, 59, 59, 999).getTime()),
+      sumCycleIncome(
+        cycles,
+        new Date(2026, 6, 1).getTime(),
+        new Date(2026, 6, 31, 23, 59, 59, 999).getTime(),
+      ),
     ).toBe(18000)
     expect(
       sumCycleIncome(cycles, new Date(2026, 6, 1).getTime(), new Date(2026, 7, 12).getTime()),
@@ -326,12 +336,34 @@ describe('buildHistoryReview', () => {
   test('assembles health, trends, net worth proxy and insights', () => {
     const now = new Date(2026, 7, 12)
     const cycles: BudgetCycle[] = [
-      { cycle_id: 'cycle-202608', cycle_code: '202608', income_day: 1, income: 20000, saving_target: 4000 },
-      { cycle_id: 'cycle-202607', cycle_code: '202607', income_day: 1, income: 20000, saving_target: 4000 },
+      {
+        cycle_id: 'cycle-202608',
+        cycle_code: '202608',
+        income_day: 1,
+        income: 20000,
+        saving_target: 4000,
+      },
+      {
+        cycle_id: 'cycle-202607',
+        cycle_code: '202607',
+        income_day: 1,
+        income: 20000,
+        saving_target: 4000,
+      },
     ]
     const targets: TargetExpenseLimit[] = [
-      { target_expense_id: 't1', cycle_id: 'cycle-202608', category_id: 'expense-food', amount: 2000 },
-      { target_expense_id: 't2', cycle_id: 'cycle-202607', category_id: 'expense-food', amount: 2000 },
+      {
+        target_expense_id: 't1',
+        cycle_id: 'cycle-202608',
+        category_id: 'expense-food',
+        amount: 2000,
+      },
+      {
+        target_expense_id: 't2',
+        cycle_id: 'cycle-202607',
+        category_id: 'expense-food',
+        amount: 2000,
+      },
     ]
 
     const report = buildHistoryReview({
@@ -390,9 +422,24 @@ describe('buildHistoryReview', () => {
       { account_id: 'debt-1', name: '卡數', kind: 'liability', created_at: 1, updated_at: 1 },
     ]
     const balances: AccountBalance[] = [
-      { balance_id: 'b1', account_id: 'cash-1', amount: 40000, date: new Date(2026, 6, 1).getTime() },
-      { balance_id: 'b2', account_id: 'inv-1', amount: 60000, date: new Date(2026, 6, 1).getTime() },
-      { balance_id: 'b3', account_id: 'debt-1', amount: 10000, date: new Date(2026, 6, 1).getTime() },
+      {
+        balance_id: 'b1',
+        account_id: 'cash-1',
+        amount: 40000,
+        date: new Date(2026, 6, 1).getTime(),
+      },
+      {
+        balance_id: 'b2',
+        account_id: 'inv-1',
+        amount: 60000,
+        date: new Date(2026, 6, 1).getTime(),
+      },
+      {
+        balance_id: 'b3',
+        account_id: 'debt-1',
+        amount: 10000,
+        date: new Date(2026, 6, 1).getTime(),
+      },
     ]
 
     const report = buildHistoryReview({

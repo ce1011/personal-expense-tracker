@@ -355,12 +355,7 @@ function removeTransaction(): void {
       :autofocus="true"
     />
 
-    <UiNumberField
-      v-model="form.amount"
-      label="金額"
-      :min="0"
-      :step="0.01"
-    />
+    <UiNumberField v-model="form.amount" label="金額" :min="0" :step="0.01" />
 
     <div class="grid gap-1.5">
       <p class="text-sm font-medium text-text-2">分類</p>
@@ -413,19 +408,15 @@ function removeTransaction(): void {
         class="grid grid-cols-2 gap-3 border-t border-border px-4 pb-4 pt-3"
       >
         <UiSelect v-model="form.recurring_frequency" label="週期" :options="recurringOptions" />
-        <UiNumberField
-          v-model="form.recurring_day"
-          label="到期日"
-          :min="1"
-          :max="31"
-          :step="1"
-        />
+        <UiNumberField v-model="form.recurring_day" label="到期日" :min="1" :max="31" :step="1" />
       </div>
     </div>
 
     <div v-if="form.kind === 'expense'" class="grid gap-3 rounded-xl border border-border p-4">
       <p class="text-sm font-semibold text-text">消費標記</p>
-      <p class="text-caption text-text-3">用來拆解必要／想要、支付方式與自訂標籤，讓歷史回顧更準。</p>
+      <p class="text-caption text-text-3">
+        用來拆解必要／想要、支付方式與自訂標籤，讓歷史回顧更準。
+      </p>
       <div class="grid grid-cols-3 gap-2">
         <button
           v-for="option in natureOptions"
@@ -443,7 +434,11 @@ function removeTransaction(): void {
         </button>
       </div>
       <UiSelect v-model="form.payment_method" label="支付方式" :options="paymentOptions" />
-      <BaseInput v-model="form.merchant" label="商家（可留空，預設用名稱）" placeholder="例如：星巴克" />
+      <BaseInput
+        v-model="form.merchant"
+        label="商家（可留空，預設用名稱）"
+        placeholder="例如：星巴克"
+      />
       <BaseInput v-model="form.subcategory" label="子類別" placeholder="例如：午餐、訂閱" />
       <div class="grid gap-2">
         <BaseInput

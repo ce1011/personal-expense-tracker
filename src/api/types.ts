@@ -52,6 +52,24 @@ export interface RegisterBody {
   name?: string
 }
 
+export interface ApiKeySummary {
+  api_key_id: string
+  name: string
+  prefix: string
+  created_at: number
+  expires_at?: number
+  last_used_at?: number
+}
+
+export interface ApiKeyCreated extends ApiKeySummary {
+  secret: string
+}
+
+export interface CreateApiKeyBody {
+  name: string
+  expires_at?: number
+}
+
 /** Shared multi-currency fields accepted by every transaction mutation. */
 export interface MoneyBody {
   amount: number
