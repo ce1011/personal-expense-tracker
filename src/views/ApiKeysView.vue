@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ChevronLeft } from 'lucide-vue-next'
 
 import ApiKeyCreateForm from '@/components/apiKeys/ApiKeyCreateForm.vue'
+import ApiKeyGrokSetup from '@/components/apiKeys/ApiKeyGrokSetup.vue'
 import ApiKeySecretDialog from '@/components/apiKeys/ApiKeySecretDialog.vue'
 import ApiKeysList from '@/components/apiKeys/ApiKeysList.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -60,6 +61,8 @@ async function handleRevoke(id: string): Promise<void> {
     <p v-if="error" class="rounded-xl bg-danger/5 px-3 py-2 text-body-sm text-danger">
       {{ error }}
     </p>
+
+    <ApiKeyGrokSetup />
 
     <ApiKeyCreateForm :submitting="creating" @create="handleCreate" />
 
