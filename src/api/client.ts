@@ -25,6 +25,8 @@ import type {
   IncomeTransaction,
   LoginBody,
   MonthlySnapshotSummary,
+  OauthAuthorizeBody,
+  OauthAuthorizeResult,
   RegisterBody,
   SavingBody,
   SavingChallenge,
@@ -92,6 +94,7 @@ export const API_PREFIXES = [
   '/history-review',
   '/accounts',
   '/api-keys',
+  '/oauth',
 ] as const
 
 interface TreatyResult<T> {
@@ -349,6 +352,10 @@ export const api = {
     list: () => request<ApiKeySummary[]>(http['api-keys'].get()),
     create: (body: CreateApiKeyBody) => request<ApiKeyCreated>(http['api-keys'].post(body)),
     revoke: (id: string) => request<{ revoked: true }>(http['api-keys']({ id }).delete()),
+  },
+  oauth: {
+    authorize: (body: OauthAuthorizeBody) =>
+      request<OauthAuthorizeResult>(http.oauth.authorize.post(body)),
   },
 }
 

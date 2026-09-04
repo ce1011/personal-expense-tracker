@@ -17,8 +17,8 @@ const isQuickAddOpen = shallowRef(false)
 
 // Shell chrome (header cycle label + trip-mode switch). Skipped on public
 // (auth) routes, which render bare without the shell.
-const isPublic = computed(() => Boolean(route.meta.public))
-const { currentCycle, loading } = useShellData(isPublic)
+const isBare = computed(() => Boolean(route.meta.public || route.meta.bare))
+const { currentCycle, loading } = useShellData(isBare)
 
 function openQuickAdd(): void {
   isQuickAddOpen.value = true
@@ -49,7 +49,7 @@ async function addSaving(draft: SavingDraft): Promise<void> {
     <DrawerProvider>
       <UiToastHost>
         <!-- Auth pages render bare (no app chrome / quick-add). -->
-        <RouterView v-if="route.meta.public" v-slot="{ Component, route: activeRoute }">
+        <RouterView v-if="isBare" v-slot="{ Component, route: activeRoute }">
           <Transition name="auth-page" mode="out-in">
             <component :is="Component" :key="activeRoute.fullPath" />
           </Transition>

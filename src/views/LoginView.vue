@@ -34,12 +34,24 @@ const showPassword = shallowRef(false)
 const isOnline = shallowRef(true)
 
 const isRegister = computed(() => mode.value === 'register')
-const pageTitle = computed(() => (isRegister.value ? '建立你的同步帳戶' : '歡迎回來'))
-const pageDescription = computed(() =>
-  isRegister.value
+const returningToOauth = computed(() => {
+  const redirect = route.query.redirect
+  return typeof redirect === 'string' && redirect.startsWith('/oauth/authorize')
+})
+const pageTitle = computed(() => {
+  if (returningToOauth.value) {
+    return '先登入再授權 Grok'
+  }
+  return isRegister.value ? '建立你的同步帳戶' : '歡迎回來'
+})
+const pageDescription = computed(() => {
+  if (returningToOauth.value) {
+    return '登入這本帳之後，就可以允許 Grok 代你記帳與查詢開支。'
+  }
+  return isRegister.value
     ? '建立一次，之後在每部裝置繼續同一本帳。'
-    : '你的預算、交易與旅程，已準備好接續。',
-)
+    : '你的預算、交易與旅程，已準備好接續。'
+})
 
 const passwordStrength = computed(() => {
   const value = password.value

@@ -10,10 +10,19 @@ import HistoryReviewView from '@/views/HistoryReviewView.vue'
 import ImportTransactionsView from '@/views/ImportTransactionsView.vue'
 import LoginView from '@/views/LoginView.vue'
 import MonthlySnapshotView from '@/views/MonthlySnapshotView.vue'
+import OauthAuthorizeView from '@/views/OauthAuthorizeView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import TransactionsView from '@/views/TransactionsView.vue'
 import TripsView from '@/views/TripsView.vue'
 import { useAuthStore } from '@/stores/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    public?: boolean
+    bare?: boolean
+    title?: string
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,6 +39,12 @@ const router = createRouter({
       name: 'login',
       component: LoginView,
       meta: { public: true, title: '登入' },
+    },
+    {
+      path: '/oauth/authorize',
+      name: 'oauth-authorize',
+      component: OauthAuthorizeView,
+      meta: { bare: true, title: '授權 Grok' },
     },
     { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '總覽' } },
     {

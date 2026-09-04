@@ -70,6 +70,22 @@ export interface CreateApiKeyBody {
   expires_at?: number
 }
 
+export interface OauthAuthorizeBody {
+  decision: 'allow' | 'deny'
+  response_type: string
+  client_id: string
+  redirect_uri: string
+  state?: string
+  code_challenge: string
+  code_challenge_method: string
+  scope?: string
+  resource?: string
+}
+
+export interface OauthAuthorizeResult {
+  redirect_to: string
+}
+
 /** Shared multi-currency fields accepted by every transaction mutation. */
 export interface MoneyBody {
   amount: number

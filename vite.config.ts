@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 
-import { realpathSync } from 'node:fs'
+import { copyFileSync, existsSync, realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
 import vue from '@vitejs/plugin-vue'
@@ -14,6 +15,19 @@ import { VitePWA } from 'vite-plugin-pwa'
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000'
 const configDir = fileURLToPath(new URL('.', import.meta.url))
 const realConfigDir = realpathSync(configDir)
+
+function githubPagesSpaFallback() {
+  return {
+    name: 'github-pages-spa-fallback',
+    closeBundle() {
+      const index = resolve(realConfigDir, 'dist/index.html')
+      const fallback = resolve(realConfigDir, 'dist/404.html')
+      if (existsSync(index)) {
+        copyFileSync(index, fallback)
+      }
+    },
+  }
+}
 
 const apiProxy = {
   '/api': {
@@ -30,6 +44,7 @@ export default defineConfig({
     tailwindcss(),
     vue(),
     vueDevTools(),
+    githubPagesSpaFallback(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico'],

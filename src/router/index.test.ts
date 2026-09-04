@@ -66,6 +66,26 @@ describe('router', () => {
     expect(login?.meta.public).toBe(true)
   })
 
+  test('oauth authorize is a bare authenticated route', async () => {
+    const authorize = router.getRoutes().find((route) => route.name === 'oauth-authorize')
+    expect(authorize).toBeDefined()
+    expect(authorize?.meta.public).toBeFalsy()
+    expect(authorize?.meta.bare).toBe(true)
+
+    await router.push('/oauth/authorize?client_id=grok')
+    await router.isReady()
+    for (let i = 0; i < 12; i += 1) {
+      await Promise.resolve()
+    }
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(String(router.currentRoute.value.query.redirect)).toContain('/oauth/authorize')
+
+    useAuthStore()._setAuthenticated()
+    await router.push('/oauth/authorize?client_id=grok&response_type=code')
+    await router.isReady()
+    expect(router.currentRoute.value.name).toBe('oauth-authorize')
+  })
+
   // Regression test for the login-redirect bug: the guard must see the user as
   // authenticated immediately after login() (reactive auth state), so the
   // post-login navigation to '/' is not bounced back to '/login'.
